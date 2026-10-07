@@ -8,6 +8,9 @@
 		"fabric-gametest": [
 			"nl.jeeninga.tafelboem.gametest.SessionGameTest",
 			"nl.jeeninga.tafelboem.gametest.BossFightGameTest"
+		],
+		"fabric-client-gametest": [
+			"nl.jeeninga.tafelboem.gametest.PlaythroughClientGameTest"
 		]
 	},
 	"depends": {

@@ -129,7 +129,12 @@ public final class BombEffects {
 	}
 
 	public static void correctAnswer(ServerLevel level, ServerPlayer player) {
-		level.sendParticles(ParticleTypes.HAPPY_VILLAGER, player.getX(), player.getY() + 1, player.getZ(), 20, 0.5, 0.6, 0.5, 0.1);
+		// A ring at the feet, so the sparkles don't block the child's view.
+		for (int i = 0; i < 12; i++) {
+			double angle = Math.PI * 2 * i / 12;
+			level.sendParticles(ParticleTypes.HAPPY_VILLAGER, player.getX() + Math.cos(angle) * 1.2, player.getY() + 0.2,
+					player.getZ() + Math.sin(angle) * 1.2, 1, 0, 0.1, 0, 0);
+		}
 		level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.6f, 1.4f);
 	}
 

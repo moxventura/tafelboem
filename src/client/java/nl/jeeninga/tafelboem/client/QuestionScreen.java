@@ -23,8 +23,11 @@ import nl.jeeninga.tafelboem.net.QuizS2C;
  */
 public final class QuestionScreen extends Screen {
 	private static final int MAX_DIGITS = 3;
-	private static final int BUTTON_SIZE = 24;
-	private static final int GAP = 4;
+	private static final int BUTTON_SIZE = 20;
+	private static final int GAP = 3;
+	private static final int PAD_WIDTH = 3 * BUTTON_SIZE + 2 * GAP;
+	private static final int PAD_HEIGHT = 4 * BUTTON_SIZE + 3 * GAP;
+	private static final int LINE = 11;
 	private static final int WHITE = 0xFFFFFFFF;
 	private static final int YELLOW = 0xFFFFE04A;
 	private static final int GREEN = 0xFF6BFF6B;
@@ -46,7 +49,11 @@ public final class QuestionScreen extends Screen {
 	private long waitingSince;
 	private long correctionShownAt;
 	private int shakeTicks;
-	private Button dontKnowButton;
+
+	/** Vertical layout, recomputed in {@link #init()} so everything fits even on small windows. */
+	private float bigScale;
+	private int top;
+	private int padTop;
 
 	private QuestionScreen(QuizS2C payload) {
 		super(Component.translatable("tafelboem.screen.title"));
@@ -70,6 +77,18 @@ public final class QuestionScreen extends Screen {
 		return sessionId;
 	}
 
+	public int a() {
+		return a;
+	}
+
+	public int b() {
+		return b;
+	}
+
+	public boolean isCorrecting() {
+		return correcting;
+	}
+
 	void showCorrection(QuizS2C payload) {
 		correcting = true;
 		reason = payload.reason();
@@ -78,37 +97,45 @@ public final class QuestionScreen extends Screen {
 		input.setLength(0);
 		waitingForServer = false;
 		correctionShownAt = System.currentTimeMillis();
-		if (dontKnowButton != null) {
-			dontKnowButton.visible = false;
+		if (minecraft != null) {
+			rebuildWidgets();
 		}
 	}
 
 	@Override
 	protected void init() {
-		int padWidth = 3 * BUTTON_SIZE + 2 * GAP;
-		int left = (width - padWidth) / 2;
-		int top = height / 2 + 4;
+		bigScale = height < 300 ? 3.0f : 4.0f;
+		int bigHeight = Math.round(font.lineHeight * bigScale);
+		// Question: name, big sum, hint. Correction: name, reason, big fact, tip, same, prompt, typed answer.
+		int textHeight = correcting ? 6 * LINE + bigHeight + Math.round(font.lineHeight * 2.0f) + 4 : LINE + bigHeight + LINE + 6;
+		int contentHeight = textHeight + PAD_HEIGHT;
+		top = Math.max(4, (height - contentHeight) / 2);
+		padTop = top + textHeight;
 
+		int left = (width - PAD_WIDTH) / 2;
 		String[] keys = {"7", "8", "9", "4", "5", "6", "1", "2", "3"};
 		for (int i = 0; i < keys.length; i++) {
 			String digit = keys[i];
 			int x = left + (i % 3) * (BUTTON_SIZE + GAP);
-			int y = top + (i / 3) * (BUTTON_SIZE + GAP);
+			int y = padTop + (i / 3) * (BUTTON_SIZE + GAP);
 			addRenderableWidget(Button.builder(Component.literal(digit), button -> type(digit.charAt(0)))
 					.bounds(x, y, BUTTON_SIZE, BUTTON_SIZE).build());
 		}
 
-		int lastRow = top + 3 * (BUTTON_SIZE + GAP);
-		addRenderableWidget(Button.builder(Component.literal("⌫"), button -> backspace())
+		int lastRow = padTop + 3 * (BUTTON_SIZE + GAP);
+		addRenderableWidget(Button.builder(Component.literal("←"), button -> backspace())
 				.bounds(left, lastRow, BUTTON_SIZE, BUTTON_SIZE).build());
 		addRenderableWidget(Button.builder(Component.literal("0"), button -> type('0'))
 				.bounds(left + BUTTON_SIZE + GAP, lastRow, BUTTON_SIZE, BUTTON_SIZE).build());
 		addRenderableWidget(Button.builder(Component.literal("OK"), button -> submit())
 				.bounds(left + 2 * (BUTTON_SIZE + GAP), lastRow, BUTTON_SIZE, BUTTON_SIZE).build());
 
-		dontKnowButton = addRenderableWidget(Button.builder(Component.translatable("tafelboem.screen.dont_know"), button -> dontKnow())
-				.bounds(left - 4, lastRow + BUTTON_SIZE + GAP, padWidth + 8, 20).build());
-		dontKnowButton.visible = !correcting;
+		if (!correcting) {
+			// Next to the pad instead of below it, so it never falls off a small screen.
+			int dontKnowWidth = Math.max(70, font.width(Component.translatable("tafelboem.screen.dont_know")) + 12);
+			addRenderableWidget(Button.builder(Component.translatable("tafelboem.screen.dont_know"), button -> dontKnow())
+					.bounds(left + PAD_WIDTH + 12, padTop + PAD_HEIGHT - BUTTON_SIZE, dontKnowWidth, BUTTON_SIZE).build());
+		}
 	}
 
 	@Override
@@ -220,26 +247,34 @@ public final class QuestionScreen extends Screen {
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
 		int centerX = width / 2;
-		int panelTop = height / 2 - 92;
-		graphics.fill(centerX - 130, panelTop, centerX + 130, height / 2 + 4 + 4 * (BUTTON_SIZE + GAP) + 26, PANEL);
+		int panelHalfWidth = Math.min(width / 2 - 4, 150);
+		graphics.fill(centerX - panelHalfWidth, top - 4, centerX + panelHalfWidth, padTop + PAD_HEIGHT + 4, PANEL);
 
-		graphics.centeredText(font, bombName(), centerX, panelTop + 6, YELLOW);
+		int y = top;
+		graphics.centeredText(font, bombName(), centerX, y, YELLOW);
+		y += LINE;
 
 		if (correcting) {
-			graphics.centeredText(font, Component.translatable(reasonKey()), centerX, panelTop + 20, WHITE);
-			drawBig(graphics, a + " × " + b + " = " + (a * b), centerX, panelTop + 34, 3.0f, GREEN);
-			graphics.centeredText(font, tipText(), centerX, panelTop + 66, WHITE);
+			graphics.centeredText(font, Component.translatable(reasonKey()), centerX, y, WHITE);
+			y += LINE;
+			drawBig(graphics, a + " × " + b + " = " + (a * b), centerX, y, bigScale, GREEN);
+			y += Math.round(font.lineHeight * bigScale) + 2;
+			graphics.centeredText(font, tipText(), centerX, y, WHITE);
+			y += LINE;
 			if (a != b) {
-				graphics.centeredText(font, Component.translatable("tafelboem.screen.same", b, a), centerX, panelTop + 78, WHITE);
+				graphics.centeredText(font, Component.translatable("tafelboem.screen.same", b, a), centerX, y, WHITE);
 			}
+			y += LINE;
 			int shake = shakeTicks > 0 ? (shakeTicks % 2 == 0 ? 3 : -3) : 0;
-			Component prompt = Component.translatable("tafelboem.screen.retype", a * b);
-			graphics.centeredText(font, prompt, centerX + shake, height / 2 - 8, shakeTicks > 0 ? RED : YELLOW);
-			drawBig(graphics, input.isEmpty() ? "_" : input.toString(), centerX + 90, height / 2 + 30, 3.0f, WHITE);
+			graphics.centeredText(font, Component.translatable("tafelboem.screen.retype", a * b), centerX + shake, y,
+					shakeTicks > 0 ? RED : YELLOW);
+			y += LINE;
+			drawBig(graphics, input.isEmpty() ? "_" : input.toString(), centerX, y, 2.0f, WHITE);
 		} else {
 			String answer = input.isEmpty() ? "?" : input.toString();
-			drawBig(graphics, a + " × " + b + " = " + answer, centerX, panelTop + 30, 4.0f, WHITE);
-			graphics.centeredText(font, Component.translatable("tafelboem.screen.hint"), centerX, height / 2 - 12, 0xFFBBBBBB);
+			drawBig(graphics, a + " × " + b + " = " + answer, centerX, y + 2, bigScale, WHITE);
+			y += Math.round(font.lineHeight * bigScale) + 4;
+			graphics.centeredText(font, Component.translatable("tafelboem.screen.hint"), centerX, y, 0xFFBBBBBB);
 		}
 
 		super.extractRenderState(graphics, mouseX, mouseY, delta);

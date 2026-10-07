@@ -22,7 +22,7 @@ fabricApi {
 		createSourceSet = true
 		modId = "tafelboem-test"
 		enableGameTests = true
-		enableClientGameTests = false
+		enableClientGameTests = true
 		eula = true
 	}
 }

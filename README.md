@@ -7,6 +7,10 @@ Right-click a bomb and you are rooted in place while a sum pops up. Answer corre
 the boom, or kick it back at the villain **Graaf Fout**. Answer wrong and the bomb goes off on you,
 and then you see the correct fact big on screen and type it once.
 
+| Question | Correction after a miss | Graaf Fout gets yeeted |
+|---|---|---|
+| ![Question](docs/screenshots/r0-question.png) | ![Correction](docs/screenshots/r0-correction.png) | ![Yeet](docs/screenshots/r0-yeet.png) |
+
 The full design lives in
 [`docs/superpowers/specs/2026-10-07-tafelboem-design.md`](docs/superpowers/specs/2026-10-07-tafelboem-design.md).
 
@@ -34,6 +38,8 @@ Requirements: JDK 25 (`sudo apt install openjdk-25-jdk`).
 ./gradlew build          # compile, unit tests, GameTests
 ./gradlew test           # unit tests only (core learning logic)
 ./gradlew runGameTest    # headless in-game tests
+./gradlew runClientGameTest   # plays R0 in a real client and takes screenshots
+                              # (build/run/clientGameTest/screenshots; needs a display, e.g. WSLg)
 ```
 
 ## Deploying to the kids' PCs
