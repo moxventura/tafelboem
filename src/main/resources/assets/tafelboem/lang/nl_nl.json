@@ -3,7 +3,6 @@
   "block.tafelboem.knalletje": "Knalletje",
   "block.tafelboem.gewone_tnt": "Gewone TNT",
   "block.tafelboem.kippenbom": "Kippenbom",
-
   "tafelboem.screen.title": "Elke lont is een som!",
   "tafelboem.screen.hint": "Typ je antwoord en druk op Enter",
   "tafelboem.screen.dont_know": "? Ik weet het niet",
@@ -12,7 +11,6 @@
   "tafelboem.screen.reason.chicken_out": "Tok tok! Zo zit het:",
   "tafelboem.screen.same": "%s × %s is hetzelfde!",
   "tafelboem.screen.retype": "Typ %s en druk op Enter",
-
   "tafelboem.tip.one": "Keer 1 blijft hetzelfde getal: %s → %s",
   "tafelboem.tip.ten": "Keer 10: zet een 0 achter %s → %s",
   "tafelboem.tip.two": "Keer 2 is dubbel: %s + %1$s = %2$s",
@@ -21,7 +19,11 @@
   "tafelboem.tip.four": "Keer 4 is dubbel-dubbel: %s → %s → %s",
   "tafelboem.tip.three": "Keer 3 is keer 2 plus nog één keer: %2$s + %1$s = %3$s",
   "tafelboem.tip.five_split": "%s × %s = 5 × %2$s + %3$s × %2$s = %4$s + %5$s = %6$s",
-
   "tafelboem.message.run": "Goed zo! RENNEN!",
-  "tafelboem.message.run_countdown": "Rennen! %s..."
+  "tafelboem.message.run_countdown": "Rennen! %s...",
+  "tafelboem.stats.empty": "%s heeft nog geen sommen gemaakt.",
+  "tafelboem.stats.header": "TafelBoem - %s: %s sommen, %s%% goed",
+  "tafelboem.stats.table": "  ×%s: %s/%s goed, meestal %s s",
+  "tafelboem.stats.hardest": "  Nog aan het oefenen: %s",
+  "tafelboem.message.version_mismatch": "Deze PC heeft TafelBoem %s maar de wereld heeft %s. Vraag een volwassene om tafelboem-update.bat te starten!"
 }

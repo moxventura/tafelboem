@@ -1,17 +1,28 @@
 package nl.jeeninga.tafelboem.client;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 
+import nl.jeeninga.tafelboem.TafelBoem;
 import nl.jeeninga.tafelboem.net.QuizS2C;
+import nl.jeeninga.tafelboem.net.VersionS2C;
 
 public class TafelBoemClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		ClientPlayNetworking.registerGlobalReceiver(QuizS2C.TYPE, (payload, context) -> handle(context.client(), payload));
+		ClientPlayNetworking.registerGlobalReceiver(VersionS2C.TYPE, (payload, context) -> {
+			String mine = TafelBoem.version();
+			if (!mine.equals(payload.version())) {
+				context.player().sendSystemMessage(Component.translatable("tafelboem.message.version_mismatch", mine, payload.version())
+						.withStyle(ChatFormatting.GOLD));
+			}
+		});
 	}
 
 	private static void handle(Minecraft client, QuizS2C payload) {

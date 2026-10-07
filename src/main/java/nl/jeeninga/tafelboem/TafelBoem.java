@@ -6,14 +6,17 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.storage.LevelResource;
 
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.loader.api.FabricLoader;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import nl.jeeninga.tafelboem.command.TafelBoemCommand;
 import nl.jeeninga.tafelboem.game.BombEffects;
 import nl.jeeninga.tafelboem.game.QuizClient;
 import nl.jeeninga.tafelboem.game.SessionManager;
@@ -34,6 +37,7 @@ public class TafelBoem implements ModInitializer {
 		ModBlocks.register();
 		ModCreativeTab.register();
 		ModNetworking.register();
+		CommandRegistrationCallback.EVENT.register((dispatcher, buildContext, selection) -> TafelBoemCommand.register(dispatcher));
 
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
 			AnswerLog log = new AnswerLog(server.getWorldPath(LevelResource.ROOT).resolve(MOD_ID));
@@ -65,6 +69,12 @@ public class TafelBoem implements ModInitializer {
 			throw new IllegalStateException("TafelBoem sessions are only available while a server is running");
 		}
 		return sessions;
+	}
+
+	public static String version() {
+		return FabricLoader.getInstance().getModContainer(MOD_ID)
+				.map(mod -> mod.getMetadata().getVersion().getFriendlyString())
+				.orElse("unknown");
 	}
 
 	public static Identifier id(String path) {
