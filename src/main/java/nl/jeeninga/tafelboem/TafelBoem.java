@@ -16,6 +16,7 @@ import net.fabricmc.loader.api.FabricLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import nl.jeeninga.tafelboem.boss.BossFights;
 import nl.jeeninga.tafelboem.command.TafelBoemCommand;
 import nl.jeeninga.tafelboem.game.BombEffects;
 import nl.jeeninga.tafelboem.game.QuizClient;
@@ -25,16 +26,21 @@ import nl.jeeninga.tafelboem.log.Learners;
 import nl.jeeninga.tafelboem.net.ModNetworking;
 import nl.jeeninga.tafelboem.registry.ModBlocks;
 import nl.jeeninga.tafelboem.registry.ModCreativeTab;
+import nl.jeeninga.tafelboem.registry.ModEntities;
+import nl.jeeninga.tafelboem.registry.ModItems;
 
 public class TafelBoem implements ModInitializer {
 	public static final String MOD_ID = "tafelboem";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
 	private static @Nullable SessionManager sessions;
+	private static @Nullable BossFights fights;
 
 	@Override
 	public void onInitialize() {
 		ModBlocks.register();
+		ModItems.register();
+		ModEntities.register();
 		ModCreativeTab.register();
 		ModNetworking.register();
 		CommandRegistrationCallback.EVENT.register((dispatcher, buildContext, selection) -> TafelBoemCommand.register(dispatcher));
@@ -42,11 +48,23 @@ public class TafelBoem implements ModInitializer {
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
 			AnswerLog log = new AnswerLog(server.getWorldPath(LevelResource.ROOT).resolve(MOD_ID));
 			sessions = new SessionManager(server, new Learners(log), QuizClient.NETWORK);
+			fights = new BossFights(sessions);
 		});
-		ServerLifecycleEvents.SERVER_STOPPED.register(server -> sessions = null);
+		ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+			if (fights != null) {
+				fights.endAll();
+			}
+		});
+		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+			sessions = null;
+			fights = null;
+		});
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			if (sessions != null) {
 				sessions.tick();
+			}
+			if (fights != null) {
+				fights.tick();
 			}
 		});
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
@@ -69,6 +87,13 @@ public class TafelBoem implements ModInitializer {
 			throw new IllegalStateException("TafelBoem sessions are only available while a server is running");
 		}
 		return sessions;
+	}
+
+	public static BossFights fights() {
+		if (fights == null) {
+			throw new IllegalStateException("TafelBoem fights are only available while a server is running");
+		}
+		return fights;
 	}
 
 	public static String version() {

@@ -6,7 +6,8 @@
 	"environment": "*",
 	"entrypoints": {
 		"fabric-gametest": [
-			"nl.jeeninga.tafelboem.gametest.SessionGameTest"
+			"nl.jeeninga.tafelboem.gametest.SessionGameTest",
+			"nl.jeeninga.tafelboem.gametest.BossFightGameTest"
 		]
 	},
 	"depends": {

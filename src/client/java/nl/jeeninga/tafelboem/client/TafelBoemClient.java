@@ -3,18 +3,24 @@ package nl.jeeninga.tafelboem.client;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.network.chat.Component;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 
 import nl.jeeninga.tafelboem.TafelBoem;
 import nl.jeeninga.tafelboem.net.QuizS2C;
 import nl.jeeninga.tafelboem.net.VersionS2C;
+import nl.jeeninga.tafelboem.registry.ModEntities;
 
 public class TafelBoemClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
+		EntityRendererRegistry.register(ModEntities.GRAAF_FOUT, GraafFoutRenderer::new);
+		EntityRendererRegistry.register(ModEntities.THROWN_BOMB, ThrownItemRenderer::new);
+
 		ClientPlayNetworking.registerGlobalReceiver(QuizS2C.TYPE, (payload, context) -> handle(context.client(), payload));
 		ClientPlayNetworking.registerGlobalReceiver(VersionS2C.TYPE, (payload, context) -> {
 			String mine = TafelBoem.version();

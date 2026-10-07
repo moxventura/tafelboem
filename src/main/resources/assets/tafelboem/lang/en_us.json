@@ -25,5 +25,16 @@
   "tafelboem.stats.header": "TafelBoem - %s: %s sums, %s%% correct",
   "tafelboem.stats.table": "  ×%s: %s/%s correct, usually %s s",
   "tafelboem.stats.hardest": "  Still practising: %s",
-  "tafelboem.message.version_mismatch": "This PC has TafelBoem %s but the world has %s. Ask a grown-up to run tafelboem-update.bat!"
+  "tafelboem.message.version_mismatch": "This PC has TafelBoem %s but the world has %s. Ask a grown-up to run tafelboem-update.bat!",
+  "entity.tafelboem.graaf_fout": "Count Wrong",
+  "entity.tafelboem.thrown_bomb": "Bomb",
+  "item.tafelboem.summon_graaf_fout": "Summon Count Wrong!",
+  "tafelboem.boss.says": "<%s> %s",
+  "tafelboem.boss.graaf_fout.intro": "Mwahaha! I'm Count Wrong and I LOVE mistakes! Right answer? Then you kick my bomb back!",
+  "tafelboem.boss.graaf_fout.taunt.wrong": "Not yet! %s × %s = %s... I'll throw that one again soon!",
+  "tafelboem.boss.graaf_fout.taunt.dont_know": "Hehe! We'll practise %s × %s again in a moment.",
+  "tafelboem.boss.graaf_fout.taunt.chicken_out": "Cluck cluck! Hahaha! That chicken is mine!",
+  "tafelboem.boss.graaf_fout.defeated": "Noooo! All those right answers... that's not fair! I'll be back!",
+  "tafelboem.message.loot": "You got %s× %s!",
+  "tafelboem.message.boss_already_here": "Count Wrong is already here!"
 }

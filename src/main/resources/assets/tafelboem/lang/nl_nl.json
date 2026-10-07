@@ -25,5 +25,16 @@
   "tafelboem.stats.header": "TafelBoem - %s: %s sommen, %s%% goed",
   "tafelboem.stats.table": "  ×%s: %s/%s goed, meestal %s s",
   "tafelboem.stats.hardest": "  Nog aan het oefenen: %s",
-  "tafelboem.message.version_mismatch": "Deze PC heeft TafelBoem %s maar de wereld heeft %s. Vraag een volwassene om tafelboem-update.bat te starten!"
+  "tafelboem.message.version_mismatch": "Deze PC heeft TafelBoem %s maar de wereld heeft %s. Vraag een volwassene om tafelboem-update.bat te starten!",
+  "entity.tafelboem.graaf_fout": "Graaf Fout",
+  "entity.tafelboem.thrown_bomb": "Bom",
+  "item.tafelboem.summon_graaf_fout": "Roep Graaf Fout op!",
+  "tafelboem.boss.says": "<%s> %s",
+  "tafelboem.boss.graaf_fout.intro": "Mwahaha! Ik ben Graaf Fout en ik hou van FOUTEN! Goed antwoord? Dan schop je mijn bom terug!",
+  "tafelboem.boss.graaf_fout.taunt.wrong": "Nog niet! %s × %s = %s... die gooi ik zo nóg een keer!",
+  "tafelboem.boss.graaf_fout.taunt.dont_know": "Hihi! %s × %s oefenen we zo nog een keer.",
+  "tafelboem.boss.graaf_fout.taunt.chicken_out": "Tok tok! Hahaha! Die kip is van mij!",
+  "tafelboem.boss.graaf_fout.defeated": "Neeeee! Al die goede antwoorden... dat is niet eerlijk! Ik kom terug!",
+  "tafelboem.message.loot": "Je krijgt %s× %s!",
+  "tafelboem.message.boss_already_here": "Graaf Fout is er al!"
 }

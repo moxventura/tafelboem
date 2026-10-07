@@ -25,6 +25,7 @@ public final class ModCreativeTab {
 				.displayItems((parameters, output) -> {
 					// R0 play-test: all bombs are available. From R1 on, only the Knalletje is free and
 					// the rest is earned as loot.
+					output.accept(ModItems.SUMMON_GRAAF_FOUT);
 					for (BombTier tier : BombTier.values()) {
 						output.accept(ModBlocks.bombItem(tier));
 					}

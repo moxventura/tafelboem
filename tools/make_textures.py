@@ -105,3 +105,59 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# --- Graaf Fout -------------------------------------------------------------------------------
+# Usage: python3 tools/make_textures.py --graaf-fout <path to vanilla evoker.png>
+# The skin is the vanilla evoker texture recoloured: purple robes and a big red times sign.
+
+ENTITY_OUT = Path("src/main/resources/assets/tafelboem/textures/entity")
+ITEM_OUT = Path("src/main/resources/assets/tafelboem/textures/item")
+PURPLE = (120, 40, 160)
+GOLD = (230, 190, 60)
+
+# UV regions (x0, y0, x1, y1) of the illager texture that are clothing, not skin.
+CLOTHING = [(16, 20, 40, 38), (0, 38, 28, 64), (40, 20, 64, 48)]
+CHEST_FRONT = (22, 26)  # top-left of the 8x12 body front
+ROBE_FRONT = (6, 44)  # top-left of the 8x20 robe front
+
+
+def in_clothing(x, y):
+    return any(x0 <= x < x1 and y0 <= y < y1 for x0, y0, x1, y1 in CLOTHING)
+
+
+def graaf_fout(evoker_path):
+    src = Image.open(evoker_path).convert("RGBA")
+    out = src.copy()
+    for x in range(64):
+        for y in range(64):
+            r, g, b, a = src.getpixel((x, y))
+            if a == 0 or not in_clothing(x, y):
+                continue
+            light = (r + g + b) / (3 * 255)
+            if r > 150 and g > 120 and b < 90:  # keep the gold trim, just a little warmer
+                out.putpixel((x, y), GOLD + (a,))
+            else:
+                shade = 0.45 + light * 0.9
+                out.putpixel((x, y), tuple(min(255, int(c * shade)) for c in PURPLE) + (a,))
+    for ox, oy in (CHEST_FRONT, ROBE_FRONT):
+        put(out, [(ox + 1 + px, oy + 2 + py) for px, py in cross(3, 3, 3)], RED)
+    ENTITY_OUT.mkdir(parents=True, exist_ok=True)
+    out.save(ENTITY_OUT / "graaf_fout.png")
+
+    icon = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    for x in range(16):
+        for y in range(16):
+            if (x - 7.5) ** 2 + (y - 7.5) ** 2 <= 49:
+                icon.putpixel((x, y), PURPLE + (255,))
+    put(icon, cross(7, 7, 3) + cross(8, 7, 3), RED)
+    ITEM_OUT.mkdir(parents=True, exist_ok=True)
+    icon.save(ITEM_OUT / "summon_graaf_fout.png")
+    print("wrote graaf_fout")
+
+
+if __name__ == "__main__":
+    import sys
+
+    if len(sys.argv) == 3 and sys.argv[1] == "--graaf-fout":
+        graaf_fout(sys.argv[2])

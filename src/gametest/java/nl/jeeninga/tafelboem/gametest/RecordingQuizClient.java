@@ -13,7 +13,11 @@ import nl.jeeninga.tafelboem.net.QuizS2C;
  * Stands in for a real client: remembers everything the server sent.
  */
 final class RecordingQuizClient implements QuizClient {
+	record Sent(ServerPlayer player, QuizS2C payload) {
+	}
+
 	final List<QuizS2C> sent = new ArrayList<>();
+	final List<Sent> sentTo = new ArrayList<>();
 	final List<Component> actionBars = new ArrayList<>();
 
 	@Override
@@ -24,6 +28,7 @@ final class RecordingQuizClient implements QuizClient {
 	@Override
 	public void send(ServerPlayer player, QuizS2C payload) {
 		sent.add(payload);
+		sentTo.add(new Sent(player, payload));
 	}
 
 	@Override
