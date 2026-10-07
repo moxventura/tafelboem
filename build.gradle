@@ -27,11 +27,19 @@ fabricApi {
 	}
 }
 
+configurations {
+	// Mods that must sit next to our jar in a player's mods folder.
+	deployMods {
+		transitive = false
+	}
+}
+
 dependencies {
 	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	deployMods "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
 	// Plain JUnit for the pure-Java learning core (no Minecraft bootstrap needed).
 	testImplementation platform("org.junit:junit-bom:${project.junit_version}")
@@ -61,4 +69,18 @@ java {
 
 	sourceCompatibility = JavaVersion.VERSION_25
 	targetCompatibility = JavaVersion.VERSION_25
+}
+
+// --- Deployment to the kids' Minecraft installs -------------------------------------------
+// The Windows launcher profile uses its own game directory, so this mods folder is dedicated to
+// TafelBoem and Sync may safely remove anything that is not ours.
+def windowsGameDir = providers.gradleProperty("windowsGameDir")
+		.orElse("/mnt/c/Users/jeejes/AppData/Roaming/.minecraft-tafelboem")
+
+tasks.register("deployToWindows", Sync) {
+	group = "tafelboem"
+	description = "Syncs the mod and Fabric API into the TafelBoem launcher profile on this Windows PC."
+	from(tasks.named("jar"))
+	from(configurations.deployMods)
+	into(windowsGameDir.map { "$it/mods" })
 }
