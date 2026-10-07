@@ -1,0 +1,27 @@
+{
+  "itemGroup.tafelboem": "TafelBoem",
+  "block.tafelboem.knalletje": "Firecracker",
+  "block.tafelboem.gewone_tnt": "Classic TNT",
+  "block.tafelboem.kippenbom": "Chicken Bomb",
+
+  "tafelboem.screen.title": "Every fuse is a sum!",
+  "tafelboem.screen.hint": "Type your answer and press Enter",
+  "tafelboem.screen.dont_know": "? I don't know",
+  "tafelboem.screen.reason.wrong": "Not yet! The right answer is:",
+  "tafelboem.screen.reason.dont_know": "No problem! Here's how it goes:",
+  "tafelboem.screen.reason.chicken_out": "Cluck cluck! Here's how it goes:",
+  "tafelboem.screen.same": "%s × %s is the same!",
+  "tafelboem.screen.retype": "Type %s and press Enter",
+
+  "tafelboem.tip.one": "Times 1 keeps the number: %s → %s",
+  "tafelboem.tip.ten": "Times 10: put a 0 after %s → %s",
+  "tafelboem.tip.two": "Times 2 is double: %s + %1$s = %2$s",
+  "tafelboem.tip.five": "Times 5 is half of times 10: %s × 10 = %s, half is %s",
+  "tafelboem.tip.nine": "Times 9 is times 10 minus one: %s × 10 = %s, minus %1$s = %3$s",
+  "tafelboem.tip.four": "Times 4 is double double: %s → %s → %s",
+  "tafelboem.tip.three": "Times 3 is times 2 plus one more: %2$s + %1$s = %3$s",
+  "tafelboem.tip.five_split": "%s × %s = 5 × %2$s + %3$s × %2$s = %4$s + %5$s = %6$s",
+
+  "tafelboem.message.run": "Correct! RUN!",
+  "tafelboem.message.run_countdown": "Run! %s..."
+}

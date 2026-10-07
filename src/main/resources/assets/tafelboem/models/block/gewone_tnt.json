@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "bottom": "tafelboem:block/gewone_tnt_bottom",
+    "side": "tafelboem:block/gewone_tnt_side",
+    "top": "tafelboem:block/gewone_tnt_top"
+  }
+}

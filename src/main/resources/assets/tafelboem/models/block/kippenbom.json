@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "bottom": "tafelboem:block/kippenbom_bottom",
+    "side": "tafelboem:block/kippenbom_side",
+    "top": "tafelboem:block/kippenbom_top"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "itemGroup.tafelboem": "TafelBoem",
+  "block.tafelboem.knalletje": "Knalletje",
+  "block.tafelboem.gewone_tnt": "Gewone TNT",
+  "block.tafelboem.kippenbom": "Kippenbom",
+
+  "tafelboem.screen.title": "Elke lont is een som!",
+  "tafelboem.screen.hint": "Typ je antwoord en druk op Enter",
+  "tafelboem.screen.dont_know": "? Ik weet het niet",
+  "tafelboem.screen.reason.wrong": "Nog niet! Het goede antwoord is:",
+  "tafelboem.screen.reason.dont_know": "Geen probleem! Zo zit het:",
+  "tafelboem.screen.reason.chicken_out": "Tok tok! Zo zit het:",
+  "tafelboem.screen.same": "%s × %s is hetzelfde!",
+  "tafelboem.screen.retype": "Typ %s en druk op Enter",
+
+  "tafelboem.tip.one": "Keer 1 blijft hetzelfde getal: %s → %s",
+  "tafelboem.tip.ten": "Keer 10: zet een 0 achter %s → %s",
+  "tafelboem.tip.two": "Keer 2 is dubbel: %s + %1$s = %2$s",
+  "tafelboem.tip.five": "Keer 5 is de helft van keer 10: %s × 10 = %s, de helft is %s",
+  "tafelboem.tip.nine": "Keer 9 is keer 10 min één keer: %s × 10 = %s, min %1$s = %3$s",
+  "tafelboem.tip.four": "Keer 4 is dubbel-dubbel: %s → %s → %s",
+  "tafelboem.tip.three": "Keer 3 is keer 2 plus nog één keer: %2$s + %1$s = %3$s",
+  "tafelboem.tip.five_split": "%s × %s = 5 × %2$s + %3$s × %2$s = %4$s + %5$s = %6$s",
+
+  "tafelboem.message.run": "Goed zo! RENNEN!",
+  "tafelboem.message.run_countdown": "Rennen! %s..."
+}
