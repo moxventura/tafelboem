@@ -1,0 +1,27 @@
+{
+	"schemaVersion": 1,
+	"id": "tafelboem",
+	"version": "${version}",
+	"name": "TafelBoem",
+	"description": "Practise the times tables 1-10 with increasingly ridiculous TNT. Every fuse is a sum!",
+	"authors": [
+		"Jesper Jeeninga"
+	],
+	"license": "All-Rights-Reserved",
+	"icon": "assets/tafelboem/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"nl.jeeninga.tafelboem.TafelBoem"
+		],
+		"client": [
+			"nl.jeeninga.tafelboem.client.TafelBoemClient"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

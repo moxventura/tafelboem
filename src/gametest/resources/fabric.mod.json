@@ -1,0 +1,15 @@
+{
+	"schemaVersion": 1,
+	"id": "tafelboem-test",
+	"version": "1.0.0",
+	"name": "TafelBoem GameTests",
+	"environment": "*",
+	"entrypoints": {
+		"fabric-gametest": [
+			"nl.jeeninga.tafelboem.gametest.SmokeGameTest"
+		]
+	},
+	"depends": {
+		"tafelboem": "*"
+	}
+}
