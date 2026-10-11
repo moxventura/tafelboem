@@ -69,7 +69,7 @@ multiplayer sessions and a one-step deploy to every PC are part of R0.
 | **R0 POC "Graaf Fout komt!"** (~1 week) | see the R0 scope below | The rooted-question loop with a yeetable villain is fun, and an 8-year-old can use the question screen | see the R0 evaluation below |
 | **R0.1 "Beter mikken"** (patch) | see the R0.1 scope below | With the playtest-1 blockers fixed, the kids see every consequence of their answers, "?" is only pressed on purpose, and a correction on the HUD sticks as well as the retype did | see the R0.1 evaluation below |
 | **R1 "Kies je level"** | a hub with a door per level and stars; levels 1–3 (easy, medium, hard) with their own bombs; premade arenas from structure templates, including arenas the kids build; the yeet catalogue and the full yeet-o-meter; the counting Kippenbom; experiments behind toggles: dodgeable bombs and "Graaf Fout eats your mistake" | Choosing a level and more variety keep them coming back, and over time they pick harder levels; dodging and healing don't cut answers per minute or add frustration | levels picked per session, answers per minute vs R0.1, the kids still asking, frustration tally |
-| **R2 "Leren dat blijft"** | fact states and spaced picker, a Tafelkaart screen (GUI), parent report, the daily limit, "Kies je bom" | The practice spreads out and facts move toward Fluent | 2 weeks of logs: % Accurate/Fluent up, median time down, sessions spread over days, kids still asking |
+| **R2 "Leren dat blijft"** | fact states and spaced picker, a Tafelkaart screen (GUI), parent report, the daily limit, "Kies je bom", the full leg kick in third person | The practice spreads out and facts move toward Fluent | 2 weeks of logs: % Accurate/Fluent up, median time down, sessions spread over days, kids still asking |
 | **R3 "Meer boem"** | bombs 4–9, levels 4–9, particle choreographies, craters, escape aids, lethal tiers with 3 lives, inventory stash, signature reactions, co-op rescue sums, the lobby extras in the hub (Tafelkaart wall, trophy wall, animal pen) | Escalation keeps them climbing without frustration | level reached per week, favourite bombs, no tears at levels 7–9, FPS OK on the woonkamer PC |
 | R4 new villains *(when they ask for it)* | Tante Toverfout, then Robo-Rekenaar 3000 | Pulled by the kids beating Graaf Fout | |
 | R5 endgame | endless mode, hardcore, golden bomb, polish | | |
@@ -226,6 +226,8 @@ A patch on R0 that fixes what playtest 1 found (P-numbers refer to `docs/evaluat
   faceplants). Every yeet spins, and the same one never comes twice in a row.
 - **Yeet-o-meter, simple version.** When he lands, everyone in the fight sees "Graaf Fout vloog
   23 blokken!".
+- **Kick, simple version.** When a correct answer kicks the bomb back, the kid's arm swings the
+  vanilla way, with a "whoosh" sound and a small camera bump. No custom animation.
 - **World setup (P11).** `/tafelboem arena` makes the world fit for playing: always day, no
   weather, no mob spawning, keep inventory, and it removes hostile mobs nearby. It also lays a round
   arena floor around the player.
@@ -245,8 +247,9 @@ A patch on R0 that fixes what playtest 1 found (P-numbers refer to `docs/evaluat
 5. During a fight question the view turns to Graaf Fout, and after a correct answer the yeet is in
    view.
 6. At least three different yeets show up in one fight, never the same one twice in a row.
-7. `/tafelboem arena` stops day/night and mob spawning in an existing world.
-8. `/tafelboem stats` shows re-ask accuracy and likely mis-clicks.
+7. A correct answer in a fight gives an arm swing, a whoosh and a camera bump as the bomb leaves.
+8. `/tafelboem arena` stops day/night and mob spawning in an existing world.
+9. `/tafelboem stats` shows re-ask accuracy and likely mis-clicks.
 
 **R0.1 evaluation (playtest 2).** Record it in `docs/evaluations/R0.1.md`:
 - the R0 numbers that were missed: answers per 20 minutes, % correct, median time
@@ -317,11 +320,11 @@ A patch on R0 that fixes what playtest 1 found (P-numbers refer to `docs/evaluat
   - **Wrong:** the tier's penalty hits you, outside the question screen so you can see it.
   - **Camera assist:** while answering, the view turns to the boss, and after a correct answer it
     tracks him for 2 s so the kid never misses the reaction.
-  - **Kick animation (Jesper's idea, stage not decided).** The kid who answered correctly visibly
-    kicks the bomb back, so the hit feels like their own doing.
-    - Simple version: the vanilla arm swing, a "whoosh" sound and a small camera bump when the
-      kick leaves. No custom animation needed; a candidate for R0.1 next to the camera assist.
-    - Full version (R1, with the yeet catalogue): the right leg swings forward in third person, so
+  - **Kick animation.** The kid who answered correctly visibly kicks the bomb back, so the hit
+    feels like their own doing.
+    - Simple version (R0.1): the vanilla arm swing, a "whoosh" sound and a small camera bump when
+      the kick leaves. No custom animation needed.
+    - Full version (R2): the right leg swings forward in third person, so
       siblings on LAN see each other kick. This needs a player-model pose plus a payload to the
       other clients. In first person your own legs aren't visible; a boot swinging into view is
       later polish.

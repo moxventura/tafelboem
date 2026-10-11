@@ -22,9 +22,9 @@ go/no-go (see the spec):
 | Release | Content | Status |
 |---|---|---|
 | **R0 "Graaf Fout komt!"** | Core question loop, 3 bombs, basic Graaf Fout (yeeted on every hit), LAN, answer log | ✅ playtest 1 done |
-| **R0.1 "Beter mikken"** | Fixes from playtest 1: clearer question screen, correction on the HUD, distinct bombs, camera assist, more yeets, world setup, better stats | 🚧 in progress |
+| **R0.1 "Beter mikken"** | Fixes from playtest 1: clearer question screen, correction on the HUD, distinct bombs, camera assist, a simple kick, more yeets, world setup, better stats | 🚧 in progress |
 | R1 "Kies je level" | Hub with level doors, premade arenas (also built by the kids), yeet catalogue, counting Kippenbom, dodgeable bombs, Graaf Fout eats your mistake | backlog |
-| R2 "Leren dat blijft" | Fact states, spaced practice, Tafelkaart, parent report, daily limit, "Kies je bom" | backlog |
+| R2 "Leren dat blijft" | Fact states, spaced practice, Tafelkaart, parent report, daily limit, "Kies je bom", leg-kick animation | backlog |
 | R3 "Meer boem" | Bombs 4–9, craters, particle shows, lives, co-op rescue | backlog |
 | R4 new villains | Tante Toverfout, Robo-Rekenaar 3000 | backlog |
 | R5 endgame | Endless mode, hardcore | backlog |
