@@ -30,6 +30,7 @@ import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.Fight;
 import nl.jeeninga.tafelboem.core.Outcome;
 import nl.jeeninga.tafelboem.core.YeetPicker;
+import nl.jeeninga.tafelboem.core.YeetStyle;
 import nl.jeeninga.tafelboem.game.BombEffects;
 import nl.jeeninga.tafelboem.game.PlayerSafeExplosion;
 import nl.jeeninga.tafelboem.game.QuizListener;
@@ -52,8 +53,14 @@ public final class BossFight implements QuizListener {
 	static final int FINALE_TICKS = 60;
 	static final int LOOT_COUNT = 4;
 	static final double MAX_THROW_DISTANCE = 16;
-	/** How long the view keeps following him after a correct answer: the kick flight plus the yeet. */
-	public static final int KICK_CAM_TICKS = 50;
+	/**
+	 * After the kick the view follows Graaf Fout until he has landed; this is only the safety net
+	 * for a kick that never arrives. Landing then shortens it to the time he lies dizzy.
+	 */
+	public static final int KICK_CAM_MAX_TICKS = 140;
+	public static final int LANDED_CAM_TICKS = GraafFout.DIZZY_TICKS;
+	/** The final launch goes straight up; follow the start of it, not minutes of empty sky. */
+	static final int FINALE_CAM_TICKS = 40;
 
 	private enum Phase {
 		COOLDOWN,
@@ -241,7 +248,7 @@ public final class BossFight implements QuizListener {
 		// The simple kick: a vanilla swing everyone sees, a whoosh, and a camera bump on the kid's screen.
 		player.swing(InteractionHand.MAIN_HAND, true);
 		level.playSound(null, pos, SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 1.2F, 0.8F);
-		sessions.client().track(player, boss, KICK_CAM_TICKS, true);
+		sessions.client().track(player, boss, KICK_CAM_MAX_TICKS, true);
 
 		phase = Phase.KICK_IN_FLIGHT;
 		phaseTicks = FLIGHT_TIMEOUT;
@@ -286,28 +293,46 @@ public final class BossFight implements QuizListener {
 			level.sendParticles(ParticleTypes.FIREWORK, boss.getX(), boss.getY() + 1, boss.getZ(), 200, 1.5, 1.5, 1.5, 0.3);
 			level.playSound(null, boss.getX(), boss.getY(), boss.getZ(), SoundEvents.FIREWORK_ROCKET_LARGE_BLAST, SoundSource.HOSTILE, 3.0F, 1.0F);
 			say(Component.translatable("tafelboem.boss.graaf_fout.defeated"));
+			followKickerFor(FINALE_CAM_TICKS);
 			phase = Phase.FINALE;
 			phaseTicks = FINALE_TICKS;
 			return;
 		}
 
-		ServerPlayer kicker = lastKicker == null ? null : level.getServer().getPlayerList().getPlayer(lastKicker);
+		ServerPlayer kicker = kicker();
 		Vec3 kickedFrom = kicker != null ? kicker.position() : where;
 		boss.yeet(where, (0.9 + level.getRandom().nextDouble() * 0.5) * tier.yeetPower(), yeets.next(), kickedFrom);
 		phase = Phase.REACTING;
 		phaseTicks = 20;
 	}
 
-	/** The yeet-o-meter: everyone in the fight sees how far he flew. */
-	void onYeetLanded(int blocks) {
-		if (phase == Phase.FINALE || phase == Phase.OVER || blocks < 1) {
+	/** The yeet-o-meter: everyone in the fight sees how far (or for the helicopter, how high) he flew. */
+	void onYeetLanded(YeetStyle style, int blocks) {
+		if (phase == Phase.FINALE || phase == Phase.OVER) {
 			return;
 		}
-		Component message = Component.translatable("tafelboem.message.yeet_distance", boss.getDisplayName(), blocks)
+		followKickerFor(LANDED_CAM_TICKS);
+		if (blocks < 1) {
+			return;
+		}
+		String key = style == YeetStyle.HELICOPTER ? "tafelboem.message.yeet_height" : "tafelboem.message.yeet_distance";
+		Component message = Component.translatable(key, boss.getDisplayName(), blocks)
 				.withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD);
 		for (ServerPlayer player : participantPlayers()) {
 			sessions.client().actionBar(player, message);
 		}
+	}
+
+	/** Keeps the kicker's view on Graaf Fout for a little longer, then lets go. */
+	private void followKickerFor(int ticks) {
+		ServerPlayer kicker = kicker();
+		if (kicker != null) {
+			sessions.client().track(kicker, boss, ticks, false);
+		}
+	}
+
+	private @Nullable ServerPlayer kicker() {
+		return lastKicker == null ? null : level.getServer().getPlayerList().getPlayer(lastKicker);
 	}
 
 	private void reward() {

@@ -3,6 +3,9 @@ package nl.jeeninga.tafelboem.boss;
 import org.jspecify.annotations.Nullable;
 
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -17,6 +20,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 
+import nl.jeeninga.tafelboem.core.YeetPose;
 import nl.jeeninga.tafelboem.core.YeetStyle;
 
 /**
@@ -27,13 +31,22 @@ import nl.jeeninga.tafelboem.core.YeetStyle;
  * long as the server session.
  */
 public class GraafFout extends Evoker {
+	private static final EntityDataAccessor<Byte> DATA_YEET_POSE = SynchedEntityData.defineId(GraafFout.class, EntityDataSerializers.BYTE);
+
 	private static final double HOVER_HEIGHT = 1.5;
-	private static final int DIZZY_TICKS = 30;
+	static final int DIZZY_TICKS = 30;
 	private static final int MAX_AIRBORNE_TICKS = 100;
 	private static final int MAX_BOUNCES = 3;
-	private static final int HELICOPTER_RISE_TICKS = 30;
+	/** Each bounce is lower and shorter, so even the strongest bomb keeps him near the arena (about 18 blocks). */
+	private static final double BOUNCE_LAUNCH = 0.6;
+	private static final double BOUNCE_REBOUND = 0.45;
+	private static final double BOUNCE_DAMPING = 0.6;
+	/** The helicopter rises this many ticks per unit of yeet power: a bigger bomb, a higher flight. */
+	private static final double HELICOPTER_RISE_TICKS_PER_POWER = 22;
 	private static final int BOOMERANG_OUT_TICKS = 12;
 	private static final int BOOMERANG_MAX_TICKS = 45;
+	/** The boomerang drops this far in front of the kid, so his face lands just short of their feet. */
+	private static final double BOOMERANG_STOP = 4;
 
 	private @Nullable BossFight fight;
 	private boolean airborne;
@@ -48,8 +61,17 @@ public class GraafFout extends Evoker {
 	private Vec3 returnTo = Vec3.ZERO;
 	private double power;
 	private double furthest;
+	private double launchGround;
+	private double highest;
+	private int helicopterRiseTicks;
 	private int bounces;
 	private int stageTicks;
+
+	/** Client side: when the pose last changed and what came before, so the renderer can ease in and out. */
+	private YeetPose shownPose = YeetPose.NONE;
+	private YeetPose previousPose = YeetPose.NONE;
+	private YeetPose.Angles previousAngles = YeetPose.Angles.UPRIGHT;
+	private int poseChangedAt;
 
 	public GraafFout(EntityType<? extends GraafFout> type, Level level) {
 		super(type, level);
@@ -68,6 +90,43 @@ public class GraafFout extends Evoker {
 	void attach(BossFight fight) {
 		this.fight = fight;
 		setNoGravity(true);
+	}
+
+	@Override
+	protected void defineSynchedData(SynchedEntityData.Builder entityData) {
+		super.defineSynchedData(entityData);
+		entityData.define(DATA_YEET_POSE, (byte) YeetPose.NONE.ordinal());
+	}
+
+	/** The extra roll or faceplant on top of his spin; the server decides, every client draws it. */
+	public YeetPose yeetPose() {
+		return YeetPose.values()[entityData.get(DATA_YEET_POSE)];
+	}
+
+	private void setYeetPose(YeetPose pose) {
+		entityData.set(DATA_YEET_POSE, (byte) pose.ordinal());
+	}
+
+	@Override
+	public void onSyncedDataUpdated(EntityDataAccessor<?> accessor) {
+		super.onSyncedDataUpdated(accessor);
+		if (DATA_YEET_POSE.equals(accessor) && level().isClientSide()) {
+			previousAngles = renderAngles(0F);
+			previousPose = shownPose;
+			shownPose = yeetPose();
+			poseChangedAt = tickCount;
+		}
+	}
+
+	/** Client side: the pose whose pivot the renderer should use, including while settling back up. */
+	public YeetPose renderPose() {
+		return shownPose != YeetPose.NONE ? shownPose : previousPose;
+	}
+
+	/** Client side: the extra roll and pitch to draw him with right now. */
+	public YeetPose.Angles renderAngles(float partialTick) {
+		float ticks = tickCount - poseChangedAt + partialTick;
+		return shownPose != YeetPose.NONE ? shownPose.angles(ticks) : YeetPose.settle(previousAngles, ticks);
 	}
 
 	public boolean isReacting() {
@@ -128,19 +187,24 @@ public class GraafFout extends Evoker {
 		this.power = power;
 		this.launchPos = position();
 		this.furthest = 0;
+		this.launchGround = level().getHeight(Heightmap.Types.MOTION_BLOCKING, getBlockX(), getBlockZ());
+		this.highest = 0;
+		this.helicopterRiseTicks = (int) Math.round(HELICOPTER_RISE_TICKS_PER_POWER * power);
 		this.bounces = 0;
 		this.stageTicks = 0;
-		// The boomerang faceplants three blocks in front of the kid, never on top of them.
-		this.returnTo = kicker.add(launchPos.subtract(kicker).multiply(1, 0, 1).normalize().scale(3));
+		// The boomerang faceplants in front of the kid, never on top of them.
+		this.returnTo = kicker.add(launchPos.subtract(kicker).multiply(1, 0, 1).normalize().scale(BOOMERANG_STOP));
+		setYeetPose(style == YeetStyle.TUMBLE ? YeetPose.TUMBLE : YeetPose.NONE);
 
 		airborne = true;
 		airborneTicks = 0;
 		dizzyTicks = 0;
 		switch (style) {
 			case CLASSIC -> launch(power, 0.6 + power * 0.6, false);
-			case BOUNCE -> launch(power * 0.8, 0.5 + power * 0.4, false);
+			case BOUNCE -> launch(power * BOUNCE_LAUNCH, 0.5 + power * 0.3, false);
 			case HELICOPTER -> launch(0.15, 0.22, true);
 			case BOOMERANG -> launch(power * 0.9, 0.35, true);
+			case TUMBLE -> launch(power * 0.85, 0.55 + power * 0.55, false);
 		}
 		needsSync = true;
 		armsUp(true);
@@ -158,6 +222,7 @@ public class GraafFout extends Evoker {
 	public void finalYeet() {
 		finale = true;
 		airborne = false;
+		setYeetPose(YeetPose.NONE);
 		setNoGravity(true);
 		armsUp(true);
 		playSound(SoundEvents.EVOKER_HURT, 2.0F, 0.6F);
@@ -187,6 +252,7 @@ public class GraafFout extends Evoker {
 		airborneTicks++;
 		stageTicks++;
 		furthest = Math.max(furthest, position().subtract(launchPos).horizontalDistance());
+		highest = Math.max(highest, getY() - launchGround);
 		level.sendParticles(ParticleTypes.CLOUD, getX(), getY() + 1, getZ(), 1, 0.1, 0.1, 0.1, 0.0);
 
 		boolean landed = switch (style) {
@@ -203,8 +269,15 @@ public class GraafFout extends Evoker {
 				yield helicopter(level);
 			}
 			case BOOMERANG -> {
-				spin(60F);
+				if (yeetPose() != YeetPose.FACEPLANT) {
+					spin(60F);
+				}
 				yield boomerang();
+			}
+			case TUMBLE -> {
+				// Slower spin than the classic, so the roll and the flips (drawn by the client) show.
+				spin(20F);
+				yield onGround() && airborneTicks > 5;
 			}
 		};
 		if (landed || airborneTicks > MAX_AIRBORNE_TICKS) {
@@ -222,7 +295,7 @@ public class GraafFout extends Evoker {
 		}
 		bounces++;
 		stageTicks = 0;
-		double horizontal = power * 0.8 * Math.pow(0.8, bounces);
+		double horizontal = power * BOUNCE_REBOUND * Math.pow(BOUNCE_DAMPING, bounces);
 		setDeltaMovement(away.x * horizontal, 0.55 - 0.1 * bounces, away.z * horizontal);
 		level.playSound(null, getX(), getY(), getZ(), SoundEvents.SLIME_JUMP, SoundSource.HOSTILE, 1.5F, 0.9F + 0.15F * bounces);
 		level.sendParticles(ParticleTypes.CLOUD, getX(), getY() + 0.1, getZ(), 8, 0.4, 0.05, 0.4, 0.02);
@@ -231,10 +304,10 @@ public class GraafFout extends Evoker {
 
 	/** Spins up slowly on his cape like a propeller, then gravity remembers him. */
 	private boolean helicopter(ServerLevel level) {
-		if (stageTicks <= HELICOPTER_RISE_TICKS) {
+		if (stageTicks <= helicopterRiseTicks) {
 			setDeltaMovement(away.x * 0.12, 0.22, away.z * 0.12);
 			level.sendParticles(ParticleTypes.SWEEP_ATTACK, getX(), getY() + 2.1, getZ(), 1, 0, 0, 0, 0);
-			if (stageTicks == HELICOPTER_RISE_TICKS) {
+			if (stageTicks == helicopterRiseTicks) {
 				setNoGravity(false);
 				playSound(SoundEvents.EVOKER_HURT, 1.5F, 1.4F);
 			}
@@ -255,6 +328,7 @@ public class GraafFout extends Evoker {
 			if (back.horizontalDistance() < 1.5 || stageTicks > BOOMERANG_MAX_TICKS) {
 				setNoGravity(false);
 				setDeltaMovement(back.multiply(0.1, 0, 0.1).add(0, -0.4, 0));
+				faceplantTowards(away.reverse());
 			} else {
 				setDeltaMovement(back.normalize().scale(0.6));
 			}
@@ -263,8 +337,20 @@ public class GraafFout extends Evoker {
 		return onGround();
 	}
 
+	/** Stops spinning, turns to face where he was flying and falls flat on his face. */
+	private void faceplantTowards(Vec3 direction) {
+		float yaw = (float) (Mth.atan2(direction.z, direction.x) * Mth.RAD_TO_DEG) - 90F;
+		setYRot(yaw);
+		setYBodyRot(yaw);
+		setYHeadRot(yaw);
+		setYeetPose(YeetPose.FACEPLANT);
+	}
+
 	private void land(ServerLevel level) {
 		airborne = false;
+		if (yeetPose() == YeetPose.TUMBLE) {
+			setYeetPose(YeetPose.NONE);
+		}
 		dizzyTicks = DIZZY_TICKS;
 		setNoGravity(false);
 		setDeltaMovement(Vec3.ZERO);
@@ -276,16 +362,23 @@ public class GraafFout extends Evoker {
 		}
 		level.playSound(null, getX(), getY(), getZ(), SoundEvents.GENERIC_BIG_FALL, SoundSource.HOSTILE, 1.5F, 0.8F);
 		if (fight != null) {
-			fight.onYeetLanded((int) Math.round(furthest));
+			// The helicopter goes up more than away, so the yeet-o-meter says how high he got.
+			double blocks = style == YeetStyle.HELICOPTER ? highest : furthest;
+			fight.onYeetLanded(style, (int) Math.round(blocks));
 		}
 	}
 
 	private void dizzy(ServerLevel level) {
 		dizzyTicks--;
 		double angle = tickCount * 0.5;
-		level.sendParticles(ParticleTypes.CRIT, getX() + Math.cos(angle) * 0.5, getEyeY() + 0.6, getZ() + Math.sin(angle) * 0.5,
-				1, 0, 0, 0, 0);
+		Vec3 head = new Vec3(getX(), getEyeY() + 0.6, getZ());
+		if (yeetPose() == YeetPose.FACEPLANT) {
+			// Face down on the ground: the stars circle where his head ended up.
+			head = position().add(Vec3.directionFromRotation(0, getYRot()).scale(1.6)).add(0, 0.4, 0);
+		}
+		level.sendParticles(ParticleTypes.CRIT, head.x + Math.cos(angle) * 0.5, head.y, head.z + Math.sin(angle) * 0.5, 1, 0, 0, 0, 0);
 		if (dizzyTicks == 0) {
+			setYeetPose(YeetPose.NONE);
 			setNoGravity(true);
 		}
 	}

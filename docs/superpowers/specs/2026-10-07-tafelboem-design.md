@@ -219,13 +219,19 @@ A patch on R0 that fixes what playtest 1 found (P-numbers refer to `docs/evaluat
   - A thrown bomb trails particles in its own colour, and Graaf Fout shouts its name.
   - A kicked bomb's blast and the yeet's power grow with the bomb.
 - **Camera assist (P8).** While a fight question is open, the view turns smoothly to Graaf Fout.
-  After a correct answer it keeps tracking him for 2 s, so the kick and the yeet are in view.
-  Config toggle `cameraAssist`.
-- **More yeets (P1).** Besides the classic yeet: a bounce yeet (three bounces with a boing), a
-  helicopter yeet (spins up slowly, then drops) and a boomerang yeet (flies off, comes back and
-  faceplants). Every yeet spins, and the same one never comes twice in a row.
+  After a correct answer it keeps following him until he has landed and lies dizzy, then lets go
+  (at most 7 s, in case the kick never arrives). Config toggle `cameraAssist`.
+- **More yeets (P1).** Besides the classic yeet:
+  - a bounce yeet: three bounces with a boing, each one lower and shorter, so even the strongest
+    Gewone TNT lands about 18 blocks away instead of 30+;
+  - a helicopter yeet: spins up slowly, then drops; a bigger bomb sends him higher (about 6 blocks
+    for a Knalletje, up to 12 for a Gewone TNT);
+  - a boomerang yeet: flies off, comes back and falls flat on his face just in front of the kid,
+    lying there dizzy with the stars at his head;
+  - a tumble yeet: rolls and flips head over heels while he spins (yeet review, 2026-10-11).
+  Every yeet spins, and the same one never comes twice in a row.
 - **Yeet-o-meter, simple version.** When he lands, everyone in the fight sees "Graaf Fout vloog
-  23 blokken!".
+  23 blokken!", or for the helicopter "Graaf Fout vloog 12 blokken hoog!".
 - **Kick, simple version.** When a correct answer kicks the bomb back, the kid's arm swings the
   vanilla way, with a "whoosh" sound and a small camera bump. No custom animation.
 - **World setup (P11).** `/tafelboem arena` makes the world fit for playing: always day, no
@@ -244,8 +250,8 @@ A patch on R0 that fixes what playtest 1 found (P-numbers refer to `docs/evaluat
 3. After a wrong answer, the kid sees the penalty, then the fact on the HUD, and can move straight
    away.
 4. Knalletje and Gewone TNT can be told apart in flight and when kicked.
-5. During a fight question the view turns to Graaf Fout, and after a correct answer the yeet is in
-   view.
+5. During a fight question the view turns to Graaf Fout, and after a correct answer the view
+   follows him until he has landed.
 6. At least three different yeets show up in one fight, never the same one twice in a row.
 7. A correct answer in a fight gives an arm swing, a whoosh and a camera bump as the bomb leaves.
 8. `/tafelboem arena` stops day/night and mob spawning in an existing world.
@@ -319,7 +325,7 @@ A patch on R0 that fixes what playtest 1 found (P-numbers refer to `docs/evaluat
   - **Failed escape:** you are only launched, harmlessly. **A correct answer never hurts you.**
   - **Wrong:** the tier's penalty hits you, outside the question screen so you can see it.
   - **Camera assist:** while answering, the view turns to the boss, and after a correct answer it
-    tracks him for 2 s so the kid never misses the reaction.
+    follows him until he has landed, so the kid never misses the reaction.
   - **Kick animation.** The kid who answered correctly visibly kicks the bomb back, so the hit
     feels like their own doing.
     - Simple version (R0.1): the vanilla arm swing, a "whoosh" sound and a small camera bump when
@@ -398,13 +404,17 @@ A patch on R0 that fixes what playtest 1 found (P-numbers refer to `docs/evaluat
 - **Spin is the core.** Playtest 1 showed the spinning yeet was the funniest thing in the game, so
   every reaction includes a spin.
 - **Yeet-o-meter.** After every yeet, everyone in the fight sees how far he flew: *"Graaf Fout
-  vloog 23 blokken!"* (R0.1). From R1 there is a personal best, and fast answers and streaks yeet
+  vloog 23 blokken!"* (R0.1). For the helicopter it says how high: *"…vloog 12 blokken hoog!"*,
+  so the helicopter doesn't always look like the weakest yeet. From R1 there is a personal best, and fast answers and streaks yeet
   him further. Only personal bests, no ranking between siblings.
 - **Shared reaction moves** (used by every boss, with that boss's props):
   - **Yeet:** launched with a spin, landing head-first stuck in the ground, legs wiggling, then pops out.
-  - **Bounce yeet:** bounces three times like a ball, with a boing on each bounce (R0.1).
-  - **Helicopter yeet:** spins up slowly on his cape like a propeller, then drops (R0.1).
-  - **Boomerang yeet:** flies off, curves back and faceplants near the kid (R0.1).
+  - **Bounce yeet:** bounces three times like a ball, each bounce lower, with a boing on each
+    bounce (R0.1).
+  - **Helicopter yeet:** spins up slowly on his cape like a propeller, higher for a bigger bomb,
+    then drops (R0.1).
+  - **Boomerang yeet:** flies off, curves back and falls flat on his face in front of the kid (R0.1).
+  - **Tumble yeet:** rolls and flips head over heels while he spins (R0.1).
   - **Wall splat:** flies into the arena wall, sticks for a moment and slides down.
   - **Frantic running:** circles the arena with his pants smoking, waving his arms.
   - **Pancake:** squashed flat, waddles, then *boing* back into shape.

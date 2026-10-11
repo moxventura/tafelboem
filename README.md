@@ -55,6 +55,9 @@ Requirements: JDK 25 (`sudo apt install openjdk-25-jdk`).
    `fabric-api-0.161.0+26.2.jar` into `minecraft\mods`.
 4. Start it, create a world with cheats on, stand where the fight should be and type
    `/tafelboem arena`: always day, no weather, no monsters, and an arena floor under your feet.
+   For a world that has cheats off, use **Esc → Instellingen → Wereldinstellingen** and set
+   **Cheats** to on and **Spelmodus** to Creatief. The cheat and game-mode settings on the
+   **Openen voor LAN** screen only apply to players who join, not to the host.
 5. For more PCs: right-click the instance → **Export** → Prism zip, and on the other PC
    **Add Instance** → **Import**. Fabric, the mods and the world come along.
 

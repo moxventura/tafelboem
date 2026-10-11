@@ -41,5 +41,6 @@
   "tafelboem.stats.misclicks": "Probably pressed ? by accident: %s times",
   "tafelboem.boss.graaf_fout.throws": "Look out: a %s!",
   "tafelboem.message.yeet_distance": "%s flew %s blocks!",
+  "tafelboem.message.yeet_height": "%s flew %s blocks high!",
   "tafelboem.arena.done": "Ready for TafelBoem: always day, no monsters, an arena under your feet. Removed %s monsters."
 }

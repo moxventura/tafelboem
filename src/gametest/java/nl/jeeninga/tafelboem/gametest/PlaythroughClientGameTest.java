@@ -14,9 +14,12 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 
 import nl.jeeninga.tafelboem.TafelBoem;
+import nl.jeeninga.tafelboem.boss.GraafFout;
 import nl.jeeninga.tafelboem.client.CorrectionHud;
 import nl.jeeninga.tafelboem.client.QuestionScreen;
 import nl.jeeninga.tafelboem.core.BombTier;
+import nl.jeeninga.tafelboem.core.YeetPose;
+import nl.jeeninga.tafelboem.core.YeetStyle;
 import nl.jeeninga.tafelboem.registry.ModBlocks;
 
 /**
@@ -95,7 +98,60 @@ public class PlaythroughClientGameTest implements FabricClientGameTest {
 			context.takeScreenshot("tafelboem-08-yeet");
 			context.waitTicks(30);
 			context.takeScreenshot("tafelboem-09-dizzy");
+
+			// 4. The tumble and the boomerang's faceplant, on cue, since a fight picks yeets at random.
+			yeetOnCue(world, YeetStyle.TUMBLE);
+			context.waitTicks(10);
+			context.takeScreenshot("tafelboem-10-tumble");
+			context.waitTicks(4);
+			context.takeScreenshot("tafelboem-11-tumble-later");
+
+			yeetOnCue(world, YeetStyle.BOOMERANG);
+			for (int tick = 0; !faceDown(world); tick++) {
+				check(tick < 100, "the boomerang should end with Graaf Fout face down on the ground");
+				context.waitTicks(1);
+			}
+			context.waitTicks(8);
+			context.takeScreenshot("tafelboem-12-faceplant");
+			BlockPos faceDownAt = world.getServer().computeOnServer(server -> {
+				ServerPlayer player = server.getPlayerList().getPlayers().getFirst();
+				GraafFout boss = TafelBoem.fights().active().getFirst().boss();
+				Vec3 side = Vec3.directionFromRotation(0, boss.getYRot() + 90F).scale(4);
+				player.teleportTo(boss.getX() + side.x, boss.getY(), boss.getZ() + side.z);
+				return boss.blockPosition();
+			});
+			context.waitTicks(2);
+			context.getInput().lookAt(faceDownAt);
+			context.waitTicks(2);
+			context.takeScreenshot("tafelboem-13-faceplant-side");
+			world.getServer().runOnServer(server -> TafelBoem.fights().endAll());
 		}
+	}
+
+	private static boolean faceDown(TestSingleplayerContext world) {
+		return world.getServer().computeOnServer(server -> {
+			GraafFout boss = TafelBoem.fights().active().getFirst().boss();
+			return boss.onGround() && boss.yeetPose() == YeetPose.FACEPLANT;
+		});
+	}
+
+	/**
+	 * A fresh Graaf Fout 8 blocks ahead, yeeted sideways across the view, with the camera assist
+	 * following him the way it does after a kick.
+	 */
+	private static void yeetOnCue(TestSingleplayerContext world, YeetStyle style) {
+		world.getServer().runOnServer(server -> {
+			TafelBoem.fights().endAll();
+			ServerPlayer player = server.getPlayerList().getPlayers().getFirst();
+			Direction facing = player.getDirection();
+			Direction side = facing.getClockWise();
+			Vec3 spot = player.position().add(facing.getStepX() * 8, 1.5, facing.getStepZ() * 8);
+			TafelBoem.fights().summon(player.level(), spot);
+			GraafFout boss = TafelBoem.fights().active().getFirst().boss();
+			Vec3 from = spot.subtract(side.getStepX() * 2, 0, side.getStepZ() * 2);
+			boss.yeet(from, 1.2, style, player.position());
+			TafelBoem.sessions().client().track(player, boss, 60, false);
+		});
 	}
 
 	/** Playtest 1: the OK button was too small and the kids hit "?" next to it instead. */

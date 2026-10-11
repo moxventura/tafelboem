@@ -5,12 +5,14 @@ package nl.jeeninga.tafelboem.core;
  * the funniest thing in the game, so every style spins.
  */
 public enum YeetStyle {
-	/** Launched up and away, tumbling. */
+	/** Launched up and away in a high arc, spinning. */
 	CLASSIC,
 	/** Bounces three times like a ball, boing, boing, boing. */
 	BOUNCE,
 	/** Spins up slowly on his cape like a propeller, then drops. */
 	HELICOPTER,
 	/** Flies off, comes back and faceplants near the kid. */
-	BOOMERANG
+	BOOMERANG,
+	/** Rolls and flips head over heels while he spins: a real tumble. */
+	TUMBLE
 }

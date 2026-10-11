@@ -9,6 +9,8 @@ import java.util.Set;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 
@@ -59,10 +61,51 @@ public class BossFightGameTest {
 			int boss = fight.boss().getId();
 			helper.assertTrue(client.tracks.stream().anyMatch(t -> t.entityId() == boss && t.ticksAfterScreen() == 0 && !t.kick()),
 					"while answering, the view turns to Graaf Fout");
-			helper.assertTrue(client.tracks.stream().anyMatch(t -> t.entityId() == boss && t.ticksAfterScreen() == BossFight.KICK_CAM_TICKS && t.kick()),
+			helper.assertTrue(client.tracks.stream().anyMatch(t -> t.entityId() == boss && t.ticksAfterScreen() == BossFight.KICK_CAM_MAX_TICKS && t.kick()),
 					"after the kick, the view follows him through the yeet");
 			fights.endAll();
 		});
+	}
+
+	@GameTest(maxTicks = 600, padding = 48)
+	@SuppressWarnings("removal") // mock players are still the only way to test without a client
+	public void theViewFollowsGraafFoutUntilHeIsDizzyOnTheGround(GameTestHelper helper) {
+		OpenField.open(helper);
+		RecordingQuizClient client = new RecordingQuizClient();
+		SessionManager sessions = new SessionManager(helper.getLevel().getServer(), new Learners(new AnswerLog(tempDir())), client);
+		BossFights fights = new BossFights(sessions);
+
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		Vec3 stand = Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(1, 1, 1)));
+		player.teleportTo(stand.x, stand.y, stand.z);
+		helper.assertTrue(fights.summon(helper.getLevel(), stand.add(6, 1.5, 0)), "Graaf Fout should appear");
+		BossFight fight = fights.active().getFirst();
+
+		Set<Integer> answered = new HashSet<>();
+		helper.onEachTick(() -> {
+			sessions.tick();
+			fights.tick();
+			for (RecordingQuizClient.Sent sent : List.copyOf(client.sentTo)) {
+				QuizS2C question = sent.payload();
+				if (question.mode() == QuizS2C.ASK && answered.add(question.sessionId())) {
+					sessions.onClientAction(sent.player(), new QuizC2S(question.sessionId(), QuizC2S.ANSWER, question.a() * question.b(), QuizC2S.VIA_KEY));
+				}
+			}
+		});
+
+		helper.succeedWhen(() -> {
+			int boss = fight.boss().getId();
+			helper.assertFalse(client.actionBars.stream().noneMatch(BossFightGameTest::isYeetOMeter), "wait until he has landed");
+			helper.assertTrue(client.tracks.stream().anyMatch(t -> t.player() == player && t.entityId() == boss
+					&& t.ticksAfterScreen() == BossFight.LANDED_CAM_TICKS && !t.kick()),
+					"once he lands, the view stays on him while he is dizzy and then lets go");
+			fights.endAll();
+		});
+	}
+
+	private static boolean isYeetOMeter(Component message) {
+		return message.getContents() instanceof TranslatableContents translatable
+				&& translatable.getKey().startsWith("tafelboem.message.yeet_");
 	}
 
 	private static java.nio.file.Path tempDir() {
