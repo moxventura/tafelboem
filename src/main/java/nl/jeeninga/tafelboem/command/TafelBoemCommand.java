@@ -10,6 +10,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -19,6 +20,7 @@ import nl.jeeninga.tafelboem.core.StatsReport;
 
 /**
  * {@code /tafelboem stats [player]}: a parent-friendly summary of the answer log.
+ * {@code /tafelboem arena}: make this world fit for TafelBoem (needs cheats, like {@code /gamerule}).
  */
 public final class TafelBoemCommand {
 	private TafelBoemCommand() {
@@ -26,10 +28,20 @@ public final class TafelBoemCommand {
 
 	public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
 		dispatcher.register(Commands.literal("tafelboem")
+				.then(Commands.literal("arena")
+						.requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+						.executes(context -> arena(context.getSource())))
 				.then(Commands.literal("stats")
 						.executes(context -> stats(context.getSource(), context.getSource().getPlayerOrException()))
 						.then(Commands.argument("player", EntityArgument.player())
 								.executes(context -> stats(context.getSource(), EntityArgument.getPlayer(context, "player"))))));
+	}
+
+	private static int arena(CommandSourceStack source) {
+		BlockPos center = BlockPos.containing(source.getPosition());
+		int removed = ArenaSetup.apply(source.getLevel(), center);
+		source.sendSuccess(() -> Component.translatable("tafelboem.arena.done", removed).withStyle(ChatFormatting.GOLD), true);
+		return 1;
 	}
 
 	private static int stats(CommandSourceStack source, ServerPlayer player) throws CommandSyntaxException {

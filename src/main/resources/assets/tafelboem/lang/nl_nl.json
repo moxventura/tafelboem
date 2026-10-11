@@ -40,5 +40,6 @@
   "tafelboem.stats.reasks": "Opnieuw gevraagd na een fout: %s van %s goed (%s%%)",
   "tafelboem.stats.misclicks": "Waarschijnlijk per ongeluk op ? gedrukt: %s keer",
   "tafelboem.boss.graaf_fout.throws": "Pas op: een %s!",
-  "tafelboem.message.yeet_distance": "%s vloog %s blokken!"
+  "tafelboem.message.yeet_distance": "%s vloog %s blokken!",
+  "tafelboem.arena.done": "Klaar voor TafelBoem: altijd dag, geen monsters, een arena onder je voeten. %s monsters weggehaald."
 }
