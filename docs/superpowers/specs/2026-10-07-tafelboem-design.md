@@ -9,16 +9,19 @@ git repo pushed to a **private GitHub repo `tafelboem`**. Minecraft Java up to 2
 `C:\Users\jeejes\AppData\Roaming\.minecraft`, no mod loader). WSL is Debian 13 with no JDK.
 
 The design was shaped with Jesper and then reviewed from three angles: a kid's playthrough, a
-teacher's view and gamification theory. Decisions:
+teacher's view and gamification theory. It was revised after R0 playtest 1 on 2026-10-11; see
+[`docs/evaluations/R0.md`](../../evaluations/R0.md). Decisions:
 - **Delivered in small releases, each evaluated with the kids.**
   - **R0 POC** is the core question loop plus a simple Graaf Fout who gets **yeeted on every
     hit**, played over LAN on the woonkamer PC and the other PCs.
   - The rest of the design is a backlog, re-prioritised after every evaluation.
 - **Fabric on Minecraft 26.2.** UI follows the game language (nl_nl + en_us).
 - **"Bomb in your lap" loop.** Every fuse is a sum and you are rooted in place while answering.
-  Right means you strike back or escape. Wrong means the bomb goes off on you.
-- **A TafelBoem world type.** The whole world is a floating arena island, so there is nowhere to
-  wander off to.
+  Right means you strike back or escape. Wrong means the bomb goes off on you, you're free again,
+  and the correct fact shows big on your HUD while the game goes on.
+- **Premade levels and a hub.** Arenas are premade (some built by the kids themselves) and placed
+  in a void world. A hub with a door per level is where you pick a level. This replaces the
+  generated arena island; the kids disliked the creative superflat world.
 - **Three bosses, each with 9 levels, played in order:**
   1. **Graaf Fout** (Count Wrong), who builds accuracy.
   2. **Tante Toverfout**, who builds flexibility with missing-factor questions.
@@ -64,11 +67,17 @@ multiplayer sessions and a one-step deploy to every PC are part of R0.
 | Release | The kids get | Hypothesis | Go/no-go evidence |
 |---|---|---|---|
 | **R0 POC "Graaf Fout komt!"** (~1 week) | see the R0 scope below | The rooted-question loop with a yeetable villain is fun, and an 8-year-old can use the question screen | see the R0 evaluation below |
-| **R1 "Leren dat blijft"** | fact states and spaced picker, a Tafelkaart screen (GUI), parent report, levels 1–3 with loot, more reactions (frantic run, pancake, dizzy), the product grid, the daily limit | The practice spreads out and facts move toward Fluent; levels and loot add pull | 2 weeks of logs: % Accurate/Fluent up, median time down, sessions spread over days, kids still asking |
-| **R2 "Meer boem"** | bombs 4–9, levels 4–9, particle choreographies, craters, escape aids, lethal tiers with 3 lives, inventory stash, signature reactions, co-op rescue sums | Escalation keeps them climbing without frustration | level reached per week, favourite bombs, no tears at levels 7–9, FPS OK on the woonkamer PC |
-| R3 own world *(only if needed)* | the TafelBoem world type, arena island, lobby, Tafelkaart wall in blocks | Only if R0–R2 show them actually wandering off | observation |
+| **R0.1 "Beter mikken"** (patch) | see the R0.1 scope below | With the playtest-1 blockers fixed, the kids see every consequence of their answers, "?" is only pressed on purpose, and a correction on the HUD sticks as well as the retype did | see the R0.1 evaluation below |
+| **R1 "Kies je level"** | a hub with a door per level and stars; levels 1–3 (easy, medium, hard) with their own bombs; premade arenas from structure templates, including arenas the kids build; the yeet catalogue and the full yeet-o-meter; the counting Kippenbom; experiments behind toggles: dodgeable bombs and "Graaf Fout eats your mistake" | Choosing a level and more variety keep them coming back, and over time they pick harder levels; dodging and healing don't cut answers per minute or add frustration | levels picked per session, answers per minute vs R0.1, the kids still asking, frustration tally |
+| **R2 "Leren dat blijft"** | fact states and spaced picker, a Tafelkaart screen (GUI), parent report, the daily limit, "Kies je bom" | The practice spreads out and facts move toward Fluent | 2 weeks of logs: % Accurate/Fluent up, median time down, sessions spread over days, kids still asking |
+| **R3 "Meer boem"** | bombs 4–9, levels 4–9, particle choreographies, craters, escape aids, lethal tiers with 3 lives, inventory stash, signature reactions, co-op rescue sums, the lobby extras in the hub (Tafelkaart wall, trophy wall, animal pen) | Escalation keeps them climbing without frustration | level reached per week, favourite bombs, no tears at levels 7–9, FPS OK on the woonkamer PC |
 | R4 new villains *(when they ask for it)* | Tante Toverfout, then Robo-Rekenaar 3000 | Pulled by the kids beating Graaf Fout | |
 | R5 endgame | endless mode, hardcore, golden bomb, polish | | |
+| *Infra, after R2, only if needed* | a Fabric dedicated server on the NAS: one world and one answer log for every PC | Only if hosting on the woonkamer PC or logs spread over PCs become a problem | |
+
+The learning model moved from R1 to R2 after playtest 1, because the kids' feedback was all about
+agency and variety. No data is lost by this: every answer has been logged since R0, so the R2 model
+can be replayed and tuned on real history.
 
 **Evaluation after every release** (about 30 minutes):
 1. Watch a play session without helping. Tally confusion, laughter and frustration moments.
@@ -187,14 +196,82 @@ don't need a custom world type to test the loop.
 - **Record:** answers per session, accuracy, median time, "?" and ESC counts, the laugh tally, and
   the kids' 3 answers. Store them in `docs/evaluations/R0.md`.
 
+## R0.1 "Beter mikken" (detailed scope)
+
+A patch on R0 that fixes what playtest 1 found (P-numbers refer to `docs/evaluations/R0.md`).
+
+**In scope:**
+- **Question screen in vanilla style (P2).** No new colours, only vanilla buttons:
+  - OK is a wide button under the pad, where Minecraft puts its "Klaar" button. It is greyed out
+    until a digit is typed, and then gets the focus outline that shows Enter will press it.
+  - Keys grow from 20 to 24 px, and 0 is double-width like a real numpad.
+  - "? Weet ik niet" moves to the top-right corner of the panel, as far from OK as possible.
+- **Correction on the HUD instead of a retype screen (P3).**
+  - After a wrong answer, "?" or ESC, the question screen closes and the kid is free to move.
+  - The penalty, fizzle or chicken plays where the kid can see it.
+  - Then the correct fact shows big on the HUD for about 3 s, with the tip and "8 × 7 is
+    dezelfde!" under it.
+  - The fact is re-asked after one other question, as before. That re-ask is the real check.
+  - The retype screen stays behind the config toggle `correctionRetype` (default off).
+- **Distinct bombs (P7).**
+  - Knalletje gets its own yellow-orange firecracker texture; Gewone TNT stays red with a white
+    band and a black ×.
+  - A thrown bomb trails particles in its own colour, and Graaf Fout shouts its name.
+  - A kicked bomb's blast and the yeet's power grow with the bomb.
+- **Camera assist (P8).** While a fight question is open, the view turns smoothly to Graaf Fout.
+  After a correct answer it keeps tracking him for 2 s, so the kick and the yeet are in view.
+  Config toggle `cameraAssist`.
+- **More yeets (P1).** Besides the classic yeet: a bounce yeet (three bounces with a boing), a
+  helicopter yeet (spins up slowly, then drops) and a boomerang yeet (flies off, comes back and
+  faceplants). Every yeet spins, and the same one never comes twice in a row.
+- **Yeet-o-meter, simple version.** When he lands, everyone in the fight sees "Graaf Fout vloog
+  23 blokken!".
+- **World setup (P11).** `/tafelboem arena` makes the world fit for playing: always day, no
+  weather, no mob spawning, keep inventory, and it removes hostile mobs nearby. It also lays a round
+  arena floor around the player.
+- **Measurement.**
+  - Each answer records how it was given (Enter or the OK button), and each "?" records how many
+    digits were already typed. A "?" with digits typed counts as a likely mis-click.
+  - `/tafelboem stats` adds re-ask accuracy (how often a missed fact is right when it comes back)
+    and the likely mis-clicks.
+  - Re-ask accuracy is computed from the answer order, so it also works on the R0 logs.
+
+**R0.1 acceptance criteria** (manual, on this PC plus the woonkamer PC over LAN):
+1. All R0 criteria still hold, except the retype (now off by default).
+2. OK is greyed out with no input, and a kid can press it without hitting "?".
+3. After a wrong answer, the kid sees the penalty, then the fact on the HUD, and can move straight
+   away.
+4. Knalletje and Gewone TNT can be told apart in flight and when kicked.
+5. During a fight question the view turns to Graaf Fout, and after a correct answer the yeet is in
+   view.
+6. At least three different yeets show up in one fight, never the same one twice in a row.
+7. `/tafelboem arena` stops day/night and mob spawning in an existing world.
+8. `/tafelboem stats` shows re-ask accuracy and likely mis-clicks.
+
+**R0.1 evaluation (playtest 2).** Record it in `docs/evaluations/R0.1.md`:
+- the R0 numbers that were missed: answers per 20 minutes, % correct, median time
+- re-ask accuracy without the retype; keep the HUD correction when it is about 80% or higher
+- likely mis-clicks: aim for none
+- did they see the penalty and the yeet? did they notice the different bombs?
+- record the session on video, so laughs can be counted afterwards
+
 ## Product vision (the backlog for R1+, re-prioritised after every evaluation)
 
 ### The TafelBoem world
-- **World type.** Pick "TafelBoem" at world creation. You spawn on a **floating arena island**
-  (radius ≈ 56, about 24 blocks thick) above the void. The game mode is forced to Survival.
-- **Lobby (protected from craters):**
-  - The **bell** selects the **boss and level** from anything unlocked. Locked bosses show as
-    silhouettes with a one-line story teaser.
+- **World type.** Pick "TafelBoem" at world creation. You spawn in the **hub** above the void.
+  The game mode is forced to Survival.
+- **Premade arenas (R1).** Each level is played in a premade arena, saved as a vanilla structure
+  template (`.nbt`) and placed by the mod in the void world.
+  - Re-placing the template after a fight resets the arena, which replaces the procedural rebuild.
+  - **The kids build arenas too.** They build one in creative together and save it with a
+    structure block. It ships in the next version as a level, with their names on the door.
+  - The `.slime` format was considered and dropped: its implementation (Advanced Slime Paper) is a
+    Paper server fork that runs plugins only, not Fabric mods.
+- **Hub (protected from craters):**
+  - **A door per level**, like the lobby of a minigame server. Each door shows the level's bombs
+    and the stars earned on it. **Any unlocked level can be picked, and the easy level is always
+    open.** The kids asked for an easy way to choose the difficulty.
+  - Locked bosses show as silhouettes with a one-line story teaser.
   - A **story lectern** has a short illustrated book per boss, unlocked as you go.
   - A **Knalletje dispenser** gives free starter bombs.
   - A **Tafelkaart wall** for each player. It is a 10×10 grid of blocks showing every fact's
@@ -208,15 +285,16 @@ don't need a custom world type to test the loop.
   - The **hardcore lectern** appears after beating the final boss.
   - **Picture signs** explain how to arm a bomb and what a super attack is, alongside Graaf
     Fout's intro speech at level 1.
-- **Force field.** A glowing particle wall at the edge pushes you back inward.
+- **Force field.** A glowing particle wall at the edge pushes you back inward. Running away was
+  accepted in R0; the premade arenas bound it naturally.
 - **Void safety.** A fall during a fight returns you to the arena edge. Outside a fight it returns
-  you to the lobby. Neither kills you.
+  you to the hub. Neither kills you.
 - **Safe floor.** No block within about 4 blocks of a player in a fight is ever carved. Craters
   open on the boss's side.
-- **Self-repair.** After every fight the arena rebuilds itself procedurally, under a per-tick
-  budget, while the victory celebration plays.
-- **Arena themes.** Each boss has an arena theme, which is a block palette plus props, applied when
-  a fight with that boss starts:
+- **Self-repair.** After every fight the arena template is placed again, under a per-tick budget,
+  while the victory celebration plays.
+- **Arena themes.** Each boss has an arena theme, a set of premade arenas with its own palette and
+  props:
   - Graaf Fout: castle courtyard with purple banners
   - Tante Toverfout: swamp with mud, lily pads, cauldrons and purple fog particles
   - Robo-Rekenaar: lab and factory with iron, redstone lamps and pipes
@@ -233,10 +311,28 @@ don't need a custom world type to test the loop.
   becomes Fluent he groans *"Nee! Je kent 7 × 8 nu!"*.
 - **Thrown bombs.** The boss throws a bomb of the level's tier. It lands at your feet, you are rooted,
   and the question pops up.
-  - **Correct:** you **kick it back** for 1 hit.
+  - **Correct:** you **kick it back** for 1 hit. The blast and his yeet grow with the bomb.
   - **Clean escape:** if the blast would have reached you and you get out in time, you get +1 hit.
   - **Failed escape:** you are only launched, harmlessly. **A correct answer never hurts you.**
-  - **Wrong:** the tier's penalty hits you.
+  - **Wrong:** the tier's penalty hits you, outside the question screen so you can see it.
+  - **Camera assist:** while answering, the view turns to the boss, and after a correct answer it
+    tracks him for 2 s so the kid never misses the reaction.
+- **Dodgeable bombs (R1 experiment, toggle).** The kids wanted to dodge.
+  - A bomb you dodge lies on the ground with a visible fuse.
+  - Running into it starts the question as before.
+  - If the fuse runs out, it pops harmlessly: a soot puff, no question, no damage to the boss.
+  - Damage only comes from answered kicks, so dodging never replaces sums. Watch answers per minute.
+- **"Kies je bom" (R2).** Several bombs lie on the ground and the kid picks which one to run into.
+  - A big bomb asks a fact the kid is still learning, deals more damage and gives a bigger yeet.
+  - A small bomb asks a fact they know and deals 1 hit.
+  - The kid chooses the challenge in the moment; the picker still decides *which* facts come up.
+- **Graaf Fout eats your mistake (R1 experiment, toggle).** The kids' idea.
+  - He loves mistakes, so on a wrong answer he catches the wrong number and eats it, and gets one
+    hit back. The boss bar visibly goes up.
+  - "?" and ESC never heal him: *"Hè, geen fout om op te eten!"* This makes "?" better than
+    guessing, which is what the "?" button is for.
+  - At most 3 times per fight, never above full health. The pacing test must show that a
+    60%-accurate child still wins before this ships.
 - **Combo.** Correct answers in a row raise the sound pitch. 5 in a row gives a **golden kick**
   for +1 hit.
 - **Super attacks.**
@@ -288,8 +384,17 @@ don't need a custom world type to test the loop.
 - **Every hit triggers a reaction lasting 2–4 s.** This covers kick-backs, clean-escape bonuses,
   golden kicks and super attacks. The boss doesn't throw while reacting, which gives each fight its
   rhythm.
+- **Spin is the core.** Playtest 1 showed the spinning yeet was the funniest thing in the game, so
+  every reaction includes a spin.
+- **Yeet-o-meter.** After every yeet, everyone in the fight sees how far he flew: *"Graaf Fout
+  vloog 23 blokken!"* (R0.1). From R1 there is a personal best, and fast answers and streaks yeet
+  him further. Only personal bests, no ranking between siblings.
 - **Shared reaction moves** (used by every boss, with that boss's props):
   - **Yeet:** launched with a spin, landing head-first stuck in the ground, legs wiggling, then pops out.
+  - **Bounce yeet:** bounces three times like a ball, with a boing on each bounce (R0.1).
+  - **Helicopter yeet:** spins up slowly on his cape like a propeller, then drops (R0.1).
+  - **Boomerang yeet:** flies off, curves back and faceplants near the kid (R0.1).
+  - **Wall splat:** flies into the arena wall, sticks for a moment and slides down.
   - **Frantic running:** circles the arena with his pants smoking, waving his arms.
   - **Pancake:** squashed flat, waddles, then *boing* back into shape.
   - **Dizzy spin:** spins like a top with stars circling his head.
@@ -373,7 +478,7 @@ don't need a custom world type to test the loop.
 |---|---|---|---|---|---|
 | 1 | Knalletje / Firecracker | bundle of red-yellow firecracker sticks (small model) | small pop + confetti fireworks | none needed | soot puff, blind 1.5 s |
 | 2 | Gewone TNT / Classic TNT | TNT-style block with "×" instead of "TNT" | vanilla-size blast | none needed | egg splat on screen, 2 s |
-| 3 | Kippenbom / Chicken Bomb | white feathered box, beak, red comb | blast + a flock of chickens flies out | none needed | bucket of water from the sky + slowness, 3 s |
+| 3 | Kippenbom / Chicken Bomb | white feathered box, beak, red comb | blast + *a* chickens fly out, and each bursts into *b* more: 3 × 4 shows as 12 chickens in 3 groups (R1; at most 2 generations) | none needed | bucket of water from the sky + slowness, 3 s |
 | 4 | Boerderijbom / Farm Frenzy | red barn planks, white X-brace, hay on top | ~16 random farm animals burst out (cow, pig, random-colour sheep, goat, horse, rabbit, rare mooshroom), land unharmed, poof after 60 s; one moves to the lobby pen | none needed | a cow drops on your head (1 heart) |
 | 5 | Clusterbom / Cluster TNT | 8 mini-TNTs roped together (custom model) | splits into 8 bouncing bomblets | Speed I | slimed: slowness + green overlay, 2 hearts |
 | 6 | Aambeeldregen / Anvil Rain | iron-grey crate with an anvil on top | crater + anvils rain down | Speed II | anvils on your head (hurts, not lethal) |
@@ -393,19 +498,28 @@ don't need a custom world type to test the loop.
 - **Textures.** v1 uses simple pixel-art textures that I generate, and the kids could redraw them.
   Bombs 1, 5 and 7 get custom JSON block models.
 
-### Feedback & the error loop (on the question screen, not in chat)
+### Feedback & the error loop (on the HUD, not in chat)
 - **Screen and input:** huge digits, number keys plus Enter, no mouse needed. The number pad stays
-  clickable.
+  clickable. Vanilla buttons only: a wide OK under the pad, greyed out until something is typed,
+  and "?" in the far corner of the panel.
 - **"?" button (Ik weet het niet).** It does no damage. It shows the fact and a tip, and the fact
   comes back soon. It replaces guessing.
 - **After a wrong answer, "?", ESC or a 💀:**
-  - The correct fact appears big (`7 × 8 = 56`) and the child **types it once** to continue.
+  - The question screen closes and the kid is free. The penalty plays where the kid can see it.
+  - Then the correct fact appears big on the HUD (`7 × 8 = 56`) for about 3 s, while the game goes
+    on.
   - A derived-fact tip shows how to work it out, for example "7 × 8 = 5 × 8 + 2 × 8" or
     "×9 = ×10 − ×1".
   - It also shows "8 × 7 is dezelfde!".
   - The fact is asked again 1–2 questions later and once more at the end of the session.
-- **Typing baseline.** The retype step measures the child's own typing speed, so response times
-  exclude typing.
+- **Why no retype.** The evidence-based parts of error correction are showing the correct answer
+  (Pashler et al. 2005; Bangert-Drowns et al. 1991) and recalling it again a bit later (the testing
+  effect and spacing). Retyping while the answer is on screen is copying, not recalling; its main
+  value was making sure the kid looked. So the re-ask is the check, and **re-ask accuracy** in the
+  stats tells whether the HUD correction lands. The retype stays available behind the
+  `correctionRetype` toggle.
+- **Typing baseline.** Without the retype, the child's typing speed is estimated from their fastest
+  correct answers, so response times can exclude typing.
 
 ### Particle effects (elaborate, on every bomb, to make it rewarding)
 
@@ -481,7 +595,8 @@ Every bomb has its own particle signature, shown at each of these moments:
   - % Fluent per table
   - questions and minutes per day, plus a weekly trend of median time
   - the 5 hardest facts, each with the child's usual wrong answer (e.g., 7×8 → 54)
-  - how often "?" is used
+  - how often "?" is used, and how often it was likely a mis-click
+  - re-ask accuracy: how often a missed fact is right when it comes back
   - a flag for fast wrong answers on Fluent facts, which suggests deliberate deaths
 
 ### Performance guard-rails
@@ -493,6 +608,8 @@ Every bomb has its own particle signature, shown at each of these moments:
   world loads.
 
 ### Parked for v2
+- a Fabric dedicated server on the NAS (after R2, only if needed): one world and one answer log for
+  every PC, and the woonkamer PC no longer has to host
 - a tactical role for each bomb (anvil rain stuns, the rocket homes in on him)
 - daily "Fout's gril" modifiers
 - division and deeltafels
