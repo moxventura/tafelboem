@@ -14,6 +14,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.BossEvent;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -47,6 +48,8 @@ public final class BossFight implements QuizListener {
 	static final int FINALE_TICKS = 60;
 	static final int LOOT_COUNT = 4;
 	static final double MAX_THROW_DISTANCE = 16;
+	/** How long the view keeps following him after a correct answer: the kick flight plus the yeet. */
+	public static final int KICK_CAM_TICKS = 50;
 
 	private enum Phase {
 		COOLDOWN,
@@ -197,6 +200,7 @@ public final class BossFight implements QuizListener {
 			cooldown(COOLDOWN_TICKS);
 			return;
 		}
+		sessions.client().track(target, boss, 0, false);
 		phase = Phase.ANSWERING;
 	}
 
@@ -226,7 +230,11 @@ public final class BossFight implements QuizListener {
 		ThrownBomb kick = ThrownBomb.kicked(level, player, session.tier(), this, boss);
 		kick.setPos(Vec3.atCenterOf(pos));
 		level.addFreshEntity(kick);
-		level.playSound(null, pos, SoundEvents.PLAYER_ATTACK_STRONG, SoundSource.PLAYERS, 1.2F, 1.0F);
+
+		// The simple kick: a vanilla swing everyone sees, a whoosh, and a camera bump on the kid's screen.
+		player.swing(InteractionHand.MAIN_HAND, true);
+		level.playSound(null, pos, SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 1.2F, 0.8F);
+		sessions.client().track(player, boss, KICK_CAM_TICKS, true);
 
 		phase = Phase.KICK_IN_FLIGHT;
 		phaseTicks = FLIGHT_TIMEOUT;

@@ -5,6 +5,7 @@ import java.util.List;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 
 import nl.jeeninga.tafelboem.game.QuizClient;
 import nl.jeeninga.tafelboem.net.QuizS2C;
@@ -16,9 +17,13 @@ final class RecordingQuizClient implements QuizClient {
 	record Sent(ServerPlayer player, QuizS2C payload) {
 	}
 
+	record Track(ServerPlayer player, int entityId, int ticksAfterScreen, boolean kick) {
+	}
+
 	final List<QuizS2C> sent = new ArrayList<>();
 	final List<Sent> sentTo = new ArrayList<>();
 	final List<Component> actionBars = new ArrayList<>();
+	final List<Track> tracks = new ArrayList<>();
 
 	@Override
 	public boolean canReceive(ServerPlayer player) {
@@ -34,6 +39,11 @@ final class RecordingQuizClient implements QuizClient {
 	@Override
 	public void actionBar(ServerPlayer player, Component message) {
 		actionBars.add(message);
+	}
+
+	@Override
+	public void track(ServerPlayer player, Entity target, int ticksAfterScreen, boolean kick) {
+		tracks.add(new Track(player, target.getId(), ticksAfterScreen, kick));
 	}
 
 	QuizS2C last() {

@@ -14,6 +14,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 
 import nl.jeeninga.tafelboem.TafelBoem;
+import nl.jeeninga.tafelboem.net.CameraS2C;
 import nl.jeeninga.tafelboem.net.QuizS2C;
 import nl.jeeninga.tafelboem.net.VersionS2C;
 import nl.jeeninga.tafelboem.registry.ModEntities;
@@ -25,9 +26,13 @@ public class TafelBoemClient implements ClientModInitializer {
 		// Thrown bombs are drawn bigger than a snowball, so the kids can see which one is coming.
 		EntityRendererRegistry.register(ModEntities.THROWN_BOMB, context -> new ThrownItemRenderer<>(context, 1.6F, false));
 		HudElementRegistry.attachElementAfter(VanillaHudElements.TITLE_AND_SUBTITLE, TafelBoem.id("correction"), CorrectionHud::extract);
-		ClientTickEvents.END_CLIENT_TICK.register(client -> CorrectionHud.tick());
+		ClientTickEvents.END_CLIENT_TICK.register(client -> {
+			CorrectionHud.tick();
+			CameraAssist.tick(client);
+		});
 
 		ClientPlayNetworking.registerGlobalReceiver(QuizS2C.TYPE, (payload, context) -> handle(context.client(), payload));
+		ClientPlayNetworking.registerGlobalReceiver(CameraS2C.TYPE, (payload, context) -> CameraAssist.follow(payload));
 		ClientPlayNetworking.registerGlobalReceiver(VersionS2C.TYPE, (payload, context) -> {
 			String mine = TafelBoem.version();
 			if (!mine.equals(payload.version())) {

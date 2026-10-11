@@ -78,12 +78,19 @@ public class PlaythroughClientGameTest implements FabricClientGameTest {
 			context.waitTicks(30);
 			context.takeScreenshot("tafelboem-06-graaf-fout");
 
+			// Look the other way: the camera assist must turn us back to him (playtest 1, P8).
+			Vec3 behind = world.getServer().computeOnServer(server -> {
+				ServerPlayer player = server.getPlayerList().getPlayers().getFirst();
+				return player.position().multiply(2, 1, 2).subtract(bossSpot.x, 0, bossSpot.z);
+			});
+			context.getInput().lookAt(BlockPos.containing(behind));
+
 			context.waitForScreen(QuestionScreen.class);
+			context.waitTicks(20);
 			context.takeScreenshot("tafelboem-07-boss-question");
 			screen = (QuestionScreen) context.computeOnClient(client -> client.gui.screen());
 			answer(context, screen.a() * screen.b());
 			context.waitFor(client -> client.gui.screen() == null);
-			context.getInput().lookAt(BlockPos.containing(bossSpot).above(2));
 			context.waitTicks(14);
 			context.takeScreenshot("tafelboem-08-yeet");
 			context.waitTicks(30);

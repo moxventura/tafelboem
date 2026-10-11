@@ -3,9 +3,11 @@ package nl.jeeninga.tafelboem.game;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 
+import nl.jeeninga.tafelboem.net.CameraS2C;
 import nl.jeeninga.tafelboem.net.QuizS2C;
 
 /**
@@ -28,6 +30,13 @@ public interface QuizClient {
 		public void actionBar(ServerPlayer player, Component message) {
 			player.connection.send(new ClientboundSetActionBarTextPacket(message));
 		}
+
+		@Override
+		public void track(ServerPlayer player, Entity target, int ticksAfterScreen, boolean kick) {
+			if (ServerPlayNetworking.canSend(player, CameraS2C.TYPE)) {
+				ServerPlayNetworking.send(player, new CameraS2C(target.getId(), ticksAfterScreen, kick));
+			}
+		}
 	};
 
 	/** False when the player's client doesn't have TafelBoem installed. */
@@ -36,4 +45,7 @@ public interface QuizClient {
 	void send(ServerPlayer player, QuizS2C payload);
 
 	void actionBar(ServerPlayer player, Component message);
+
+	/** Turn the player's view towards {@code target}; see {@link CameraS2C}. */
+	void track(ServerPlayer player, Entity target, int ticksAfterScreen, boolean kick);
 }

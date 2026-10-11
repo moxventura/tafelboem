@@ -56,6 +56,11 @@ public class BossFightGameTest {
 
 		helper.succeedWhen(() -> {
 			helper.assertTrue(fight.hitsRemaining() < startHits, "a kicked-back bomb should hit Graaf Fout");
+			int boss = fight.boss().getId();
+			helper.assertTrue(client.tracks.stream().anyMatch(t -> t.entityId() == boss && t.ticksAfterScreen() == 0 && !t.kick()),
+					"while answering, the view turns to Graaf Fout");
+			helper.assertTrue(client.tracks.stream().anyMatch(t -> t.entityId() == boss && t.ticksAfterScreen() == BossFight.KICK_CAM_TICKS && t.kick()),
+					"after the kick, the view follows him through the yeet");
 			fights.endAll();
 		});
 	}

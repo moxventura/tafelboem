@@ -14,6 +14,7 @@ public final class ModNetworking {
 		PayloadTypeRegistry.clientboundPlay().register(QuizS2C.TYPE, QuizS2C.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(QuizC2S.TYPE, QuizC2S.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(VersionS2C.TYPE, VersionS2C.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(CameraS2C.TYPE, CameraS2C.CODEC);
 
 		ServerPlayNetworking.registerGlobalReceiver(QuizC2S.TYPE,
 				(payload, context) -> TafelBoem.sessions().onClientAction(context.player(), payload));
