@@ -10,16 +10,18 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import nl.jeeninga.tafelboem.TafelBoem;
 
 /**
- * Server → client: open, switch or close the question screen.
+ * Server → client: open, switch or close the question screen, or show a correction on the HUD.
  *
- * @param mode   {@link #ASK}, {@link #CORRECT} or {@link #CLOSE}
- * @param reason for {@link #CORRECT}: why the correction is shown ({@link #REASON_WRONG}, ...)
+ * @param mode   {@link #ASK}, {@link #CORRECT} (retype screen), {@link #CLOSE} or {@link #FEEDBACK}
+ *               (close the screen and show the correct fact on the HUD)
+ * @param reason for {@link #CORRECT} and {@link #FEEDBACK}: why the fact is shown ({@link #REASON_WRONG}, ...)
  */
 public record QuizS2C(int sessionId, int mode, int a, int b, int tier, int reason, String tipKey, List<Integer> tipArgs)
 		implements CustomPacketPayload {
 	public static final int ASK = 0;
 	public static final int CORRECT = 1;
 	public static final int CLOSE = 2;
+	public static final int FEEDBACK = 3;
 
 	public static final int REASON_NONE = 0;
 	public static final int REASON_WRONG = 1;
@@ -40,6 +42,14 @@ public record QuizS2C(int sessionId, int mode, int a, int b, int tier, int reaso
 
 	public static QuizS2C ask(int sessionId, int a, int b, int tier) {
 		return new QuizS2C(sessionId, ASK, a, b, tier, REASON_NONE, "", List.of());
+	}
+
+	public static QuizS2C correct(int sessionId, int a, int b, int tier, int reason, String tipKey, List<Integer> tipArgs) {
+		return new QuizS2C(sessionId, CORRECT, a, b, tier, reason, tipKey, tipArgs);
+	}
+
+	public static QuizS2C feedback(int sessionId, int a, int b, int tier, int reason, String tipKey, List<Integer> tipArgs) {
+		return new QuizS2C(sessionId, FEEDBACK, a, b, tier, reason, tipKey, tipArgs);
 	}
 
 	public static QuizS2C close(int sessionId) {

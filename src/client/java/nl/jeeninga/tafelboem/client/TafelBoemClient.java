@@ -7,8 +7,11 @@ import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.network.chat.Component;
 
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 
 import nl.jeeninga.tafelboem.TafelBoem;
 import nl.jeeninga.tafelboem.net.QuizS2C;
@@ -20,6 +23,8 @@ public class TafelBoemClient implements ClientModInitializer {
 	public void onInitializeClient() {
 		EntityRendererRegistry.register(ModEntities.GRAAF_FOUT, GraafFoutRenderer::new);
 		EntityRendererRegistry.register(ModEntities.THROWN_BOMB, ThrownItemRenderer::new);
+		HudElementRegistry.attachElementAfter(VanillaHudElements.TITLE_AND_SUBTITLE, TafelBoem.id("correction"), CorrectionHud::extract);
+		ClientTickEvents.END_CLIENT_TICK.register(client -> CorrectionHud.tick());
 
 		ClientPlayNetworking.registerGlobalReceiver(QuizS2C.TYPE, (payload, context) -> handle(context.client(), payload));
 		ClientPlayNetworking.registerGlobalReceiver(VersionS2C.TYPE, (payload, context) -> {
@@ -36,7 +41,10 @@ public class TafelBoemClient implements ClientModInitializer {
 		QuestionScreen question = current instanceof QuestionScreen screen && screen.sessionId() == payload.sessionId() ? screen : null;
 
 		switch (payload.mode()) {
-			case QuizS2C.ASK -> client.gui.setScreen(QuestionScreen.ask(payload));
+			case QuizS2C.ASK -> {
+				CorrectionHud.clear();
+				client.gui.setScreen(QuestionScreen.ask(payload));
+			}
 			case QuizS2C.CORRECT -> {
 				if (question != null) {
 					question.showCorrection(payload);
@@ -48,6 +56,12 @@ public class TafelBoemClient implements ClientModInitializer {
 				if (question != null) {
 					client.gui.setScreen(null);
 				}
+			}
+			case QuizS2C.FEEDBACK -> {
+				if (question != null) {
+					client.gui.setScreen(null);
+				}
+				CorrectionHud.show(payload);
 			}
 			default -> {
 			}

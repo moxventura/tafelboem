@@ -152,7 +152,6 @@ public final class SessionManager {
 	private void miss(ServerPlayer player, QuizSession session, Outcome outcome, int answer, String via, int typedDigits) {
 		learners.record(player, session.fact(), outcome, answer, session.elapsedMillis(), session.tier(), session.context(),
 				via, typedDigits);
-		session.startCorrecting();
 
 		ServerLevel level = player.level();
 		switch (outcome) {
@@ -179,8 +178,20 @@ public final class SessionManager {
 			case CHICKEN_OUT -> QuizS2C.REASON_CHICKEN_OUT;
 			default -> QuizS2C.REASON_DONT_KNOW;
 		};
-		client.send(player, new QuizS2C(session.id(), QuizS2C.CORRECT, fact.a(), fact.b(), session.tier().tier(),
-				reason, tip.key(), tip.args()));
+		int tier = session.tier().tier();
+
+		if (config.correctionRetype) {
+			// R0 behaviour: stay rooted until the correct fact is typed once.
+			session.startCorrecting();
+			client.send(player, QuizS2C.correct(session.id(), fact.a(), fact.b(), tier, reason, tip.key(), tip.args()));
+			return;
+		}
+
+		// The child is free straight away and sees the penalty; the fact follows on the HUD. The
+		// re-ask a question later is the real check that it stuck.
+		sessions.remove(player.getUUID());
+		RootLock.release(player);
+		client.send(player, QuizS2C.feedback(session.id(), fact.a(), fact.b(), tier, reason, tip.key(), tip.args()));
 	}
 
 	private void finish(ServerPlayer player, QuizSession session) {

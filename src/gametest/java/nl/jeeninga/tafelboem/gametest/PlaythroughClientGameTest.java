@@ -13,6 +13,7 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 
 import nl.jeeninga.tafelboem.TafelBoem;
+import nl.jeeninga.tafelboem.client.CorrectionHud;
 import nl.jeeninga.tafelboem.client.QuestionScreen;
 import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.registry.ModBlocks;
@@ -32,7 +33,7 @@ public class PlaythroughClientGameTest implements FabricClientGameTest {
 			world.getServer().runCommand("weather clear");
 			context.waitTicks(20);
 
-			// 1. A Knalletje, answered wrong: correction screen with the tip.
+			// 1. A Knalletje, answered wrong: the screen closes, the soot cloud, then the fact on the HUD.
 			BlockPos knalletje = placeBomb(world, BombTier.KNALLETJE, 3);
 			context.getInput().lookAt(knalletje);
 			startQuestion(world, BombTier.KNALLETJE, knalletje);
@@ -42,14 +43,13 @@ public class PlaythroughClientGameTest implements FabricClientGameTest {
 			QuestionScreen screen = (QuestionScreen) context.computeOnClient(client -> client.gui.screen());
 			int product = screen.a() * screen.b();
 			answer(context, product + 1);
-			context.waitFor(client -> client.gui.screen() instanceof QuestionScreen q && q.isCorrecting());
-			context.waitTicks(10);
-			context.takeScreenshot("tafelboem-02-correction");
-
-			answer(context, product);
 			context.waitFor(client -> client.gui.screen() == null);
+			context.waitTicks(5);
+			context.takeScreenshot("tafelboem-02-penalty");
+			context.waitFor(client -> CorrectionHud.isShowing());
 			context.waitTicks(10);
-			context.takeScreenshot("tafelboem-03-after-correction");
+			context.takeScreenshot("tafelboem-03-hud-correction");
+			context.waitFor(client -> !CorrectionHud.isShowing());
 
 			// 2. A Kippenbom, answered right: run, then chickens everywhere.
 			BlockPos kippenbom = placeBomb(world, BombTier.KIPPENBOM, 5);

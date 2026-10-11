@@ -18,6 +18,7 @@ import net.minecraft.world.phys.Vec3;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 
 import nl.jeeninga.tafelboem.TafelBoem;
+import nl.jeeninga.tafelboem.config.TafelBoemConfig;
 import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.Outcome;
 import nl.jeeninga.tafelboem.game.BombEffects;
@@ -51,8 +52,29 @@ public class SessionGameTest {
 	}
 
 	@GameTest
-	public void wrongAnswerShowsTheCorrectionAndKeepsThePlayerRootedUntilRetyped(GameTestHelper helper) {
+	public void wrongAnswerReleasesThePlayerAndShowsTheFactOnTheHud(GameTestHelper helper) {
 		Fixture f = new Fixture(helper);
+		QuizS2C question = f.ask();
+
+		f.answer(question, question.a() * question.b() + 1);
+
+		QuizS2C feedback = f.client.last();
+		helper.assertValueEqual(feedback.mode(), QuizS2C.FEEDBACK, "a wrong answer shows the fact on the HUD");
+		helper.assertValueEqual(feedback.reason(), QuizS2C.REASON_WRONG, "feedback reason");
+		helper.assertValueEqual(feedback.a() * feedback.b(), question.a() * question.b(), "the fact that was asked");
+		helper.assertFalse(feedback.tipKey().isEmpty(), "a derived-fact tip should be shown");
+		helper.assertFalse(f.isRooted(), "the child is free again straight away");
+		helper.assertFalse(f.manager.isBusy(f.player), "no retype is waited for");
+		helper.assertBlockNotPresent(ModBlocks.bomb(BombTier.KNALLETJE), BOMB);
+		helper.assertTrue(f.player.hasEffect(MobEffects.BLINDNESS), "the Knalletje penalty is a soot cloud");
+		helper.succeed();
+	}
+
+	@GameTest
+	public void withRetypeSwitchedOnAWrongAnswerWaitsForTheRetype(GameTestHelper helper) {
+		TafelBoemConfig retype = new TafelBoemConfig();
+		retype.correctionRetype = true;
+		Fixture f = new Fixture(helper, retype);
 		QuizS2C question = f.ask();
 
 		f.answer(question, question.a() * question.b() + 1);
@@ -60,10 +82,7 @@ public class SessionGameTest {
 		QuizS2C correction = f.client.last();
 		helper.assertValueEqual(correction.mode(), QuizS2C.CORRECT, "screen mode after wrong answer");
 		helper.assertValueEqual(correction.reason(), QuizS2C.REASON_WRONG, "correction reason");
-		helper.assertFalse(correction.tipKey().isEmpty(), "a derived-fact tip should be shown");
 		helper.assertTrue(f.isRooted(), "player stays rooted until the fact is retyped");
-		helper.assertBlockNotPresent(ModBlocks.bomb(BombTier.KNALLETJE), BOMB);
-		helper.assertTrue(f.player.hasEffect(MobEffects.BLINDNESS), "the Knalletje penalty is a soot cloud");
 
 		f.manager.onClientAction(f.player, new QuizC2S(question.sessionId(), QuizC2S.CORRECTION_DONE, 1500, QuizC2S.VIA_KEY));
 		helper.assertFalse(f.isRooted(), "retyping the fact releases the player");
@@ -78,8 +97,10 @@ public class SessionGameTest {
 
 		f.manager.onClientAction(f.player, new QuizC2S(question.sessionId(), QuizC2S.DONT_KNOW, 0, QuizC2S.VIA_KEY));
 
-		helper.assertValueEqual(f.client.last().reason(), QuizS2C.REASON_DONT_KNOW, "correction reason");
+		helper.assertValueEqual(f.client.last().mode(), QuizS2C.FEEDBACK, "'?' shows the fact on the HUD");
+		helper.assertValueEqual(f.client.last().reason(), QuizS2C.REASON_DONT_KNOW, "feedback reason");
 		helper.assertFalse(f.player.hasEffect(MobEffects.BLINDNESS), "'?' must not be punished");
+		helper.assertFalse(f.isRooted(), "the child is free again straight away");
 		helper.succeed();
 	}
 
@@ -90,7 +111,8 @@ public class SessionGameTest {
 
 		f.manager.onClientAction(f.player, new QuizC2S(question.sessionId(), QuizC2S.CHICKEN_OUT, 0, QuizC2S.VIA_KEY));
 
-		helper.assertValueEqual(f.client.last().reason(), QuizS2C.REASON_CHICKEN_OUT, "correction reason");
+		helper.assertValueEqual(f.client.last().mode(), QuizS2C.FEEDBACK, "ESC shows the fact on the HUD");
+		helper.assertValueEqual(f.client.last().reason(), QuizS2C.REASON_CHICKEN_OUT, "feedback reason");
 		AABB around = new AABB(helper.absolutePos(BOMB)).inflate(3);
 		List<Entity> chickens = helper.getLevel().getEntities((Entity) null, around,
 				entity -> entity instanceof Chicken && entity.entityTags().contains(BombEffects.SPECTACLE_TAG));
@@ -144,13 +166,17 @@ public class SessionGameTest {
 		final ServerPlayer player;
 		final SessionManager manager;
 
-		@SuppressWarnings("removal") // mock players are still the only way to test without a client
 		Fixture(GameTestHelper helper) {
+			this(helper, new TafelBoemConfig());
+		}
+
+		@SuppressWarnings("removal") // mock players are still the only way to test without a client
+		Fixture(GameTestHelper helper, TafelBoemConfig config) {
 			this.helper = helper;
 			this.player = helper.makeMockServerPlayerInLevel();
 			Vec3 standHere = Vec3.atBottomCenterOf(helper.absolutePos(BOMB.east(3)));
 			player.teleportTo(standHere.x, standHere.y, standHere.z);
-			this.manager = new SessionManager(helper.getLevel().getServer(), new Learners(new AnswerLog(tempDir())), client);
+			this.manager = new SessionManager(helper.getLevel().getServer(), new Learners(new AnswerLog(tempDir())), client, config);
 			helper.onEachTick(manager::tick);
 		}
 

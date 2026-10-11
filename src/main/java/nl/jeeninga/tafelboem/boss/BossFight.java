@@ -41,7 +41,8 @@ public final class BossFight implements QuizListener {
 	static final double BOSS_BAR_RADIUS = 48;
 	static final int FIRST_THROW_DELAY = 60;
 	static final int COOLDOWN_TICKS = 50;
-	static final int AFTER_MISS_COOLDOWN = 40;
+	/** Long enough for the penalty and the correction on the HUD before the next bomb flies. */
+	static final int AFTER_MISS_COOLDOWN = 70;
 	static final int FLIGHT_TIMEOUT = 100;
 	static final int FINALE_TICKS = 60;
 	static final int LOOT_COUNT = 4;
