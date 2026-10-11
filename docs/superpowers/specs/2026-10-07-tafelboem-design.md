@@ -317,6 +317,14 @@ A patch on R0 that fixes what playtest 1 found (P-numbers refer to `docs/evaluat
   - **Wrong:** the tier's penalty hits you, outside the question screen so you can see it.
   - **Camera assist:** while answering, the view turns to the boss, and after a correct answer it
     tracks him for 2 s so the kid never misses the reaction.
+  - **Kick animation (Jesper's idea, stage not decided).** The kid who answered correctly visibly
+    kicks the bomb back, so the hit feels like their own doing.
+    - Simple version: the vanilla arm swing, a "whoosh" sound and a small camera bump when the
+      kick leaves. No custom animation needed; a candidate for R0.1 next to the camera assist.
+    - Full version (R1, with the yeet catalogue): the right leg swings forward in third person, so
+      siblings on LAN see each other kick. This needs a player-model pose plus a payload to the
+      other clients. In first person your own legs aren't visible; a boot swinging into view is
+      later polish.
 - **Dodgeable bombs (R1 experiment, toggle).** The kids wanted to dodge.
   - A bomb you dodge lies on the ground with a visible fuse.
   - Running into it starts the question as before.
@@ -832,6 +840,7 @@ Phases 5–7 make it spectacular, phase 8 adds weeks of content, and phase 9 pol
 - **Reaction poses.** The pose transforms (squash, spin, head-in-ground) depend on the 26.2
   render-state pipeline accepting extra transforms on vanilla models. This gets a spike at the start
   of phase 4. The fallback is motion plus particles only.
+  The same spike covers the player's kick pose. Its fallback is the vanilla arm swing.
 - **Inventory stash.** The `ItemStack` serialisation round-trip needs a GameTest.
 - **Mock players.** It is unverified whether GameTest mock players survive death and respawn.
 - **Wall-clock dates.** Spacing and the daily dose depend on the system date, so changing the PC
