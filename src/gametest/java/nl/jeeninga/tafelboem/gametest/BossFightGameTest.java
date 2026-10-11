@@ -103,6 +103,59 @@ public class BossFightGameTest {
 		});
 	}
 
+	/**
+	 * Two kids, one Graaf Fout who takes turns: every camera message goes to the kid whose bomb it
+	 * is, and the other kid's view is never touched. Runs until both have kicked, so a stale kicker
+	 * from the previous yeet would show up too.
+	 */
+	@GameTest(maxTicks = 1200, padding = 48)
+	@SuppressWarnings("removal") // mock players are still the only way to test without a client
+	public void inMultiplayerOnlyTheKidWhoseBombItIsGetsTheirViewMoved(GameTestHelper helper) {
+		OpenField.open(helper);
+		RecordingQuizClient client = new RecordingQuizClient();
+		SessionManager sessions = new SessionManager(helper.getLevel().getServer(), new Learners(new AnswerLog(tempDir())), client);
+		BossFights fights = new BossFights(sessions);
+
+		ServerPlayer first = helper.makeMockServerPlayerInLevel();
+		ServerPlayer second = helper.makeMockServerPlayerInLevel();
+		Vec3 stand = Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(1, 1, 1)));
+		first.teleportTo(stand.x, stand.y, stand.z);
+		second.teleportTo(stand.x, stand.y, stand.z + 3);
+		helper.assertTrue(fights.summon(helper.getLevel(), stand.add(6, 1.5, 1.5)), "Graaf Fout should appear");
+		BossFight fight = fights.active().getFirst();
+
+		Set<Integer> answered = new HashSet<>();
+		int[] tracksChecked = {0};
+		helper.onEachTick(() -> {
+			sessions.tick();
+			fights.tick();
+			for (RecordingQuizClient.Sent sent : List.copyOf(client.sentTo)) {
+				QuizS2C question = sent.payload();
+				if (question.mode() == QuizS2C.ASK && answered.add(question.sessionId())) {
+					sessions.onClientAction(sent.player(), new QuizC2S(question.sessionId(), QuizC2S.ANSWER, question.a() * question.b(), QuizC2S.VIA_KEY));
+				}
+			}
+			// Whose turn it is: the kid who got the latest question, until the next one is asked.
+			ServerPlayer turn = client.sentTo.stream().filter(sent -> sent.payload().mode() == QuizS2C.ASK)
+					.reduce((a, b) -> b).map(RecordingQuizClient.Sent::player).orElse(null);
+			for (; tracksChecked[0] < client.tracks.size(); tracksChecked[0]++) {
+				RecordingQuizClient.Track track = client.tracks.get(tracksChecked[0]);
+				String to = track.player() == first ? "the first kid" : "the second kid";
+				String whoseTurn = turn == null ? "nobody's" : turn == first ? "the first kid's" : "the second kid's";
+				helper.assertTrue(track.player() == turn, "a camera message went to " + to + " while it was " + whoseTurn + " turn");
+			}
+		});
+
+		helper.succeedWhen(() -> {
+			for (ServerPlayer kid : List.of(first, second)) {
+				helper.assertTrue(client.tracks.stream().anyMatch(t -> t.player() == kid && t.kick()), "wait until both kids have kicked");
+				helper.assertTrue(client.tracks.stream().anyMatch(t -> t.player() == kid && t.ticksAfterScreen() == BossFight.LANDED_CAM_TICKS),
+						"wait until both yeets have landed, each followed by the kid who kicked");
+			}
+			fights.endAll();
+		});
+	}
+
 	private static boolean isYeetOMeter(Component message) {
 		return message.getContents() instanceof TranslatableContents translatable
 				&& translatable.getKey().startsWith("tafelboem.message.yeet_");
