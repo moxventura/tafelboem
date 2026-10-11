@@ -2,6 +2,7 @@ package nl.jeeninga.tafelboem.client;
 
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -19,14 +20,16 @@ import nl.jeeninga.tafelboem.net.QuizS2C;
 
 /**
  * The sum, big and readable for an 8-year-old: type with the number keys or click the number pad.
- * After a miss the same screen shows the correct fact, a tip, and asks the child to type it once.
+ * Vanilla buttons only, laid out like Minecraft's own menus: a wide OK under the pad (where
+ * "Klaar" always is), greyed out until something is typed, and "?" far away in the corner.
+ * With {@code correctionRetype} on, a miss shows the correct fact here and asks to type it once.
  */
 public final class QuestionScreen extends Screen {
 	private static final int MAX_DIGITS = 3;
-	private static final int BUTTON_SIZE = 20;
 	private static final int GAP = 3;
-	private static final int PAD_WIDTH = 3 * BUTTON_SIZE + 2 * GAP;
-	private static final int PAD_HEIGHT = 4 * BUTTON_SIZE + 3 * GAP;
+	private static final int OK_GAP = 5;
+	private static final int OK_HEIGHT = 20;
+	private static final int HEADER = 20;
 	private static final int LINE = 11;
 	private static final int WHITE = 0xFFFFFFFF;
 	private static final int YELLOW = 0xFFFFE04A;
@@ -50,10 +53,19 @@ public final class QuestionScreen extends Screen {
 	private long correctionShownAt;
 	private int shakeTicks;
 
-	/** Vertical layout, recomputed in {@link #init()} so everything fits even on small windows. */
+	/** Layout, recomputed in {@link #init()} so everything fits even on small windows. */
 	private float bigScale;
+	private int key;
 	private int top;
 	private int padTop;
+	private int padWidth;
+	private int padHeight;
+	private int panelHalfWidth;
+	private boolean nameOnOwnLine;
+
+	private @Nullable Button okButton;
+	private @Nullable Button dontKnowButton;
+	private boolean focusOkNextTick;
 
 	private QuestionScreen(QuizS2C payload) {
 		super(Component.translatable("tafelboem.screen.title"));
@@ -89,6 +101,16 @@ public final class QuestionScreen extends Screen {
 		return correcting;
 	}
 
+	/** For the client tests: the OK button. */
+	public @Nullable Button okButton() {
+		return okButton;
+	}
+
+	/** For the client tests: the "?" button, absent while correcting. */
+	public @Nullable Button dontKnowButton() {
+		return dontKnowButton;
+	}
+
 	void showCorrection(QuizS2C payload) {
 		correcting = true;
 		reason = payload.reason();
@@ -106,35 +128,67 @@ public final class QuestionScreen extends Screen {
 	protected void init() {
 		bigScale = height < 300 ? 3.0f : 4.0f;
 		int bigHeight = Math.round(font.lineHeight * bigScale);
-		// Question: name, big sum, hint. Correction: name, reason, big fact, tip, same, prompt, typed answer.
-		int textHeight = correcting ? 6 * LINE + bigHeight + Math.round(font.lineHeight * 2.0f) + 4 : LINE + bigHeight + LINE + 6;
-		int contentHeight = textHeight + PAD_HEIGHT;
-		top = Math.max(4, (height - contentHeight) / 2);
+		panelHalfWidth = Math.min(width / 2 - 4, 150);
+
+		Component dontKnow = Component.translatable("tafelboem.screen.dont_know");
+		int dontKnowWidth = font.width(dontKnow) + 12;
+		// The bomb name is centred; "?" sits in the top-right corner unless the panel is too narrow.
+		nameOnOwnLine = !correcting && font.width(bombName()) / 2 + dontKnowWidth + 10 > panelHalfWidth;
+
+		// Question: header, big sum, hint. Correction: name, reason, big fact, tip, same, prompt, typed answer.
+		int textHeight = correcting
+				? 6 * LINE + bigHeight + Math.round(font.lineHeight * 2.0f) + 4
+				: HEADER + (nameOnOwnLine ? LINE : 0) + 4 + bigHeight + 4 + LINE + 6;
+		key = 24;
+		if (textHeight + padHeight(key) + 8 > height) {
+			key = 20;
+		}
+		padWidth = 3 * key + 2 * GAP;
+		padHeight = padHeight(key);
+		top = Math.max(4, (height - textHeight - padHeight) / 2);
 		padTop = top + textHeight;
 
-		int left = (width - PAD_WIDTH) / 2;
+		int left = (width - padWidth) / 2;
 		String[] keys = {"7", "8", "9", "4", "5", "6", "1", "2", "3"};
 		for (int i = 0; i < keys.length; i++) {
 			String digit = keys[i];
-			int x = left + (i % 3) * (BUTTON_SIZE + GAP);
-			int y = padTop + (i / 3) * (BUTTON_SIZE + GAP);
+			int x = left + (i % 3) * (key + GAP);
+			int y = padTop + (i / 3) * (key + GAP);
 			addRenderableWidget(Button.builder(Component.literal(digit), button -> type(digit.charAt(0)))
-					.bounds(x, y, BUTTON_SIZE, BUTTON_SIZE).build());
+					.bounds(x, y, key, key).build());
 		}
 
-		int lastRow = padTop + 3 * (BUTTON_SIZE + GAP);
-		addRenderableWidget(Button.builder(Component.literal("←"), button -> backspace())
-				.bounds(left, lastRow, BUTTON_SIZE, BUTTON_SIZE).build());
+		int zeroRow = padTop + 3 * (key + GAP);
 		addRenderableWidget(Button.builder(Component.literal("0"), button -> type('0'))
-				.bounds(left + BUTTON_SIZE + GAP, lastRow, BUTTON_SIZE, BUTTON_SIZE).build());
-		addRenderableWidget(Button.builder(Component.literal("OK"), button -> submit(QuizC2S.VIA_CLICK))
-				.bounds(left + 2 * (BUTTON_SIZE + GAP), lastRow, BUTTON_SIZE, BUTTON_SIZE).build());
+				.bounds(left, zeroRow, 2 * key + GAP, key).build());
+		addRenderableWidget(Button.builder(Component.literal("←"), button -> backspace())
+				.bounds(left + 2 * (key + GAP), zeroRow, key, key).build());
+		okButton = addRenderableWidget(Button.builder(Component.literal("OK"), button -> submit(QuizC2S.VIA_CLICK))
+				.bounds(left, zeroRow + key + OK_GAP, padWidth, OK_HEIGHT).build());
+		updateOkButton();
 
+		dontKnowButton = null;
 		if (!correcting) {
-			// Next to the pad instead of below it, so it never falls off a small screen.
-			int dontKnowWidth = Math.max(70, font.width(Component.translatable("tafelboem.screen.dont_know")) + 12);
-			addRenderableWidget(Button.builder(Component.translatable("tafelboem.screen.dont_know"), button -> dontKnow(QuizC2S.VIA_CLICK))
-					.bounds(left + PAD_WIDTH + 12, padTop + PAD_HEIGHT - BUTTON_SIZE, dontKnowWidth, BUTTON_SIZE).build());
+			int right = width / 2 + panelHalfWidth - 4;
+			dontKnowButton = addRenderableWidget(Button.builder(dontKnow, button -> dontKnow(QuizC2S.VIA_CLICK))
+					.bounds(right - dontKnowWidth, top, dontKnowWidth, 20).build());
+		}
+	}
+
+	private static int padHeight(int key) {
+		return 4 * key + 3 * GAP + OK_GAP + OK_HEIGHT;
+	}
+
+	/** OK is greyed out until something is typed; then it takes the focus, so Enter visibly presses it. */
+	private void updateOkButton() {
+		if (okButton == null) {
+			return;
+		}
+		boolean wasActive = okButton.active;
+		okButton.active = !input.isEmpty() && !waitingForServer;
+		if (okButton.active && !wasActive) {
+			// A click on a digit focuses that digit after its handler runs, so move the focus next tick.
+			focusOkNextTick = true;
 		}
 	}
 
@@ -194,6 +248,10 @@ public final class QuestionScreen extends Screen {
 
 	@Override
 	public void tick() {
+		if (focusOkNextTick && okButton != null && okButton.active) {
+			setFocused(okButton);
+		}
+		focusOkNextTick = false;
 		if (shakeTicks > 0) {
 			shakeTicks--;
 		}
@@ -205,12 +263,14 @@ public final class QuestionScreen extends Screen {
 	private void type(char digit) {
 		if (!waitingForServer && input.length() < MAX_DIGITS) {
 			input.append(digit);
+			updateOkButton();
 		}
 	}
 
 	private void backspace() {
 		if (!waitingForServer && !input.isEmpty()) {
 			input.setLength(input.length() - 1);
+			updateOkButton();
 		}
 	}
 
@@ -232,6 +292,7 @@ public final class QuestionScreen extends Screen {
 				send(QuizC2S.CORRECTION_DONE, (int) (System.currentTimeMillis() - correctionShownAt), via);
 			} else {
 				input.setLength(0);
+				updateOkButton();
 				shakeTicks = 8;
 			}
 			return;
@@ -242,20 +303,19 @@ public final class QuestionScreen extends Screen {
 	private void send(int action, int value, int via) {
 		waitingForServer = true;
 		waitingSince = System.currentTimeMillis();
+		updateOkButton();
 		ClientPlayNetworking.send(new QuizC2S(sessionId, action, value, via));
 	}
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
 		int centerX = width / 2;
-		int panelHalfWidth = Math.min(width / 2 - 4, 150);
-		graphics.fill(centerX - panelHalfWidth, top - 4, centerX + panelHalfWidth, padTop + PAD_HEIGHT + 4, PANEL);
+		graphics.fill(centerX - panelHalfWidth, top - 4, centerX + panelHalfWidth, padTop + padHeight + 4, PANEL);
 
 		int y = top;
-		graphics.centeredText(font, bombName(), centerX, y, YELLOW);
-		y += LINE;
-
 		if (correcting) {
+			graphics.centeredText(font, bombName(), centerX, y, YELLOW);
+			y += LINE;
 			graphics.centeredText(font, Component.translatable(reasonKey()), centerX, y, WHITE);
 			y += LINE;
 			drawBig(graphics, a + " × " + b + " = " + (a * b), centerX, y, bigScale, GREEN);
@@ -272,8 +332,12 @@ public final class QuestionScreen extends Screen {
 			y += LINE;
 			drawBig(graphics, input.isEmpty() ? "_" : input.toString(), centerX, y, 2.0f, WHITE);
 		} else {
+			// The bomb name shares the header row with "?", or gets its own line on a narrow window.
+			int nameY = nameOnOwnLine ? top + HEADER : top + (HEADER - font.lineHeight) / 2;
+			graphics.centeredText(font, bombName(), centerX, nameY, YELLOW);
+			y = top + HEADER + (nameOnOwnLine ? LINE : 0) + 4;
 			String answer = input.isEmpty() ? "?" : input.toString();
-			drawBig(graphics, a + " × " + b + " = " + answer, centerX, y + 2, bigScale, WHITE);
+			drawBig(graphics, a + " × " + b + " = " + answer, centerX, y, bigScale, WHITE);
 			y += Math.round(font.lineHeight * bigScale) + 4;
 			graphics.centeredText(font, Component.translatable("tafelboem.screen.hint"), centerX, y, 0xFFBBBBBB);
 		}

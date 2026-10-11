@@ -5,7 +5,7 @@
   "block.tafelboem.kippenbom": "Chicken Bomb",
   "tafelboem.screen.title": "Every fuse is a sum!",
   "tafelboem.screen.hint": "Type your answer and press Enter",
-  "tafelboem.screen.dont_know": "? I don't know",
+  "tafelboem.screen.dont_know": "? Don't know",
   "tafelboem.screen.reason.wrong": "Not yet! The right answer is:",
   "tafelboem.screen.reason.dont_know": "No problem! Here's how it goes:",
   "tafelboem.screen.reason.chicken_out": "Cluck cluck! Here's how it goes:",
