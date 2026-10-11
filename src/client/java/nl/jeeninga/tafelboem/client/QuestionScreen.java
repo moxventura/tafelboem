@@ -127,13 +127,13 @@ public final class QuestionScreen extends Screen {
 				.bounds(left, lastRow, BUTTON_SIZE, BUTTON_SIZE).build());
 		addRenderableWidget(Button.builder(Component.literal("0"), button -> type('0'))
 				.bounds(left + BUTTON_SIZE + GAP, lastRow, BUTTON_SIZE, BUTTON_SIZE).build());
-		addRenderableWidget(Button.builder(Component.literal("OK"), button -> submit())
+		addRenderableWidget(Button.builder(Component.literal("OK"), button -> submit(QuizC2S.VIA_CLICK))
 				.bounds(left + 2 * (BUTTON_SIZE + GAP), lastRow, BUTTON_SIZE, BUTTON_SIZE).build());
 
 		if (!correcting) {
 			// Next to the pad instead of below it, so it never falls off a small screen.
 			int dontKnowWidth = Math.max(70, font.width(Component.translatable("tafelboem.screen.dont_know")) + 12);
-			addRenderableWidget(Button.builder(Component.translatable("tafelboem.screen.dont_know"), button -> dontKnow())
+			addRenderableWidget(Button.builder(Component.translatable("tafelboem.screen.dont_know"), button -> dontKnow(QuizC2S.VIA_CLICK))
 					.bounds(left + PAD_WIDTH + 12, padTop + PAD_HEIGHT - BUTTON_SIZE, dontKnowWidth, BUTTON_SIZE).build());
 		}
 	}
@@ -146,7 +146,7 @@ public final class QuestionScreen extends Screen {
 			return true;
 		}
 		if (codepoint == '?' && !correcting) {
-			dontKnow();
+			dontKnow(QuizC2S.VIA_KEY);
 			return true;
 		}
 		return super.charTyped(event);
@@ -160,7 +160,7 @@ public final class QuestionScreen extends Screen {
 				return true;
 			}
 			case GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> {
-				submit();
+				submit(QuizC2S.VIA_KEY);
 				return true;
 			}
 			default -> {
@@ -178,7 +178,7 @@ public final class QuestionScreen extends Screen {
 	@Override
 	public void onClose() {
 		if (!correcting && !waitingForServer) {
-			send(QuizC2S.CHICKEN_OUT, 0);
+			send(QuizC2S.CHICKEN_OUT, 0, QuizC2S.VIA_KEY);
 		}
 	}
 
@@ -214,13 +214,14 @@ public final class QuestionScreen extends Screen {
 		}
 	}
 
-	private void dontKnow() {
+	private void dontKnow(int via) {
 		if (!correcting && !waitingForServer) {
-			send(QuizC2S.DONT_KNOW, 0);
+			// The digits already typed tell us afterwards whether "?" was pressed on purpose.
+			send(QuizC2S.DONT_KNOW, input.length(), via);
 		}
 	}
 
-	private void submit() {
+	private void submit(int via) {
 		if (waitingForServer || input.isEmpty()) {
 			return;
 		}
@@ -228,20 +229,20 @@ public final class QuestionScreen extends Screen {
 
 		if (correcting) {
 			if (value == a * b) {
-				send(QuizC2S.CORRECTION_DONE, (int) (System.currentTimeMillis() - correctionShownAt));
+				send(QuizC2S.CORRECTION_DONE, (int) (System.currentTimeMillis() - correctionShownAt), via);
 			} else {
 				input.setLength(0);
 				shakeTicks = 8;
 			}
 			return;
 		}
-		send(QuizC2S.ANSWER, value);
+		send(QuizC2S.ANSWER, value, via);
 	}
 
-	private void send(int action, int value) {
+	private void send(int action, int value, int via) {
 		waitingForServer = true;
 		waitingSince = System.currentTimeMillis();
-		ClientPlayNetworking.send(new QuizC2S(sessionId, action, value));
+		ClientPlayNetworking.send(new QuizC2S(sessionId, action, value, via));
 	}
 
 	@Override

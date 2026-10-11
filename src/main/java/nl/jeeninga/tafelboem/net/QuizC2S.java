@@ -10,19 +10,25 @@ import nl.jeeninga.tafelboem.TafelBoem;
 /**
  * Client → server: what the child did on the question screen.
  *
- * @param value the typed answer for {@link #ANSWER}; the retype time in ms for {@link #CORRECTION_DONE}
+ * @param value the typed answer for {@link #ANSWER}; the number of digits already typed for {@link #DONT_KNOW};
+ *              the retype time in ms for {@link #CORRECTION_DONE}
+ * @param via   {@link #VIA_KEY} when given with the keyboard, {@link #VIA_CLICK} when a button was clicked
  */
-public record QuizC2S(int sessionId, int action, int value) implements CustomPacketPayload {
+public record QuizC2S(int sessionId, int action, int value, int via) implements CustomPacketPayload {
 	public static final int ANSWER = 0;
 	public static final int DONT_KNOW = 1;
 	public static final int CHICKEN_OUT = 2;
 	public static final int CORRECTION_DONE = 3;
+
+	public static final int VIA_KEY = 0;
+	public static final int VIA_CLICK = 1;
 
 	public static final Type<QuizC2S> TYPE = new Type<>(TafelBoem.id("quiz_c2s"));
 	public static final StreamCodec<RegistryFriendlyByteBuf, QuizC2S> CODEC = StreamCodec.composite(
 			ByteBufCodecs.VAR_INT, QuizC2S::sessionId,
 			ByteBufCodecs.VAR_INT, QuizC2S::action,
 			ByteBufCodecs.VAR_INT, QuizC2S::value,
+			ByteBufCodecs.VAR_INT, QuizC2S::via,
 			QuizC2S::new);
 
 	@Override

@@ -18,6 +18,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
 
 import nl.jeeninga.tafelboem.config.TafelBoemConfig;
+import nl.jeeninga.tafelboem.core.AnswerRecord;
 import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.DerivedFactTips;
 import nl.jeeninga.tafelboem.core.EscapeModel;
@@ -94,26 +95,27 @@ public final class SessionManager {
 			return;
 		}
 
+		String via = action.via() == QuizC2S.VIA_CLICK ? AnswerRecord.VIA_CLICK : AnswerRecord.VIA_KEY;
 		switch (action.action()) {
 			case QuizC2S.ANSWER -> {
 				if (session.state() == QuizSession.State.ASKING) {
 					if (action.value() == session.fact().product()) {
-						correct(player, session);
+						correct(player, session, via);
 					} else {
-						miss(player, session, Outcome.WRONG, action.value());
+						miss(player, session, Outcome.WRONG, action.value(), via, 0);
 					}
 				}
 			}
 			case QuizC2S.DONT_KNOW -> {
 				if (session.state() == QuizSession.State.ASKING) {
-					miss(player, session, Outcome.DONT_KNOW, -1);
+					miss(player, session, Outcome.DONT_KNOW, -1, via, action.value());
 				}
 			}
 			case QuizC2S.CHICKEN_OUT -> {
 				if (session.state() == QuizSession.State.ASKING) {
 					QuizListener listener = session.listener();
 					boolean allowed = listener == null || listener.allowChickenOut();
-					miss(player, session, allowed ? Outcome.CHICKEN_OUT : Outcome.DONT_KNOW, -1);
+					miss(player, session, allowed ? Outcome.CHICKEN_OUT : Outcome.DONT_KNOW, -1, via, 0);
 				}
 			}
 			case QuizC2S.CORRECTION_DONE -> {
@@ -126,9 +128,10 @@ public final class SessionManager {
 		}
 	}
 
-	private void correct(ServerPlayer player, QuizSession session) {
+	private void correct(ServerPlayer player, QuizSession session, String via) {
 		long millis = session.elapsedMillis();
-		learners.record(player, session.fact(), Outcome.CORRECT, session.fact().product(), millis, session.tier(), session.context());
+		learners.record(player, session.fact(), Outcome.CORRECT, session.fact().product(), millis, session.tier(), session.context(),
+				via, 0);
 
 		sessions.remove(player.getUUID());
 		RootLock.release(player);
@@ -146,8 +149,9 @@ public final class SessionManager {
 		actionBar(player, Component.translatable("tafelboem.message.run"));
 	}
 
-	private void miss(ServerPlayer player, QuizSession session, Outcome outcome, int answer) {
-		learners.record(player, session.fact(), outcome, answer, session.elapsedMillis(), session.tier(), session.context());
+	private void miss(ServerPlayer player, QuizSession session, Outcome outcome, int answer, String via, int typedDigits) {
+		learners.record(player, session.fact(), outcome, answer, session.elapsedMillis(), session.tier(), session.context(),
+				via, typedDigits);
 		session.startCorrecting();
 
 		ServerLevel level = player.level();

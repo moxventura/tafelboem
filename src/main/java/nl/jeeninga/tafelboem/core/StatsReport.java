@@ -16,6 +16,19 @@ public final class StatsReport {
 		}
 	}
 
+	/**
+	 * How often a missed fact was right when it came back. This is the check that a correction
+	 * landed, so it decides whether the HUD correction can replace the retype.
+	 */
+	public record ReaskStats(int asked, int correct) {
+		public int percent() {
+			return asked == 0 ? 0 : Math.round(100f * correct / asked);
+		}
+	}
+
+	/** A missed fact counts as re-asked only when it comes back within this many answers. */
+	static final int REASK_WINDOW = 5;
+
 	private final List<AnswerRecord> answers;
 
 	private StatsReport(List<AnswerRecord> answers) {
@@ -62,6 +75,31 @@ public final class StatsReport {
 				.limit(limit)
 				.map(Map.Entry::getKey)
 				.toList();
+	}
+
+	public ReaskStats reasks() {
+		Map<Fact, Integer> missedAt = new HashMap<>();
+		int asked = 0;
+		int correct = 0;
+		for (int i = 0; i < answers.size(); i++) {
+			AnswerRecord answer = answers.get(i);
+			Integer miss = missedAt.remove(answer.fact());
+			if (miss != null && i - miss <= REASK_WINDOW) {
+				asked++;
+				if (answer.correct()) {
+					correct++;
+				}
+			}
+			if (answer.outcome().isMiss()) {
+				missedAt.put(answer.fact(), i);
+			}
+		}
+		return new ReaskStats(asked, correct);
+	}
+
+	/** "?" pressed while digits were already typed: probably meant to press OK. */
+	public int likelyMisclicks() {
+		return (int) answers.stream().filter(AnswerRecord::isLikelyMisclick).count();
 	}
 
 	private static long median(LongStream values) {

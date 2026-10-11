@@ -49,7 +49,7 @@ public class BossFightGameTest {
 			for (RecordingQuizClient.Sent sent : List.copyOf(client.sentTo)) {
 				QuizS2C question = sent.payload();
 				if (question.mode() == QuizS2C.ASK && answered.add(question.sessionId())) {
-					sessions.onClientAction(sent.player(), new QuizC2S(question.sessionId(), QuizC2S.ANSWER, question.a() * question.b()));
+					sessions.onClientAction(sent.player(), new QuizC2S(question.sessionId(), QuizC2S.ANSWER, question.a() * question.b(), QuizC2S.VIA_KEY));
 				}
 			}
 		});

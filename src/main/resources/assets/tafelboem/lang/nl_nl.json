@@ -36,5 +36,7 @@
   "tafelboem.boss.graaf_fout.taunt.chicken_out": "Tok tok! Hahaha! Die kip is van mij!",
   "tafelboem.boss.graaf_fout.defeated": "Neeeee! Al die goede antwoorden... dat is niet eerlijk! Ik kom terug!",
   "tafelboem.message.loot": "Je krijgt %s× %s!",
-  "tafelboem.message.boss_already_here": "Graaf Fout is er al!"
+  "tafelboem.message.boss_already_here": "Graaf Fout is er al!",
+  "tafelboem.stats.reasks": "Opnieuw gevraagd na een fout: %s van %s goed (%s%%)",
+  "tafelboem.stats.misclicks": "Waarschijnlijk per ongeluk op ? gedrukt: %s keer"
 }

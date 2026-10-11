@@ -28,10 +28,11 @@ public final class Learners {
 		return picker(player).next();
 	}
 
-	public void record(ServerPlayer player, Fact fact, Outcome outcome, int answer, long millis, BombTier tier, String context) {
+	public void record(ServerPlayer player, Fact fact, Outcome outcome, int answer, long millis, BombTier tier, String context,
+			String via, int typedDigits) {
 		picker(player).record(fact, outcome, millis);
 		log.append(new AnswerRecord(System.currentTimeMillis(), player.getPlainTextName(), fact.a(), fact.b(), answer,
-				outcome, millis, tier.tier(), context));
+				outcome, millis, tier.tier(), context, via, typedDigits));
 	}
 
 	public AnswerLog log() {

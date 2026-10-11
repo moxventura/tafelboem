@@ -60,6 +60,16 @@ public final class TafelBoemCommand {
 		List<Fact> hardest = report.hardestFacts(5);
 		String hardestText = hardest.stream().map(fact -> fact.a() + "×" + fact.b()).collect(Collectors.joining(", "));
 		source.sendSuccess(() -> Component.translatable("tafelboem.stats.hardest", hardestText), false);
+
+		StatsReport.ReaskStats reasks = report.reasks();
+		if (reasks.asked() > 0) {
+			source.sendSuccess(() -> Component.translatable("tafelboem.stats.reasks", reasks.correct(), reasks.asked(),
+					reasks.percent()), false);
+		}
+		int misclicks = report.likelyMisclicks();
+		if (misclicks > 0) {
+			source.sendSuccess(() -> Component.translatable("tafelboem.stats.misclicks", misclicks), false);
+		}
 		return report.totalAnswers();
 	}
 }

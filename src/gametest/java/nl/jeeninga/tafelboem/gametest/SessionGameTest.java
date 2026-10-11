@@ -65,7 +65,7 @@ public class SessionGameTest {
 		helper.assertBlockNotPresent(ModBlocks.bomb(BombTier.KNALLETJE), BOMB);
 		helper.assertTrue(f.player.hasEffect(MobEffects.BLINDNESS), "the Knalletje penalty is a soot cloud");
 
-		f.manager.onClientAction(f.player, new QuizC2S(question.sessionId(), QuizC2S.CORRECTION_DONE, 1500));
+		f.manager.onClientAction(f.player, new QuizC2S(question.sessionId(), QuizC2S.CORRECTION_DONE, 1500, QuizC2S.VIA_KEY));
 		helper.assertFalse(f.isRooted(), "retyping the fact releases the player");
 		helper.assertValueEqual(f.client.last().mode(), QuizS2C.CLOSE, "screen closes after the retype");
 		helper.succeed();
@@ -76,7 +76,7 @@ public class SessionGameTest {
 		Fixture f = new Fixture(helper);
 		QuizS2C question = f.ask();
 
-		f.manager.onClientAction(f.player, new QuizC2S(question.sessionId(), QuizC2S.DONT_KNOW, 0));
+		f.manager.onClientAction(f.player, new QuizC2S(question.sessionId(), QuizC2S.DONT_KNOW, 0, QuizC2S.VIA_KEY));
 
 		helper.assertValueEqual(f.client.last().reason(), QuizS2C.REASON_DONT_KNOW, "correction reason");
 		helper.assertFalse(f.player.hasEffect(MobEffects.BLINDNESS), "'?' must not be punished");
@@ -88,7 +88,7 @@ public class SessionGameTest {
 		Fixture f = new Fixture(helper);
 		QuizS2C question = f.ask();
 
-		f.manager.onClientAction(f.player, new QuizC2S(question.sessionId(), QuizC2S.CHICKEN_OUT, 0));
+		f.manager.onClientAction(f.player, new QuizC2S(question.sessionId(), QuizC2S.CHICKEN_OUT, 0, QuizC2S.VIA_KEY));
 
 		helper.assertValueEqual(f.client.last().reason(), QuizS2C.REASON_CHICKEN_OUT, "correction reason");
 		AABB around = new AABB(helper.absolutePos(BOMB)).inflate(3);
@@ -119,7 +119,7 @@ public class SessionGameTest {
 		f.manager.start(f.player, BombTier.KNALLETJE, helper.absolutePos(BOMB), "fight", noMoreChickens);
 		QuizS2C question = f.client.last();
 
-		f.manager.onClientAction(f.player, new QuizC2S(question.sessionId(), QuizC2S.CHICKEN_OUT, 0));
+		f.manager.onClientAction(f.player, new QuizC2S(question.sessionId(), QuizC2S.CHICKEN_OUT, 0, QuizC2S.VIA_KEY));
 
 		helper.assertValueEqual(f.client.last().reason(), QuizS2C.REASON_DONT_KNOW, "ESC counts as '?' after the limit");
 		helper.succeed();
@@ -163,7 +163,7 @@ public class SessionGameTest {
 		}
 
 		void answer(QuizS2C question, int value) {
-			manager.onClientAction(player, new QuizC2S(question.sessionId(), QuizC2S.ANSWER, value));
+			manager.onClientAction(player, new QuizC2S(question.sessionId(), QuizC2S.ANSWER, value, QuizC2S.VIA_KEY));
 		}
 
 		boolean isRooted() {
