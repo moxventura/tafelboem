@@ -39,5 +39,6 @@
   "tafelboem.message.boss_already_here": "Graaf Fout is er al!",
   "tafelboem.stats.reasks": "Opnieuw gevraagd na een fout: %s van %s goed (%s%%)",
   "tafelboem.stats.misclicks": "Waarschijnlijk per ongeluk op ? gedrukt: %s keer",
-  "tafelboem.boss.graaf_fout.throws": "Pas op: een %s!"
+  "tafelboem.boss.graaf_fout.throws": "Pas op: een %s!",
+  "tafelboem.message.yeet_distance": "%s vloog %s blokken!"
 }

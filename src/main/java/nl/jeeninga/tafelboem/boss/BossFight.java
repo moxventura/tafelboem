@@ -2,7 +2,10 @@ package nl.jeeninga.tafelboem.boss;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.UUID;
+
+import org.jspecify.annotations.Nullable;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -26,6 +29,7 @@ import nl.jeeninga.tafelboem.block.BombBlock;
 import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.Fight;
 import nl.jeeninga.tafelboem.core.Outcome;
+import nl.jeeninga.tafelboem.core.YeetPicker;
 import nl.jeeninga.tafelboem.game.BombEffects;
 import nl.jeeninga.tafelboem.game.PlayerSafeExplosion;
 import nl.jeeninga.tafelboem.game.QuizListener;
@@ -72,6 +76,8 @@ public final class BossFight implements QuizListener {
 	private int throwCount;
 	private int turn;
 	private UUID currentTarget;
+	private @Nullable UUID lastKicker;
+	private final YeetPicker yeets = new YeetPicker(new Random());
 
 	BossFight(ServerLevel level, GraafFout boss, SessionManager sessions) {
 		this.level = level;
@@ -229,6 +235,7 @@ public final class BossFight implements QuizListener {
 		}
 		ThrownBomb kick = ThrownBomb.kicked(level, player, session.tier(), this, boss);
 		kick.setPos(Vec3.atCenterOf(pos));
+		lastKicker = player.getUUID();
 		level.addFreshEntity(kick);
 
 		// The simple kick: a vanilla swing everyone sees, a whoosh, and a camera bump on the kid's screen.
@@ -284,9 +291,23 @@ public final class BossFight implements QuizListener {
 			return;
 		}
 
-		boss.yeet(where, (0.9 + level.getRandom().nextDouble() * 0.5) * tier.yeetPower());
+		ServerPlayer kicker = lastKicker == null ? null : level.getServer().getPlayerList().getPlayer(lastKicker);
+		Vec3 kickedFrom = kicker != null ? kicker.position() : where;
+		boss.yeet(where, (0.9 + level.getRandom().nextDouble() * 0.5) * tier.yeetPower(), yeets.next(), kickedFrom);
 		phase = Phase.REACTING;
 		phaseTicks = 20;
+	}
+
+	/** The yeet-o-meter: everyone in the fight sees how far he flew. */
+	void onYeetLanded(int blocks) {
+		if (phase == Phase.FINALE || phase == Phase.OVER || blocks < 1) {
+			return;
+		}
+		Component message = Component.translatable("tafelboem.message.yeet_distance", boss.getDisplayName(), blocks)
+				.withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD);
+		for (ServerPlayer player : participantPlayers()) {
+			sessions.client().actionBar(player, message);
+		}
 	}
 
 	private void reward() {

@@ -17,6 +17,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 
+import nl.jeeninga.tafelboem.core.YeetStyle;
+
 /**
  * Graaf Fout (Count Wrong): an Evoker body with all its spells removed. He hovers, teleports, throws
  * bombs, and gets hilariously yeeted every time a kid kicks a bomb back at him.
@@ -28,12 +30,26 @@ public class GraafFout extends Evoker {
 	private static final double HOVER_HEIGHT = 1.5;
 	private static final int DIZZY_TICKS = 30;
 	private static final int MAX_AIRBORNE_TICKS = 100;
+	private static final int MAX_BOUNCES = 3;
+	private static final int HELICOPTER_RISE_TICKS = 30;
+	private static final int BOOMERANG_OUT_TICKS = 12;
+	private static final int BOOMERANG_MAX_TICKS = 45;
 
 	private @Nullable BossFight fight;
 	private boolean airborne;
 	private int airborneTicks;
 	private int dizzyTicks;
 	private boolean finale;
+
+	/** The current yeet: how he flies, where from, and how far he got (for the yeet-o-meter). */
+	private YeetStyle style = YeetStyle.CLASSIC;
+	private Vec3 launchPos = Vec3.ZERO;
+	private Vec3 away = Vec3.ZERO;
+	private Vec3 returnTo = Vec3.ZERO;
+	private double power;
+	private double furthest;
+	private int bounces;
+	private int stageTicks;
 
 	public GraafFout(EntityType<? extends GraafFout> type, Level level) {
 		super(type, level);
@@ -99,22 +115,41 @@ public class GraafFout extends Evoker {
 
 	/**
 	 * A kid kicked a bomb back: launch him away from the explosion, spinning and flailing.
+	 *
+	 * @param kicker where the kid who kicked stands; the boomerang comes back to them
 	 */
-	public void yeet(Vec3 from, double power) {
-		Vec3 away = position().subtract(from).multiply(1, 0, 1);
-		if (away.lengthSqr() < 1.0E-4) {
-			away = new Vec3(random.nextDouble() - 0.5, 0, random.nextDouble() - 0.5);
+	public void yeet(Vec3 from, double power, YeetStyle style, Vec3 kicker) {
+		Vec3 direction = position().subtract(from).multiply(1, 0, 1);
+		if (direction.lengthSqr() < 1.0E-4) {
+			direction = new Vec3(random.nextDouble() - 0.5, 0, random.nextDouble() - 0.5);
 		}
-		away = away.normalize();
+		this.away = direction.normalize();
+		this.style = style;
+		this.power = power;
+		this.launchPos = position();
+		this.furthest = 0;
+		this.bounces = 0;
+		this.stageTicks = 0;
+		// The boomerang faceplants three blocks in front of the kid, never on top of them.
+		this.returnTo = kicker.add(launchPos.subtract(kicker).multiply(1, 0, 1).normalize().scale(3));
 
 		airborne = true;
 		airborneTicks = 0;
 		dizzyTicks = 0;
-		setNoGravity(false);
-		setDeltaMovement(away.x * power, 0.6 + power * 0.6, away.z * power);
+		switch (style) {
+			case CLASSIC -> launch(power, 0.6 + power * 0.6, false);
+			case BOUNCE -> launch(power * 0.8, 0.5 + power * 0.4, false);
+			case HELICOPTER -> launch(0.15, 0.22, true);
+			case BOOMERANG -> launch(power * 0.9, 0.35, true);
+		}
 		needsSync = true;
 		armsUp(true);
 		playSound(SoundEvents.EVOKER_HURT, 1.5F, 1.9F);
+	}
+
+	private void launch(double horizontal, double up, boolean floating) {
+		setNoGravity(floating);
+		setDeltaMovement(away.x * horizontal, up, away.z * horizontal);
 	}
 
 	/**
@@ -149,17 +184,89 @@ public class GraafFout extends Evoker {
 	}
 
 	private void tumble(ServerLevel level) {
-		spin(45F);
 		airborneTicks++;
+		stageTicks++;
+		furthest = Math.max(furthest, position().subtract(launchPos).horizontalDistance());
 		level.sendParticles(ParticleTypes.CLOUD, getX(), getY() + 1, getZ(), 1, 0.1, 0.1, 0.1, 0.0);
-		if ((onGround() && airborneTicks > 5) || airborneTicks > MAX_AIRBORNE_TICKS) {
+
+		boolean landed = switch (style) {
+			case CLASSIC -> {
+				spin(45F);
+				yield onGround() && airborneTicks > 5;
+			}
+			case BOUNCE -> {
+				spin(30F);
+				yield bounce(level);
+			}
+			case HELICOPTER -> {
+				spin(90F);
+				yield helicopter(level);
+			}
+			case BOOMERANG -> {
+				spin(60F);
+				yield boomerang();
+			}
+		};
+		if (landed || airborneTicks > MAX_AIRBORNE_TICKS) {
 			land(level);
 		}
+	}
+
+	/** Boing, boing, boing: each bounce a bit lower, then he stays down. */
+	private boolean bounce(ServerLevel level) {
+		if (!onGround() || stageTicks <= 3) {
+			return false;
+		}
+		if (bounces >= MAX_BOUNCES) {
+			return true;
+		}
+		bounces++;
+		stageTicks = 0;
+		double horizontal = power * 0.8 * Math.pow(0.8, bounces);
+		setDeltaMovement(away.x * horizontal, 0.55 - 0.1 * bounces, away.z * horizontal);
+		level.playSound(null, getX(), getY(), getZ(), SoundEvents.SLIME_JUMP, SoundSource.HOSTILE, 1.5F, 0.9F + 0.15F * bounces);
+		level.sendParticles(ParticleTypes.CLOUD, getX(), getY() + 0.1, getZ(), 8, 0.4, 0.05, 0.4, 0.02);
+		return false;
+	}
+
+	/** Spins up slowly on his cape like a propeller, then gravity remembers him. */
+	private boolean helicopter(ServerLevel level) {
+		if (stageTicks <= HELICOPTER_RISE_TICKS) {
+			setDeltaMovement(away.x * 0.12, 0.22, away.z * 0.12);
+			level.sendParticles(ParticleTypes.SWEEP_ATTACK, getX(), getY() + 2.1, getZ(), 1, 0, 0, 0, 0);
+			if (stageTicks == HELICOPTER_RISE_TICKS) {
+				setNoGravity(false);
+				playSound(SoundEvents.EVOKER_HURT, 1.5F, 1.4F);
+			}
+			return false;
+		}
+		return onGround();
+	}
+
+	/** Flies off, slows down, turns around and comes back to the kid, face first. */
+	private boolean boomerang() {
+		if (stageTicks <= BOOMERANG_OUT_TICKS) {
+			double slowdown = 1.0 - (double) stageTicks / BOOMERANG_OUT_TICKS;
+			setDeltaMovement(away.x * power * 0.9 * slowdown, 0.35 * slowdown, away.z * power * 0.9 * slowdown);
+			return false;
+		}
+		if (isNoGravity()) {
+			Vec3 back = returnTo.add(0, 1.5, 0).subtract(position());
+			if (back.horizontalDistance() < 1.5 || stageTicks > BOOMERANG_MAX_TICKS) {
+				setNoGravity(false);
+				setDeltaMovement(back.multiply(0.1, 0, 0.1).add(0, -0.4, 0));
+			} else {
+				setDeltaMovement(back.normalize().scale(0.6));
+			}
+			return false;
+		}
+		return onGround();
 	}
 
 	private void land(ServerLevel level) {
 		airborne = false;
 		dizzyTicks = DIZZY_TICKS;
+		setNoGravity(false);
 		setDeltaMovement(Vec3.ZERO);
 		armsUp(false);
 		for (int i = 0; i < 24; i++) {
@@ -168,6 +275,9 @@ public class GraafFout extends Evoker {
 					1, 0, 0, 0, 0.05);
 		}
 		level.playSound(null, getX(), getY(), getZ(), SoundEvents.GENERIC_BIG_FALL, SoundSource.HOSTILE, 1.5F, 0.8F);
+		if (fight != null) {
+			fight.onYeetLanded((int) Math.round(furthest));
+		}
 	}
 
 	private void dizzy(ServerLevel level) {
