@@ -17,6 +17,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
 
+import nl.jeeninga.tafelboem.config.TafelBoemConfig;
 import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.DerivedFactTips;
 import nl.jeeninga.tafelboem.core.EscapeModel;
@@ -39,15 +40,21 @@ public final class SessionManager {
 	private final MinecraftServer server;
 	private final Learners learners;
 	private final QuizClient client;
+	private final TafelBoemConfig config;
 	private final Map<UUID, QuizSession> sessions = new HashMap<>();
 	private final List<PendingBoom> booms = new ArrayList<>();
 	private final List<Spectacle> spectacles = new ArrayList<>();
 	private int nextSessionId = 1;
 
 	public SessionManager(MinecraftServer server, Learners learners, QuizClient client) {
+		this(server, learners, client, new TafelBoemConfig());
+	}
+
+	public SessionManager(MinecraftServer server, Learners learners, QuizClient client, TafelBoemConfig config) {
 		this.server = server;
 		this.learners = learners;
 		this.client = client;
+		this.config = config;
 	}
 
 	public Learners learners() {

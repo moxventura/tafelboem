@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 
 import nl.jeeninga.tafelboem.boss.BossFights;
 import nl.jeeninga.tafelboem.command.TafelBoemCommand;
+import nl.jeeninga.tafelboem.config.TafelBoemConfig;
 import nl.jeeninga.tafelboem.game.BombEffects;
 import nl.jeeninga.tafelboem.game.QuizClient;
 import nl.jeeninga.tafelboem.game.SessionManager;
@@ -33,11 +34,13 @@ public class TafelBoem implements ModInitializer {
 	public static final String MOD_ID = "tafelboem";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
+	private static TafelBoemConfig config = new TafelBoemConfig();
 	private static @Nullable SessionManager sessions;
 	private static @Nullable BossFights fights;
 
 	@Override
 	public void onInitialize() {
+		config = TafelBoemConfig.load(FabricLoader.getInstance().getConfigDir().resolve(MOD_ID + ".json"));
 		ModBlocks.register();
 		ModItems.register();
 		ModEntities.register();
@@ -47,7 +50,7 @@ public class TafelBoem implements ModInitializer {
 
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
 			AnswerLog log = new AnswerLog(server.getWorldPath(LevelResource.ROOT).resolve(MOD_ID));
-			sessions = new SessionManager(server, new Learners(log), QuizClient.NETWORK);
+			sessions = new SessionManager(server, new Learners(log), QuizClient.NETWORK, config);
 			fights = new BossFights(sessions);
 		});
 		ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
@@ -80,6 +83,10 @@ public class TafelBoem implements ModInitializer {
 		});
 
 		LOGGER.info("TafelBoem loaded - every fuse is a sum!");
+	}
+
+	public static TafelBoemConfig config() {
+		return config;
 	}
 
 	public static SessionManager sessions() {
