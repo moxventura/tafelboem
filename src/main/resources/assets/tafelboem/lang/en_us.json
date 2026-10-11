@@ -38,5 +38,6 @@
   "tafelboem.message.loot": "You got %s× %s!",
   "tafelboem.message.boss_already_here": "Count Wrong is already here!",
   "tafelboem.stats.reasks": "Asked again after a miss: %s of %s right (%s%%)",
-  "tafelboem.stats.misclicks": "Probably pressed ? by accident: %s times"
+  "tafelboem.stats.misclicks": "Probably pressed ? by accident: %s times",
+  "tafelboem.boss.graaf_fout.throws": "Look out: a %s!"
 }

@@ -6,6 +6,7 @@ import org.jspecify.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
@@ -95,6 +96,8 @@ public class ThrownBomb extends ThrowableItemProjectile {
 		}
 		super.tick();
 		if (level() instanceof ServerLevel level) {
+			// Each bomb trails its own colour, so the kids can tell from afar what is coming.
+			level.sendParticles(new DustParticleOptions(tier.trailColor(), 1.5F), getX(), getY(), getZ(), 2, 0.05, 0.05, 0.05, 0);
 			level.sendParticles(ParticleTypes.SMOKE, getX(), getY(), getZ(), 1, 0, 0, 0, 0);
 		}
 	}

@@ -62,6 +62,10 @@ public final class SessionManager {
 		return learners;
 	}
 
+	public QuizClient client() {
+		return client;
+	}
+
 	public boolean isBusy(ServerPlayer player) {
 		return sessions.containsKey(player.getUUID());
 	}

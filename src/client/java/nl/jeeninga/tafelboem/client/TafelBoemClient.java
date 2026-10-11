@@ -22,7 +22,8 @@ public class TafelBoemClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		EntityRendererRegistry.register(ModEntities.GRAAF_FOUT, GraafFoutRenderer::new);
-		EntityRendererRegistry.register(ModEntities.THROWN_BOMB, ThrownItemRenderer::new);
+		// Thrown bombs are drawn bigger than a snowball, so the kids can see which one is coming.
+		EntityRendererRegistry.register(ModEntities.THROWN_BOMB, context -> new ThrownItemRenderer<>(context, 1.6F, false));
 		HudElementRegistry.attachElementAfter(VanillaHudElements.TITLE_AND_SUBTITLE, TafelBoem.id("correction"), CorrectionHud::extract);
 		ClientTickEvents.END_CLIENT_TICK.register(client -> CorrectionHud.tick());
 

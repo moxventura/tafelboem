@@ -46,6 +46,7 @@ public final class BossFight implements QuizListener {
 	static final int FLIGHT_TIMEOUT = 100;
 	static final int FINALE_TICKS = 60;
 	static final int LOOT_COUNT = 4;
+	static final double MAX_THROW_DISTANCE = 16;
 
 	private enum Phase {
 		COOLDOWN,
@@ -148,7 +149,8 @@ public final class BossFight implements QuizListener {
 		}
 
 		throwCount++;
-		if (throwCount % 3 == 0) {
+		// Every third throw he pops up somewhere new, and after a big yeet he comes back to the kids.
+		if (throwCount % 3 == 0 || target.distanceToSqr(boss) > MAX_THROW_DISTANCE * MAX_THROW_DISTANCE) {
 			boss.teleportNear(level, target.position());
 		}
 		BombTier tier = throwCount % 3 == 2 ? BombTier.GEWONE_TNT : BombTier.KNALLETJE;
@@ -161,6 +163,7 @@ public final class BossFight implements QuizListener {
 		bomb.setDeltaMovement(throwVelocity(start, inFront, bomb.getGravity()));
 		level.addFreshEntity(bomb);
 		level.playSound(null, boss.getX(), boss.getY(), boss.getZ(), SoundEvents.WITCH_THROW, SoundSource.HOSTILE, 1.0F, 0.8F);
+		announce(target, tier);
 
 		currentTarget = target.getUUID();
 		phase = Phase.BOMB_IN_FLIGHT;
@@ -243,11 +246,22 @@ public final class BossFight implements QuizListener {
 		cooldown(AFTER_MISS_COOLDOWN);
 	}
 
+	/** Playtest 1: the kids never noticed he threw different bombs, so he says which one is coming. */
+	private void announce(ServerPlayer target, BombTier tier) {
+		Component name = Component.translatable("block.tafelboem." + tier.id());
+		Component warning = Component.translatable("tafelboem.boss.graaf_fout.throws", name);
+		sessions.client().actionBar(target, warning.copy().withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+		if (tier != BombTier.KNALLETJE) {
+			say(warning);
+		}
+	}
+
 	void onKickHit(Vec3 where, BombTier tier) {
 		if (phase == Phase.FINALE || phase == Phase.OVER) {
 			return;
 		}
-		level.explode(null, null, PlayerSafeExplosion.INSTANCE, boss.getX(), boss.getY() + 1, boss.getZ(), 1.5F, false,
+		// The bigger the bomb, the bigger the bang and the further he flies.
+		level.explode(null, null, PlayerSafeExplosion.SHOW, boss.getX(), boss.getY() + 1, boss.getZ(), tier.blastRadius(), false,
 				Level.ExplosionInteraction.NONE);
 		fight.registerHit();
 		bossBar.setProgress(fight.healthFraction());
@@ -262,7 +276,7 @@ public final class BossFight implements QuizListener {
 			return;
 		}
 
-		boss.yeet(where, 0.9 + level.getRandom().nextDouble() * 0.5);
+		boss.yeet(where, (0.9 + level.getRandom().nextDouble() * 0.5) * tier.yeetPower());
 		phase = Phase.REACTING;
 		phaseTicks = 20;
 	}
@@ -295,7 +309,10 @@ public final class BossFight implements QuizListener {
 	}
 
 	private ServerPlayer nextTarget() {
-		List<ServerPlayer> players = participantPlayers().stream()
+		// Look as far as the boss bar reaches: a big yeet can land him well away from the kids.
+		List<ServerPlayer> players = participants.stream()
+				.map(id -> level.getServer().getPlayerList().getPlayer(id))
+				.filter(player -> player != null && player.level() == level && player.distanceToSqr(boss) < BOSS_BAR_RADIUS * BOSS_BAR_RADIUS)
 				.filter(player -> player.isAlive() && !player.isSpectator() && !sessions.isBusy(player))
 				.toList();
 		if (players.isEmpty()) {

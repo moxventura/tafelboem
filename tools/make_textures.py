@@ -54,13 +54,20 @@ def fuse_top(base, rim):
 
 
 def knalletje():
-    side = blank(RED)
+    """A bundle of red firecracker sticks on yellow with a brown cord: orange from a distance,
+    so it never looks like the red-and-white Gewone TNT (playtest 1)."""
+    side = blank(YELLOW)
     for x in range(16):
-        for y in range(16):
-            if (x // 3) % 2 == 1:
-                put(side, [(x, y)], YELLOW)
-    put(side, [(x, y) for x in range(16) for y in (0, 15)], DARK_RED)
-    top = fuse_top(RED, DARK_RED)
+        if x % 4 in (1, 2):
+            put(side, [(x, y) for y in range(1, 15)], RED if x % 4 == 1 else DARK_RED)
+    put(side, [(x, y) for x in range(16) for y in (7, 8)], BROWN)  # the cord around the bundle
+    put(side, [(x, 0) for x in range(16)], ORANGE)
+    put(side, [(x, 15) for x in range(16)], ORANGE)
+    top = blank(YELLOW)
+    for cx in (2, 6, 10, 14):
+        for cy in (2, 6, 10, 14):
+            put(top, [(cx - 1, cy - 1), (cx, cy - 1), (cx - 1, cy), (cx, cy)], RED)
+            put(top, [(cx - 1, cy - 1)], BLACK)  # a little fuse on every stick
     bottom = blank(BROWN)
     return side, top, bottom
 
