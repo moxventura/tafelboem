@@ -25,7 +25,7 @@
   "tafelboem.stats.header": "TafelBoem - %s: %s sommen, %s%% goed",
   "tafelboem.stats.table": "  ×%s: %s/%s goed, meestal %s s",
   "tafelboem.stats.hardest": "  Nog aan het oefenen: %s",
-  "tafelboem.message.version_mismatch": "Deze PC heeft TafelBoem %s maar de wereld heeft %s. Vraag een volwassene om tafelboem-update.bat te starten!",
+  "tafelboem.message.version_mismatch": "Deze PC heeft TafelBoem %s maar de wereld heeft %s. Vraag een volwassene om TafelBoem bij te werken!",
   "entity.tafelboem.graaf_fout": "Graaf Fout",
   "entity.tafelboem.thrown_bomb": "Bom",
   "item.tafelboem.summon_graaf_fout": "Roep Graaf Fout op!",

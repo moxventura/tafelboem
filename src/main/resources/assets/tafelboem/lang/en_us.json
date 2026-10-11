@@ -25,7 +25,7 @@
   "tafelboem.stats.header": "TafelBoem - %s: %s sums, %s%% correct",
   "tafelboem.stats.table": "  ×%s: %s/%s correct, usually %s s",
   "tafelboem.stats.hardest": "  Still practising: %s",
-  "tafelboem.message.version_mismatch": "This PC has TafelBoem %s but the world has %s. Ask a grown-up to run tafelboem-update.bat!",
+  "tafelboem.message.version_mismatch": "This PC has TafelBoem %s but the world has %s. Ask a grown-up to update TafelBoem!",
   "entity.tafelboem.graaf_fout": "Count Wrong",
   "entity.tafelboem.thrown_bomb": "Bomb",
   "item.tafelboem.summon_graaf_fout": "Summon Count Wrong!",

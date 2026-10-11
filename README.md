@@ -4,12 +4,13 @@ A Minecraft Java Edition mod (Fabric, Minecraft 26.2) that helps kids practise t
 tables 1–10 in a playful way: every fuse is a sum.
 
 Right-click a bomb and you are rooted in place while a sum pops up. Answer correctly and you escape
-the boom, or kick it back at the villain **Graaf Fout**. Answer wrong and the bomb goes off on you,
-and then you see the correct fact big on screen and type it once.
+the boom, or kick it back at the villain **Graaf Fout** and watch him get yeeted. Answer wrong and
+the bomb goes off on you; you're free again straight away, and the correct fact shows big on your
+screen while the game goes on. It comes back as a question soon after.
 
 | Question | Correction after a miss | Graaf Fout gets yeeted |
 |---|---|---|
-| ![Question](docs/screenshots/r0-question.png) | ![Correction](docs/screenshots/r0-correction.png) | ![Yeet](docs/screenshots/r0-yeet.png) |
+| ![Question](docs/screenshots/r0.1-question.png) | ![Correction on the HUD](docs/screenshots/r0.1-hud-correction.png) | ![Yeet-o-meter](docs/screenshots/r0.1-yeet-o-meter.png) |
 
 The full design lives in
 [`docs/superpowers/specs/2026-10-07-tafelboem-design.md`](docs/superpowers/specs/2026-10-07-tafelboem-design.md).
@@ -39,24 +40,43 @@ Requirements: JDK 25 (`sudo apt install openjdk-25-jdk`).
 ./gradlew build          # compile, unit tests, GameTests
 ./gradlew test           # unit tests only (core learning logic)
 ./gradlew runGameTest    # headless in-game tests
-./gradlew runClientGameTest   # plays R0 in a real client and takes screenshots
+./gradlew runClientGameTest   # plays through in a real client and takes screenshots
                               # (build/run/clientGameTest/screenshots; needs a display, e.g. WSLg)
 ```
 
-## Deploying to the kids' PCs
+## Installing on the kids' PCs (Prism Launcher)
 
 **One-time setup per Windows PC:**
-1. Install Fabric Loader for Minecraft 26.2 with the Fabric installer.
-2. In the Minecraft Launcher, edit the Fabric installation and set its game directory to
-   `%APPDATA%\.minecraft-tafelboem`.
+1. Install [Prism Launcher](https://prismlauncher.org) (`winget install PrismLauncher.PrismLauncher`)
+   and add the Microsoft account that owns Minecraft. Let Prism download Java 25 when it asks.
+2. **Add Instance** → **Vanilla** → version **26.2**, mod loader **Fabric 0.19.5**, name it
+   `TafelBoem`.
+3. Right-click the instance → **Folder**, and copy `tafelboem-<version>.jar` and
+   `fabric-api-0.161.0+26.2.jar` into `minecraft\mods`.
+4. Start it, create a world with cheats on, stand where the fight should be and type
+   `/tafelboem arena`: always day, no weather, no monsters, and an arena floor under your feet.
+5. For more PCs: right-click the instance → **Export** → Prism zip, and on the other PC
+   **Add Instance** → **Import**. Fabric, the mods and the world come along.
 
-**Every update:**
-- `./gradlew deployToWindows` copies the mod to this PC's `.minecraft-tafelboem\mods`.
-- `./gradlew publishToNas` publishes the mod to the NAS share.
-- On each kids' PC, double-click `tools/tafelboem-update.bat` to pull the latest version.
+**Every update on this PC:**
 
-The `deployToWindows` and `publishToNas` tasks and the update script are planned for R0 and do not
-exist yet.
+```bash
+./gradlew deployToWindows -PwindowsGameDir=/mnt/c/Users/jeejes/AppData/Roaming/PrismLauncher/instances/TafelBoem/minecraft
+```
+
+This syncs the mod and Fabric API into the instance's `mods` folder. Without `-PwindowsGameDir` it
+targets `%APPDATA%\.minecraft-tafelboem`. For the other PCs, export the instance again. A
+`publishToNas` task and an update script are planned once the NAS share path is known.
 
 To play together, one PC opens its world to LAN and the others join. Every PC needs the same mod
 version, and the mod warns when they don't match.
+
+**Parent switches** live in the instance's `config/tafelboem.json` (written on first start):
+
+| Switch | Default | What it does |
+|---|---|---|
+| `correctionRetype` | `false` | `true` brings back the R0 screen where the child retypes the correct fact after a miss |
+| `cameraAssist` | `true` | Turns the view to Graaf Fout during a fight question and while he gets yeeted |
+
+`/tafelboem stats [player]` shows accuracy and typical time per table, the hardest facts, how often a
+missed fact is right when it comes back, and how often "?" was probably pressed by accident.
