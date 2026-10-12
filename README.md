@@ -23,7 +23,7 @@ go/no-go (see the spec):
 | Release | Content | Status |
 |---|---|---|
 | **R0 "Graaf Fout komt!"** | Core question loop, 3 bombs, basic Graaf Fout (yeeted on every hit), LAN, answer log | ✅ playtest 1 done |
-| **R0.1 "Beter mikken"** | Fixes from playtest 1: clearer question screen, correction on the HUD, distinct bombs, camera assist, a simple kick, more yeets, world setup, better stats | 🚧 in progress |
+| **R0.1 "Beter mikken"** | Fixes from playtest 1: clearer question screen, correction on the HUD, distinct bombs, camera assist, a simple kick, more yeets, world setup, better stats, self-updating Prism instance | 🚧 in progress |
 | R1 "Kies je level" | Hub with level doors, premade arenas (also built by the kids), yeet catalogue, counting Kippenbom, dodgeable bombs, Graaf Fout eats your mistake | backlog |
 | R2 "Leren dat blijft" | Fact states, spaced practice, Tafelkaart, parent report, daily limit, "Kies je bom", leg-kick animation | backlog |
 | R3 "Meer boem" | Bombs 4–9, craters, particle shows, lives, co-op rescue | backlog |
@@ -44,32 +44,56 @@ Requirements: JDK 25 (`sudo apt install openjdk-25-jdk`).
                               # (build/run/clientGameTest/screenshots; needs a display, e.g. WSLg)
 ```
 
-## Installing on the kids' PCs (Prism Launcher)
+## Playing on the kids' PCs (Prism Launcher)
+
+Every PC plays in a Prism Launcher instance that updates itself: before each launch, packwiz
+downloads the newest published TafelBoem from the public pack repo
+[`moxventura/tafelboem-pack`](https://github.com/moxventura/tafelboem-pack).
 
 **One-time setup per Windows PC:**
 1. Install [Prism Launcher](https://prismlauncher.org) (`winget install PrismLauncher.PrismLauncher`)
    and add the Microsoft account that owns Minecraft. Let Prism download Java 25 when it asks.
-2. **Add Instance** → **Vanilla** → version **26.2**, mod loader **Fabric 0.19.5**, name it
-   `TafelBoem`.
-3. Right-click the instance → **Folder**, and copy `tafelboem-<version>.jar` and
-   `fabric-api-0.161.0+26.2.jar` into `minecraft\mods`.
-4. Start it, create a world with cheats on, stand where the fight should be and type
-   `/tafelboem arena`: always day, no weather, no monsters, and an arena floor under your feet.
-   For a world that has cheats off, use **Esc → Instellingen → Wereldinstellingen** and set
-   **Cheats** to on and **Spelmodus** to Creatief. The cheat and game-mode settings on the
-   **Openen voor LAN** screen only apply to players who join, not to the host.
-5. For more PCs: right-click the instance → **Export** → Prism zip, and on the other PC
-   **Add Instance** → **Import**. Fabric, the mods and the world come along.
+2. **Add Instance** → **Import**, paste
+   `https://raw.githubusercontent.com/moxventura/tafelboem-pack/main/TafelBoem-instance.zip` and
+   press OK.
+3. Press **Play**: a small packwiz window installs TafelBoem and Fabric API, then Minecraft starts.
+4. Create a world with cheats on, stand where the fight should be and type `/tafelboem arena`:
+   always day, no weather, no monsters, and an arena floor under your feet. For a world that has
+   cheats off, use **Esc → Instellingen → Wereldinstellingen** and set **Cheats** to on and
+   **Spelmodus** to Creatief. The cheat and game-mode settings on the **Openen voor LAN** screen
+   only apply to players who join, not to the host.
 
-**Every update on this PC:**
+**Publishing a new version:**
 
 ```bash
-./gradlew deployToWindows -PwindowsGameDir=/mnt/c/Users/jeejes/AppData/Roaming/PrismLauncher/instances/TafelBoem/minecraft
+./gradlew publishPack
 ```
 
-This syncs the mod and Fabric API into the instance's `mods` folder. Without `-PwindowsGameDir` it
-targets `%APPDATA%\.minecraft-tafelboem`. For the other PCs, export the instance again. A
-`publishToNas` task and an update script are planned once the NAS share path is known.
+This builds and runs all tests, publishes the jars to the pack repo, and then waits until GitHub
+serves them: **wait for "Live after N s"** (usually 4–5 minutes, GitHub caches each file for up to
+5) and then press Play on any PC. Pressing Play earlier is harmless: packwiz notices the half-updated
+pack by its hashes, shows an error and keeps the installed version. For a quick look without
+publishing, `./gradlew runClient` starts the game here in WSL.
+
+**Rules of thumb:**
+- Never copy jars into the instance's `mods` folder by hand; packwiz manages it.
+- No internet? In the packwiz error window, choose **Continue without updating** to play the
+  installed version.
+- After a Minecraft or Fabric Loader version bump (in `gradle.properties`), the first Play updates
+  the instance and the second Play starts the new version.
+
+**The instance template** (`TafelBoem-instance.zip`, only redone when the setup changes): a Prism
+instance named `TafelBoem` (Minecraft 26.2, Fabric 0.19.5) with `packwiz-installer.jar` and
+`packwiz-installer-bootstrap.jar` (`./gradlew prismKit` downloads the pinned, checksum-verified
+versions into `build/prism`) in its `minecraft` folder, and as custom pre-launch command (Edit →
+Settings → Custom commands):
+
+```
+"$INST_JAVA" -jar packwiz-installer-bootstrap.jar --bootstrap-no-update https://raw.githubusercontent.com/moxventura/tafelboem-pack/main/pack.toml
+```
+
+Export it with Prism (right-click → Export) **before its first Play**, so no saves or machine paths
+come along, and commit the zip to the pack repo.
 
 To play together, one PC opens its world to LAN and the others join. Every PC needs the same mod
 version, and the mod warns when they don't match.

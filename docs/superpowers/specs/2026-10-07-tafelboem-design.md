@@ -89,7 +89,7 @@ can be replayed and tuned on real history.
 - `./gradlew build` is green: core JUnit tests plus a GameTest smoke test of the session engine.
 - The manual checklist for that release is done.
 - nl and en are complete.
-- It is deployed to every kids' PC through the update script.
+- It is published with `./gradlew publishPack`, and every kids' PC picks it up on the next Play.
 - Every new feature has a config toggle, so we can switch it off quickly if the kids dislike it.
 - The release has a version tag.
 
@@ -151,14 +151,22 @@ can be replayed and tuned on real history.
 **Where to play R0.** In a fresh **superflat** world that you create, opened to LAN. The kids
 don't need a custom world type to test the loop.
 
-**Deploy to the kids' PCs:**
-- `./gradlew deployToWindows` syncs to this PC's `.minecraft-tafelboem/mods`, for your own testing.
-- `./gradlew publishToNas` copies our jar and the Fabric API jar into a NAS share folder. The
-  share path gets decided during R0 setup.
-- `tools/tafelboem-update.bat` is double-clicked on each kids' PC. It mirrors the NAS folder into
-  that PC's `%APPDATA%\.minecraft-tafelboem\mods` using `robocopy /MIR`.
-- **One-time setup per PC:** install Fabric 26.2 with the installer, then create a launcher profile
-  with game dir `.minecraft-tafelboem`.
+**Deploy to the kids' PCs** (revised 2026-10-12; replaces the never-built NAS share and `.bat`):
+- **Prism Launcher plus packwiz.** Every PC plays in a Prism instance `TafelBoem` (26.2 + Fabric
+  0.19.5). Its pre-launch command runs packwiz-installer, which reads a public pack repo,
+  [`moxventura/tafelboem-pack`](https://github.com/moxventura/tafelboem-pack), and updates the mods
+  before every Play. Only the changed files are downloaded, and every file is hash-checked.
+- **Publishing.** `./gradlew publishPack` builds and tests first. It then puts our jar and Fabric API
+  in the pack under fixed names (`mods/tafelboem.jar`, `mods/fabric-api.jar`), writes the packwiz
+  `index.toml` and `pack.toml`, commits and pushes. Finally it waits until GitHub serves every file
+  and prints "Live after N s".
+- **Wait for "Live".** GitHub's raw CDN caches each file for up to 5 minutes, separately. Measured on
+  2026-10-12: 263 s. Pressing Play earlier can meet a mix of old and new files. packwiz then refuses
+  on the hash check and leaves the installed version untouched, so it is harmless.
+- **One-time setup per PC.** Install Prism and log in, then Add Instance → Import with the URL of
+  `TafelBoem-instance.zip` from the pack repo.
+- **Rules.** Never copy jars into the instance by hand. Offline, choose "Continue without updating"
+  in the packwiz window. A Minecraft or Fabric version bump takes two Plays.
 - The woonkamer PC can be woken with `ssh nas "~/wake_pc.sh"`.
 
 **R0 acceptance criteria** (checked manually on this PC plus the woonkamer PC over LAN):
@@ -234,6 +242,9 @@ A patch on R0 that fixes what playtest 1 found (P-numbers refer to `docs/evaluat
   23 blokken!", or for the helicopter "Graaf Fout vloog 12 blokken hoog!".
 - **Kick, simple version.** When a correct answer kicks the bomb back, the kid's arm swings the
   vanilla way, with a "whoosh" sound and a small camera bump. No custom animation.
+- **Easy updates (playtest prep).** Prism Launcher on both PCs with a packwiz updater that installs
+  the newest published version on every Play; `./gradlew publishPack` publishes (see "Deploy to the
+  kids' PCs").
 - **World setup (P11).** `/tafelboem arena` makes the world fit for playing: always day, no
   weather, no mob spawning, keep inventory, and it removes hostile mobs nearby. It also lays a round
   arena floor around the player.
@@ -256,6 +267,8 @@ A patch on R0 that fixes what playtest 1 found (P-numbers refer to `docs/evaluat
 7. A correct answer in a fight gives an arm swing, a whoosh and a camera bump as the bomb leaves.
 8. `/tafelboem arena` stops day/night and mob spawning in an existing world.
 9. `/tafelboem stats` shows re-ask accuracy and likely mis-clicks.
+10. After `./gradlew publishPack` reports "Live", pressing Play installs the new version on both PCs
+    without copying any file; offline, "Continue without updating" starts the installed version.
 
 **R0.1 evaluation (playtest 2).** Record it in `docs/evaluations/R0.1.md`:
 - the R0 numbers that were missed: answers per 20 minutes, % correct, median time
@@ -762,7 +775,7 @@ The steps:
      rename it to the `tafelboem` id and package.
    - Empty mod builds, `runGameTest` is green. Commit and push.
    - Fabric profiles on this PC and the woonkamer PC.
-   - `deployToWindows`, `publishToNas` and `tools/tafelboem-update.bat`.
+   - `deployToWindows` (R0.1 replaced it, and the never-built NAS share, with `publishPack`).
    - The mod loads on both PCs.
 3. **Session engine.**
    - Knalletje block → `RootLock` → `QuestionScreen` (digits, "?", correction and retype, tip) →
@@ -789,7 +802,7 @@ The steps:
    - Get an empty mod to build, with `runGameTest` green.
    - Jesper installs Fabric 26.2 with the Windows installer and creates a launcher profile with
      its own game dir `.minecraft-tafelboem`. The Gradle task `deployToWindows` syncs our jar and
-     Fabric API into that profile's `mods`.
+     Fabric API into that profile's `mods`. (R0.1 moved to Prism Launcher and `publishPack`.)
    - Check that the mod loads in game.
 1. **Slice.**
    - Knalletje block → root lock → question screen with a fixed question, "?" and the retype step.
@@ -868,8 +881,7 @@ Phases 5–7 make it spectacular, phase 8 adds weeks of content, and phase 9 pol
     (correct for all 100 facts), the one-level fight maths, and the architecture test.
   - The GameTest smoke test covers: lock applied → correct answer → lock released and boom
     scheduled; wrong → penalty and correction state; ESC cap.
-- **Deploy:** `./gradlew deployToWindows publishToNas`, then run `tafelboem-update.bat` on the
-  woonkamer PC.
+- **Deploy:** `./gradlew publishPack`; after "Live", Play on each PC installs it.
 - **Manual:** the R0 acceptance checklist (11 items above) on this PC plus the woonkamer PC over LAN.
 - **Evaluation:** a play session with the kids, written up in `docs/evaluations/R0.md`, then the
   go/no-go.
@@ -905,8 +917,8 @@ Phases 5–7 make it spectacular, phase 8 adds weeks of content, and phase 9 pol
   - daily dose puts the bosses to sleep
   - beating Graaf Fout level 9 unlocks Tante Toverfout
   - crater cap respected (test config radius 3)
-- **Play-test.** `./gradlew build deployToWindows`, then create a new TafelBoem world in the
-  Fabric profile on Windows. Check the following:
+- **Play-test.** `./gradlew publishPack`, wait for "Live", press Play in the Prism instance, then
+  create a new TafelBoem world. Check the following:
   - Nederlands and English
   - a first-time onboarding walk-through
   - all three bosses, levels 1–9 (`/tafelboem fight <boss> <level>` to jump ahead)

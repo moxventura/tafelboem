@@ -71,16 +71,38 @@ java {
 	targetCompatibility = JavaVersion.VERSION_25
 }
 
-// --- Deployment to the kids' Minecraft installs -------------------------------------------
-// The Windows launcher profile uses its own game directory, so this mods folder is dedicated to
-// TafelBoem and Sync may safely remove anything that is not ours.
-def windowsGameDir = providers.gradleProperty("windowsGameDir")
-		.orElse("/mnt/c/Users/jeejes/AppData/Roaming/.minecraft-tafelboem")
-
-tasks.register("deployToWindows", Sync) {
+// --- Distribution to the kids' PCs ---------------------------------------------------------
+// The PCs play in a Prism Launcher instance whose packwiz updater reads the public pack repo
+// before every launch. `./gradlew publishPack` builds, tests and publishes there, then waits until
+// GitHub serves it. Never copy jars into that instance by hand: packwiz manages its mods folder.
+tasks.register("publishPack", nl.jeeninga.tafelboem.build.PublishPack) {
 	group = "tafelboem"
-	description = "Syncs the mod and Fabric API into the TafelBoem launcher profile on this Windows PC."
-	from(tasks.named("jar"))
-	from(configurations.deployMods)
-	into(windowsGameDir.map { "$it/mods" })
+	description = "Builds, tests and publishes TafelBoem to the pack repo; Prism installs it on the next Play."
+	dependsOn("build")
+	modJar = tasks.named("jar", Jar).flatMap { it.archiveFile }
+	fabricApi.from(configurations.deployMods)
+	packDir = layout.projectDirectory.dir(providers.gradleProperty("packDir").orElse("../tafelboem-pack"))
+	sourceDir = layout.projectDirectory
+	packName = "TafelBoem"
+	modVersion = project.version.toString()
+	minecraft = project.minecraft_version
+	fabric = project.loader_version
+	rawUrl = "https://raw.githubusercontent.com/${project.pack_repo}"
+}
+
+// The two packwiz jars that go into the Prism instance, pinned and checked.
+def packwizInstaller = tasks.register("downloadPackwizInstaller", nl.jeeninga.tafelboem.build.DownloadVerified) {
+	url = "https://github.com/packwiz/packwiz-installer/releases/download/v${project.packwiz_installer_version}/packwiz-installer.jar"
+	sha256 = project.packwiz_installer_sha256
+	output = layout.buildDirectory.file("prism/packwiz-installer.jar")
+}
+def packwizBootstrap = tasks.register("downloadPackwizBootstrap", nl.jeeninga.tafelboem.build.DownloadVerified) {
+	url = "https://github.com/packwiz/packwiz-installer-bootstrap/releases/download/v${project.packwiz_bootstrap_version}/packwiz-installer-bootstrap.jar"
+	sha256 = project.packwiz_bootstrap_sha256
+	output = layout.buildDirectory.file("prism/packwiz-installer-bootstrap.jar")
+}
+tasks.register("prismKit") {
+	group = "tafelboem"
+	description = "Downloads the pinned packwiz jars for the Prism instance into build/prism."
+	dependsOn(packwizInstaller, packwizBootstrap)
 }

@@ -1,6 +1,7 @@
-# Gradle
+# Gradle (anchored: a Java package may be called build)
 .gradle/
-build/
+/build/
+/buildSrc/build/
 !gradle/wrapper/gradle-wrapper.jar
 
 # Minecraft dev runs
