@@ -63,19 +63,35 @@ downloads the newest published TafelBoem from the public pack repo
    **Spelmodus** to Creatief. The cheat and game-mode settings on the **Openen voor LAN** screen
    only apply to players who join, not to the host.
 
-**Publishing a new version:**
+**Publishing a new version.** Every version the kids get is a clean commit with a tag `vX.Y.Z`. Here
+`X.Y` is the release (R0.1 → `0.1`, R1 → `1.0`) and `Z` counts the builds published in it. Commit,
+tag with the next number, and publish:
 
 ```bash
+git tag v0.1.3
 ./gradlew publishPack
 ```
 
-This builds and runs all tests, publishes the jars to the pack repo, and then waits until GitHub
-serves them: **wait for "Live after N s"** (usually 4–5 minutes, GitHub caches each file for up to
+`publishPack` refuses uncommitted changes or an untagged commit within seconds, and names the next
+tag. It pushes the tag to GitHub, builds and runs all tests, publishes the jars to the pack repo,
+and then waits until GitHub serves them: **wait for "Live after N s"** (usually 4–5 minutes, GitHub caches each file for up to
 5) and then press Play on any PC. Pressing Play earlier is harmless: packwiz notices the half-updated
 pack by its hashes, shows an error and keeps the installed version. For a quick look without
 publishing, `./gradlew runClient` starts the game here in WSL.
 
+**Versions come from git**, not from a file:
+- **On a tag:** a clean, tagged commit builds as exactly the tag's number, such as `0.1.3`.
+- **Everywhere else:** any other build, for example `runClient`, CI, or a commit after the tag,
+  becomes something like `0.1.3+2.g1a2b3c4`. Uncommitted changes add `.dirty` to the end.
+- **Where it shows:** every answer log line records the version, and the join-time check compares
+  it exactly.
+
 **Rules of thumb:**
+- A new release starts at `X.Y.0`, for example `v1.0.0` for R1.
+- A pushed tag is never moved, deleted or reused. If a build has a mistake, fix it and publish the
+  next number.
+- To roll back, run `git checkout v0.1.2 && ./gradlew publishPack`. This publishes the old version
+  again.
 - Never copy jars into the instance's `mods` folder by hand; packwiz manages it.
 - No internet? In the packwiz error window, choose **Continue without updating** to play the
   installed version.
@@ -96,7 +112,7 @@ command and `OverrideCommands=true`, and its version catalogue has Minecraft 26.
 and Fabric Loader 0.19.5. No Prism is needed on the build PC.
 
 To play together, one PC opens its world to LAN and the others join. Every PC needs the same mod
-version, and the mod warns when they don't match.
+version, and the mod warns when they don't match, even when two builds are only one commit apart.
 
 **Parent switches** live in the instance's `config/tafelboem.json` (written on first start):
 

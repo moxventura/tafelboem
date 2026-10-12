@@ -1,13 +1,11 @@
 package nl.jeeninga.tafelboem.build;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -39,9 +37,10 @@ import org.gradle.process.ExecOperations;
 
 /**
  * Publishes the built mod to the public pack repo that Prism's packwiz updater reads before every
- * launch: copies the jars under fixed names, writes the packwiz files, commits, pushes, and then
- * waits until GitHub's raw CDN (cached for up to 5 minutes) serves exactly what was pushed. After
- * "Live", pressing Play on any PC installs the new version.
+ * launch: pushes the version tag of this repo (checked by {@link CheckRelease}), copies the jars
+ * under fixed names, writes the packwiz files, commits, pushes, and then waits until GitHub's raw
+ * CDN (cached for up to 5 minutes) serves exactly what was pushed. After "Live", pressing Play on
+ * any PC installs the new version.
  */
 @UntrackedTask(because = "publishes to GitHub")
 public abstract class PublishPack extends DefaultTask {
@@ -63,7 +62,7 @@ public abstract class PublishPack extends DefaultTask {
 	@Internal
 	public abstract DirectoryProperty getPackDir();
 
-	/** This repo, to note which commit a pack was built from. */
+	/** This repo: its version tag is pushed, and the pack notes which commit it was built from. */
 	@Internal
 	public abstract DirectoryProperty getSourceDir();
 
@@ -88,35 +87,39 @@ public abstract class PublishPack extends DefaultTask {
 
 	@TaskAction
 	public void publish() throws IOException, InterruptedException {
-		File pack = getPackDir().get().getAsFile();
-		if (!new File(pack, ".git").exists()) {
-			throw new GradleException("No pack repo clone at " + pack + ". Clone it with: git clone git@github.com:moxventura/tafelboem-pack.git");
+		File packClone = getPackDir().get().getAsFile();
+		if (!new File(packClone, ".git").exists()) {
+			throw new GradleException("No pack repo clone at " + packClone + ". Clone it with: git clone git@github.com:moxventura/tafelboem-pack.git");
 		}
-		String localChanges = git(pack, "status", "--porcelain");
+		Git pack = new Git(getExec(), packClone);
+		String localChanges = pack.run("status", "--porcelain");
 		if (!localChanges.isEmpty()) {
-			throw new GradleException("The pack clone " + pack + " has local changes; commit or discard them first:\n" + localChanges);
+			throw new GradleException("The pack clone " + packClone + " has local changes; commit or discard them first:\n" + localChanges);
 		}
-		String branch = git(pack, "rev-parse", "--abbrev-ref", "HEAD");
-		if (!git(pack, "ls-remote", "--heads", "origin", branch).isEmpty()) {
-			git(pack, "pull", "--ff-only", "-q", "origin", branch);
+		String branch = pack.run("rev-parse", "--abbrev-ref", "HEAD");
+		if (!pack.run("ls-remote", "--heads", "origin", branch).isEmpty()) {
+			pack.run("pull", "--ff-only", "-q", "origin", branch);
 		}
 
-		Path packDir = pack.toPath();
+		// The tag first: every version the PCs can download then has its tag (and commit) on GitHub.
+		Git source = new Git(getExec(), getSourceDir().get().getAsFile());
+		String tag = "v" + getModVersion().get();
+		source.run("push", "-q", "origin", "refs/tags/" + tag);
+
+		Path packDir = packClone.toPath();
 		Path mods = packDir.resolve("mods");
 		replaceMods(mods);
 		Packwiz.write(packDir, getPackName().get(), getModVersion().get(), getMinecraft().get(), getFabric().get());
 		Files.copy(getInstanceZip().get().getAsFile().toPath(), packDir.resolve(INSTANCE_ZIP), StandardCopyOption.REPLACE_EXISTING);
 
-		git(pack, "add", "-A", Packwiz.PACK, Packwiz.INDEX, "mods", INSTANCE_ZIP);
-		if (git(pack, "status", "--porcelain").isEmpty()) {
+		pack.run("add", "-A", Packwiz.PACK, Packwiz.INDEX, "mods", INSTANCE_ZIP);
+		if (pack.run("status", "--porcelain").isEmpty()) {
 			getLogger().lifecycle("Nothing to publish: {} {} is already in the pack ({}).", getPackName().get(), getModVersion().get(), branch);
 			return;
 		}
-		File source = getSourceDir().get().getAsFile();
-		String built = "tafelboem@" + git(source, "rev-parse", "--short", "HEAD")
-				+ (git(source, "status", "--porcelain").isEmpty() ? "" : "-dirty");
-		git(pack, "commit", "-q", "-m", getPackName().get() + " " + getModVersion().get() + " (" + built + ")");
-		git(pack, "push", "-q", "origin", "HEAD");
+		String built = "tafelboem@" + source.run("rev-parse", "--short", "HEAD");
+		pack.run("commit", "-q", "-m", getPackName().get() + " " + getModVersion().get() + " (" + built + ")");
+		pack.run("push", "-q", "origin", "HEAD");
 		getLogger().lifecycle("Pushed {} {} ({}) to branch {}. Waiting until GitHub serves it...", getPackName().get(), getModVersion().get(), built, branch);
 
 		waitUntilLive(packDir, branch);
@@ -191,22 +194,5 @@ public abstract class PublishPack extends DefaultTask {
 		} catch (NoSuchAlgorithmException e) {
 			throw new IllegalStateException(e);
 		}
-	}
-
-	private String git(File dir, String... args) {
-		List<String> command = new ArrayList<>(List.of("git", "-C", dir.getAbsolutePath()));
-		command.addAll(List.of(args));
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
-		ByteArrayOutputStream err = new ByteArrayOutputStream();
-		int exit = getExec().exec(spec -> {
-			spec.commandLine(command);
-			spec.setStandardOutput(out);
-			spec.setErrorOutput(err);
-			spec.setIgnoreExitValue(true);
-		}).getExitValue();
-		if (exit != 0) {
-			throw new GradleException(String.join(" ", command) + " failed (" + exit + "): " + err.toString(StandardCharsets.UTF_8).trim());
-		}
-		return out.toString(StandardCharsets.UTF_8).trim();
 	}
 }

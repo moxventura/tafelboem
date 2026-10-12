@@ -19,6 +19,7 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 
 import nl.jeeninga.tafelboem.TafelBoem;
 import nl.jeeninga.tafelboem.config.TafelBoemConfig;
+import nl.jeeninga.tafelboem.core.AnswerRecord;
 import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.Outcome;
 import nl.jeeninga.tafelboem.game.BombEffects;
@@ -49,6 +50,20 @@ public class SessionGameTest {
 		helper.assertValueEqual(f.client.last().mode(), QuizS2C.CLOSE, "screen mode after correct answer");
 		helper.assertBlockPresent(ModBlocks.bomb(BombTier.KNALLETJE), BOMB);
 		helper.succeedWhen(() -> helper.assertBlockNotPresent(ModBlocks.bomb(BombTier.KNALLETJE), BOMB));
+	}
+
+	@GameTest
+	public void everyLoggedAnswerSaysWhichVersionWasPlayed(GameTestHelper helper) {
+		// Ties playtest data to the exact build the kids had.
+		Fixture f = new Fixture(helper);
+		QuizS2C question = f.ask();
+
+		f.answer(question, question.a() * question.b());
+
+		List<AnswerRecord> logged = f.learners.log().read(f.player.getPlainTextName());
+		helper.assertValueEqual(logged.size(), 1, "logged answers");
+		helper.assertValueEqual(logged.getFirst().version(), TafelBoem.version(), "version in the answer log");
+		helper.succeed();
 	}
 
 	@GameTest
@@ -164,6 +179,7 @@ public class SessionGameTest {
 		final GameTestHelper helper;
 		final RecordingQuizClient client = new RecordingQuizClient();
 		final ServerPlayer player;
+		final Learners learners;
 		final SessionManager manager;
 
 		Fixture(GameTestHelper helper) {
@@ -176,7 +192,8 @@ public class SessionGameTest {
 			this.player = helper.makeMockServerPlayerInLevel();
 			Vec3 standHere = Vec3.atBottomCenterOf(helper.absolutePos(BOMB.east(3)));
 			player.teleportTo(standHere.x, standHere.y, standHere.z);
-			this.manager = new SessionManager(helper.getLevel().getServer(), new Learners(new AnswerLog(tempDir())), client, config);
+			this.learners = new Learners(new AnswerLog(tempDir()));
+			this.manager = new SessionManager(helper.getLevel().getServer(), learners, client, config);
 			helper.onEachTick(manager::tick);
 		}
 

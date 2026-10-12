@@ -95,6 +95,22 @@ This PC doesn't play, so it gets no Prism. The kids play on the woonkamer PC and
 - [x] README: playing, publishing, rules of thumb, and the instance template.
 - [x] `docs/evaluations/R0.1.md`: checklist row 10; columns are now "Woonkamer PC" and "Second PC".
 
+### Task 7: Versions from git tags (added 2026-10-12)
+Before this, the version was typed by hand, so different builds could share "0.1.2". When that
+happened, the join-time check missed the difference and the answer log couldn't say which build was
+played.
+- [x] `GitVersion` (TDD, `GitVersionTest`, 8 tests) turns `git describe` into the version:
+  - `0.1.3` on a clean tag;
+  - `0.1.3+2.g1a2b3c4[.dirty]` otherwise.
+
+  `version=` is gone from `gradle.properties`.
+- [x] `checkRelease` runs before anything compiles. It refuses uncommitted changes, an untagged
+      HEAD (and names the next tag), and a version that doesn't match the tag.
+- [x] `publishPack` pushes the tag before the pack, and the `-dirty` marker is gone.
+- [x] Every answer log line records the version (`SessionGameTest`).
+- [x] CI fetches the full history, so its jars carry real versions.
+- [x] `v0.1.2` tags `502918a`, the build that was live.
+
 ## Known limits
 - **Wait for "Live" after publishing** (measured: 263 s). For an instant look, `./gradlew runClient`
   runs the game in WSL.

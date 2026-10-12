@@ -6,6 +6,13 @@ repositories {
 	mavenCentral()
 }
 
+// The version comes from git, not from a file: a clean commit tagged v0.1.3 builds "0.1.3", anything
+// else "0.1.3+2.g1a2b3c4" (plus ".dirty"), so a test build never passes for a published one.
+version = providers.exec {
+	commandLine(nl.jeeninga.tafelboem.build.GitVersion.DESCRIBE)
+	ignoreExitValue = true
+}.standardOutput.asText.map { nl.jeeninga.tafelboem.build.GitVersion.fromDescribe(it) }.get()
+
 loom {
 	splitEnvironmentSourceSets()
 
@@ -107,10 +114,19 @@ def prismInstance = tasks.register("prismInstance", nl.jeeninga.tafelboem.build.
 	zip = layout.buildDirectory.file("prism/TafelBoem.zip")
 }
 
+// Only a clean commit tagged vX.Y.Z is published. The check runs before anything compiles.
+def checkRelease = tasks.register("checkRelease", nl.jeeninga.tafelboem.build.CheckRelease) {
+	group = "tafelboem"
+	description = "Fails unless HEAD is a clean commit tagged with this build's version."
+	sourceDir = layout.projectDirectory
+	modVersion = project.version.toString()
+}
+tasks.withType(JavaCompile).configureEach { mustRunAfter(checkRelease) }
+
 tasks.register("publishPack", nl.jeeninga.tafelboem.build.PublishPack) {
 	group = "tafelboem"
-	description = "Builds, tests and publishes TafelBoem to the pack repo; Prism installs it on the next Play."
-	dependsOn("build")
+	description = "Builds, tests and publishes the tagged HEAD to the pack repo; Prism installs it on the next Play."
+	dependsOn(checkRelease, "build")
 	modJar = tasks.named("jar", Jar).flatMap { it.archiveFile }
 	fabricApi.from(configurations.deployMods)
 	instanceZip = prismInstance.flatMap { it.zip }

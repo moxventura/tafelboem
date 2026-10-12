@@ -91,7 +91,9 @@ can be replayed and tuned on real history.
 - nl and en are complete.
 - It is published with `./gradlew publishPack`, and every kids' PC picks it up on the next Play.
 - Every new feature has a config toggle, so we can switch it off quickly if the kids dislike it.
-- The release has a version tag.
+- Every publish is a clean commit tagged `vX.Y.Z`. `X.Y` is the release (R0.1 → 0.1, R1 → 1.0)
+  and `Z` counts its published builds. The evaluation names the version that passed (decided
+  2026-10-12).
 
 **Testing strategy.**
 - Heavy unit tests go on what is stable: the learning logic and the fight maths.
@@ -139,7 +141,8 @@ can be replayed and tuned on real history.
   5 hardest facts. Everything stays local; nothing is sent over the network.
 - **Language.** nl_nl and en_us from the start.
 - **Version check.** On join, the server compares the mod version with the client's. A mismatch
-  shows a friendly "Update TafelBoem op deze PC" message.
+  shows a friendly "Update TafelBoem op deze PC" message. Since 0.1.3 the version comes from git
+  (`0.1.3` on a tag, `0.1.3+2.g1a2b3c4` otherwise), so even builds one commit apart differ.
 
 **Out of R0 (backlog):**
 - bombs 4–9, craters, choreographies
@@ -156,6 +159,8 @@ don't need a custom world type to test the loop.
   0.19.5). Its pre-launch command runs packwiz-installer, which reads a public pack repo,
   [`moxventura/tafelboem-pack`](https://github.com/moxventura/tafelboem-pack), and updates the mods
   before every Play. Only the changed files are downloaded, and every file is hash-checked.
+- **Versions.** The version comes from `git describe`. `publishPack` only publishes a clean commit
+  tagged `vX.Y.Z`, and pushes that tag first, so every version on the PCs can be rebuilt.
 - **Publishing.** `./gradlew publishPack` builds and tests first. It then puts our jar and Fabric API
   in the pack under fixed names (`mods/tafelboem.jar`, `mods/fabric-api.jar`), writes the packwiz
   `index.toml` and `pack.toml`, commits and pushes. Finally it waits until GitHub serves every file
@@ -790,7 +795,8 @@ The steps:
    - The defeat finale, the Kippenbom loot, and LAN turns.
 6. **Bombs 2–3 and nl/en polish.**
    - Gewone TNT and Kippenbom with simple particle bursts.
-   - Run the manual acceptance checklist on both PCs, tag `r0`, and publish.
+   - Run the manual acceptance checklist on both PCs, tag `r0`, and publish. (R0 was never tagged;
+     from R0.1 every publish is tagged `vX.Y.Z`.)
 7. **Evaluation session with the kids.** Write it up in `docs/evaluations/R0.md`, then hold a
    backlog review with Jesper.
 

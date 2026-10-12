@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import net.minecraft.server.level.ServerPlayer;
 
+import nl.jeeninga.tafelboem.TafelBoem;
 import nl.jeeninga.tafelboem.core.AnswerRecord;
 import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.Fact;
@@ -32,7 +33,7 @@ public final class Learners {
 			String via, int typedDigits) {
 		picker(player).record(fact, outcome, millis);
 		log.append(new AnswerRecord(System.currentTimeMillis(), player.getPlainTextName(), fact.a(), fact.b(), answer,
-				outcome, millis, tier.tier(), context, via, typedDigits));
+				outcome, millis, tier.tier(), context, via, typedDigits, TafelBoem.version()));
 	}
 
 	public AnswerLog log() {
