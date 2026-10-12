@@ -75,20 +75,7 @@ java {
 // The PCs play in a Prism Launcher instance whose packwiz updater reads the public pack repo
 // before every launch. `./gradlew publishPack` builds, tests and publishes there, then waits until
 // GitHub serves it. Never copy jars into that instance by hand: packwiz manages its mods folder.
-tasks.register("publishPack", nl.jeeninga.tafelboem.build.PublishPack) {
-	group = "tafelboem"
-	description = "Builds, tests and publishes TafelBoem to the pack repo; Prism installs it on the next Play."
-	dependsOn("build")
-	modJar = tasks.named("jar", Jar).flatMap { it.archiveFile }
-	fabricApi.from(configurations.deployMods)
-	packDir = layout.projectDirectory.dir(providers.gradleProperty("packDir").orElse("../tafelboem-pack"))
-	sourceDir = layout.projectDirectory
-	packName = "TafelBoem"
-	modVersion = project.version.toString()
-	minecraft = project.minecraft_version
-	fabric = project.loader_version
-	rawUrl = "https://raw.githubusercontent.com/${project.pack_repo}"
-}
+def rawPackRepo = "https://raw.githubusercontent.com/${project.pack_repo}"
 
 // The two packwiz jars that go into the Prism instance, pinned and checked.
 def packwizInstaller = tasks.register("downloadPackwizInstaller", nl.jeeninga.tafelboem.build.DownloadVerified) {
@@ -105,4 +92,33 @@ tasks.register("prismKit") {
 	group = "tafelboem"
 	description = "Downloads the pinned packwiz jars for the Prism instance into build/prism."
 	dependsOn(packwizInstaller, packwizBootstrap)
+}
+
+// The instance new PCs import (Prism → Add Instance → Import → URL of this zip in the pack repo).
+def prismInstance = tasks.register("prismInstance", nl.jeeninga.tafelboem.build.PrismInstanceZip) {
+	group = "tafelboem"
+	description = "Builds TafelBoem.zip: a Prism instance that runs packwiz before every launch."
+	instanceName = "TafelBoem"
+	minecraft = project.minecraft_version
+	fabric = project.loader_version
+	packUrl = "${rawPackRepo}/main/pack.toml"
+	bootstrap = packwizBootstrap.flatMap { it.output }
+	installer = packwizInstaller.flatMap { it.output }
+	zip = layout.buildDirectory.file("prism/TafelBoem.zip")
+}
+
+tasks.register("publishPack", nl.jeeninga.tafelboem.build.PublishPack) {
+	group = "tafelboem"
+	description = "Builds, tests and publishes TafelBoem to the pack repo; Prism installs it on the next Play."
+	dependsOn("build")
+	modJar = tasks.named("jar", Jar).flatMap { it.archiveFile }
+	fabricApi.from(configurations.deployMods)
+	instanceZip = prismInstance.flatMap { it.zip }
+	packDir = layout.projectDirectory.dir(providers.gradleProperty("packDir").orElse("../tafelboem-pack"))
+	sourceDir = layout.projectDirectory
+	packName = "TafelBoem"
+	modVersion = project.version.toString()
+	minecraft = project.minecraft_version
+	fabric = project.loader_version
+	rawUrl = rawPackRepo
 }

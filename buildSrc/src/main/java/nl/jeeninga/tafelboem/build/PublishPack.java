@@ -47,12 +47,17 @@ import org.gradle.process.ExecOperations;
 public abstract class PublishPack extends DefaultTask {
 	private static final Duration POLL_EVERY = Duration.ofSeconds(20);
 	private static final Duration GIVE_UP_AFTER = Duration.ofMinutes(8);
+	private static final String INSTANCE_ZIP = "TafelBoem.zip";
 
 	@InputFile
 	public abstract RegularFileProperty getModJar();
 
 	@InputFiles
 	public abstract ConfigurableFileCollection getFabricApi();
+
+	/** The Prism instance new PCs import; published next to the pack, not in its index. */
+	@InputFile
+	public abstract RegularFileProperty getInstanceZip();
 
 	/** A clone of the pack repo; whatever branch is checked out gets published. */
 	@Internal
@@ -100,8 +105,9 @@ public abstract class PublishPack extends DefaultTask {
 		Path mods = packDir.resolve("mods");
 		replaceMods(mods);
 		Packwiz.write(packDir, getPackName().get(), getModVersion().get(), getMinecraft().get(), getFabric().get());
+		Files.copy(getInstanceZip().get().getAsFile().toPath(), packDir.resolve(INSTANCE_ZIP), StandardCopyOption.REPLACE_EXISTING);
 
-		git(pack, "add", "-A", Packwiz.PACK, Packwiz.INDEX, "mods");
+		git(pack, "add", "-A", Packwiz.PACK, Packwiz.INDEX, "mods", INSTANCE_ZIP);
 		if (git(pack, "status", "--porcelain").isEmpty()) {
 			getLogger().lifecycle("Nothing to publish: {} {} is already in the pack ({}).", getPackName().get(), getModVersion().get(), branch);
 			return;
@@ -140,6 +146,7 @@ public abstract class PublishPack extends DefaultTask {
 		Map<String, String> expected = new TreeMap<>();
 		expected.put(Packwiz.PACK, Packwiz.sha256(packDir.resolve(Packwiz.PACK)));
 		expected.put(Packwiz.INDEX, Packwiz.sha256(packDir.resolve(Packwiz.INDEX)));
+		expected.put(INSTANCE_ZIP, Packwiz.sha256(packDir.resolve(INSTANCE_ZIP)));
 		try (Stream<Path> mods = Files.list(packDir.resolve("mods"))) {
 			for (Path jar : mods.toList()) {
 				expected.put("mods/" + jar.getFileName(), Packwiz.sha256(jar));

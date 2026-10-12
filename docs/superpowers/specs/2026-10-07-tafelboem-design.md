@@ -164,7 +164,7 @@ don't need a custom world type to test the loop.
   2026-10-12: 263 s. Pressing Play earlier can meet a mix of old and new files. packwiz then refuses
   on the hash check and leaves the installed version untouched, so it is harmless.
 - **One-time setup per PC.** Install Prism and log in, then Add Instance → Import with the URL of
-  `TafelBoem-instance.zip` from the pack repo.
+  `TafelBoem.zip` from the pack repo.
 - **Rules.** Never copy jars into the instance by hand. Offline, choose "Continue without updating"
   in the packwiz window. A Minecraft or Fabric version bump takes two Plays.
 - The woonkamer PC can be woken with `ssh nas "~/wake_pc.sh"`.
@@ -255,7 +255,7 @@ A patch on R0 that fixes what playtest 1 found (P-numbers refer to `docs/evaluat
     and the likely mis-clicks.
   - Re-ask accuracy is computed from the answer order, so it also works on the R0 logs.
 
-**R0.1 acceptance criteria** (manual, on this PC plus the woonkamer PC over LAN):
+**R0.1 acceptance criteria** (manual, on both play PCs, the woonkamer PC and a second PC, over LAN):
 1. All R0 criteria still hold, except the retype (now off by default).
 2. OK is greyed out with no input, and a kid can press it without hitting "?".
 3. After a wrong answer, the kid sees the penalty, then the fact on the HUD, and can move straight

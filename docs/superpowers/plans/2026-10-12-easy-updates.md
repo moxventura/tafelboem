@@ -61,26 +61,39 @@ publishes, and waits until GitHub's raw CDN serves every file.
   - All B then installs B.
 - [x] Delete the `e2e` branch.
 
-### Task 4: This PC (Jesper does the clicks)
-- [ ] `winget install PrismLauncher.PrismLauncher`, then log in.
-- [ ] Create the instance `TafelBoem` (26.2 + Fabric 0.19.5).
-- [ ] Put the `./gradlew prismKit` jars in its `minecraft` folder, and set the custom pre-launch
-      command from the README.
-- [ ] Export the instance **before the first Play**. Check that the zip holds no account data or
-      Java path, then commit it to the pack repo as `TafelBoem-instance.zip`.
-- [ ] Press Play. The packwiz window installs the mods and `/tafelboem stats` works.
-- [ ] With the network off, "Continue without updating" starts the installed version.
+### Task 4: The instance template, built without Prism (revised 2026-10-12)
+This PC doesn't play, so it gets no Prism. The kids play on the woonkamer PC and a second PC.
+- [x] `PrismInstance` (TDD, `PrismInstanceTest`, 4 tests) writes `TafelBoem.zip`. It is
+      byte-for-byte reproducible and contains:
+  - `instance.cfg`, plain `key=value` with no backslashes: `OverrideCommands=true` and the packwiz
+    pre-launch command;
+  - `mmc-pack.json`: Minecraft 26.2, intermediary 26.2, Fabric Loader 0.19.5;
+  - both packwiz jars in `minecraft/`.
+- [x] `./gradlew prismInstance` builds it. `publishPack` puts it in the pack repo next to the pack,
+      not in its index.
+- [x] Checked with real Prism 11.1.1. The Linux AppImage, verified against the release's SHA-1, ran
+      in WSL with a throwaway data folder, and `xdotool` pressed Enter on its dialogs.
+  - The import recognised the zip and unpacked all four files.
+  - The re-saved `instance.cfg` kept the command and `OverrideCommands=true`.
+  - Prism's catalogue has all three component versions.
+  - The instance is named after the zip, so the zip is called `TafelBoem.zip`.
+  - Not covered: launching, which needs a Microsoft account. The packwiz side was tested in Task 3.
 
-### Task 5: Woonkamer PC
-- [ ] Wake it with `ssh nas "~/wake_pc.sh"`. Install Prism, log in, then Add Instance → Import with
-      the zip URL, then Play.
-- [ ] A LAN game between both PCs shows no version warning (R0.1 checklist row 10).
+### Task 5: The two play PCs (Jesper does the clicks)
+- [ ] Woonkamer PC (wake it with `ssh nas "~/wake_pc.sh"`):
+  - `winget install PrismLauncher.PrismLauncher`, then log in.
+  - Add Instance → Import →
+    `https://raw.githubusercontent.com/moxventura/tafelboem-pack/main/TafelBoem.zip`, then Play.
+  - The packwiz window installs the mods, and `/tafelboem stats` works.
+- [ ] Second PC: the same three steps.
+- [ ] A LAN game between both shows no version warning (R0.1 checklist row 10).
+- [ ] With the network off, "Continue without updating" starts the installed version.
 
 ### Task 6: Docs
 - [x] Spec: the "Deploy to the kids' PCs" section, the R0.1 "Easy updates" bullet, acceptance
       criterion 10, the definition of done, and the deploy lines.
 - [x] README: playing, publishing, rules of thumb, and the instance template.
-- [x] `docs/evaluations/R0.1.md`: checklist row 10.
+- [x] `docs/evaluations/R0.1.md`: checklist row 10; columns are now "Woonkamer PC" and "Second PC".
 
 ## Known limits
 - **Wait for "Live" after publishing** (measured: 263 s). For an instant look, `./gradlew runClient`
