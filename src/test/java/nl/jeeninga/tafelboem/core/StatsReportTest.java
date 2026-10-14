@@ -39,7 +39,7 @@ class StatsReportTest {
 	}
 
 	@Test
-	void hardestFactsRankByMistakesThenTime() {
+	void stillPractisingListsMissedAndSlowSumsMostMistakesFirst() {
 		StatsReport report = StatsReport.of(List.of(
 				answer(7, 8, false, 9000),
 				answer(8, 7, false, 9000),
@@ -47,9 +47,14 @@ class StatsReportTest {
 				answer(6, 7, true, 5000),
 				answer(3, 4, true, 8000),
 				answer(2, 2, true, 1000)));
+		assertEquals(List.of(new Fact(7, 8), new Fact(6, 7), new Fact(3, 4)), report.stillPractising(5));
+	}
 
-		List<Fact> hardest = report.hardestFacts(3);
-		assertEquals(List.of(new Fact(7, 8), new Fact(6, 7), new Fact(3, 4)), hardest);
+	@Test
+	void sumsThatWereRightAndQuickAreNotStillPractising() {
+		// Playtest 2: every sum but 1×10 was right, yet five showed up under "still practising".
+		StatsReport report = StatsReport.of(List.of(answer(6, 6, true, 4100), answer(5, 9, true, 6000), answer(2, 2, true, 1000)));
+		assertEquals(List.of(), report.stillPractising(5));
 	}
 
 	@Test

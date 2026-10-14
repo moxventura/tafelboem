@@ -1,5 +1,7 @@
 package nl.jeeninga.tafelboem;
 
+import java.nio.file.Path;
+
 import org.jspecify.annotations.Nullable;
 
 import net.minecraft.resources.Identifier;
@@ -23,6 +25,7 @@ import nl.jeeninga.tafelboem.game.BombEffects;
 import nl.jeeninga.tafelboem.game.QuizClient;
 import nl.jeeninga.tafelboem.game.SessionManager;
 import nl.jeeninga.tafelboem.log.AnswerLog;
+import nl.jeeninga.tafelboem.log.FightLog;
 import nl.jeeninga.tafelboem.log.Learners;
 import nl.jeeninga.tafelboem.net.ModNetworking;
 import nl.jeeninga.tafelboem.registry.ModBlocks;
@@ -37,6 +40,7 @@ public class TafelBoem implements ModInitializer {
 	private static TafelBoemConfig config = new TafelBoemConfig();
 	private static @Nullable SessionManager sessions;
 	private static @Nullable BossFights fights;
+	private static @Nullable FightLog fightLog;
 
 	@Override
 	public void onInitialize() {
@@ -49,7 +53,9 @@ public class TafelBoem implements ModInitializer {
 		CommandRegistrationCallback.EVENT.register((dispatcher, buildContext, selection) -> TafelBoemCommand.register(dispatcher));
 
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
-			AnswerLog log = new AnswerLog(server.getWorldPath(LevelResource.ROOT).resolve(MOD_ID));
+			Path logDirectory = server.getWorldPath(LevelResource.ROOT).resolve(MOD_ID);
+			AnswerLog log = new AnswerLog(logDirectory);
+			fightLog = new FightLog(logDirectory);
 			sessions = new SessionManager(server, new Learners(log), QuizClient.NETWORK, config);
 			fights = new BossFights(sessions);
 		});
@@ -61,6 +67,7 @@ public class TafelBoem implements ModInitializer {
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
 			sessions = null;
 			fights = null;
+			fightLog = null;
 		});
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			if (sessions != null) {
@@ -101,6 +108,13 @@ public class TafelBoem implements ModInitializer {
 			throw new IllegalStateException("TafelBoem fights are only available while a server is running");
 		}
 		return fights;
+	}
+
+	public static FightLog fightLog() {
+		if (fightLog == null) {
+			throw new IllegalStateException("The TafelBoem fights log is only available while a server is running");
+		}
+		return fightLog;
 	}
 
 	public static String version() {
