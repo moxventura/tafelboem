@@ -73,7 +73,7 @@ public class TafelBoem implements ModInitializer {
 			ServerLevel overworld = server.overworld();
 			if (TafelBoemWorlds.isTafelBoemWorld(overworld)) {
 				world = new TafelBoemWorld(overworld, WorldLayout.DEFAULT, fights, fightLog,
-						new ArenaCatalog(server.getStructureManager(), new Random(), ArenaCatalog.DEFAULT_FOLDER), QuizClient.NETWORK);
+						new ArenaCatalog(server.getStructureManager(), new Random(), ArenaCatalog.DEFAULT_FOLDER), QuizClient.NETWORK, true);
 				world.setUp();
 				LevelDoorBlock.use(world::queueDoor);
 			}
