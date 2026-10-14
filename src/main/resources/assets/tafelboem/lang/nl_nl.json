@@ -6,6 +6,8 @@
   "block.tafelboem.level_door": "TafelBoem-deur",
   "tafelboem.door.item.level": "Deur naar %s",
   "tafelboem.door.item.exit": "Uitgang naar de hub",
+  "tafelboem.door.sign": "Level %s",
+  "generator.tafelboem.tafelboem": "TafelBoem",
   "tafelboem.screen.title": "Elke lont is een som!",
   "tafelboem.screen.hint": "Typ je antwoord en druk op Enter",
   "tafelboem.screen.dont_know": "? Weet ik niet",

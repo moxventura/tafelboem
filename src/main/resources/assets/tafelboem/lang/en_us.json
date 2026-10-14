@@ -6,6 +6,8 @@
   "block.tafelboem.level_door": "TafelBoem door",
   "tafelboem.door.item.level": "Door to %s",
   "tafelboem.door.item.exit": "Exit to the hub",
+  "tafelboem.door.sign": "Level %s",
+  "generator.tafelboem.tafelboem": "TafelBoem",
   "tafelboem.screen.title": "Every fuse is a sum!",
   "tafelboem.screen.hint": "Type your answer and press Enter",
   "tafelboem.screen.dont_know": "? Don't know",

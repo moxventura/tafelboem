@@ -31,6 +31,18 @@ public final class ArenaSetup {
 	 * @return how many hostile mobs were removed
 	 */
 	public static int apply(ServerLevel level, BlockPos center) {
+		applyRules(level);
+
+		List<Entity> enemies = level.getEntities((Entity) null, new AABB(center).inflate(CLEAR_RADIUS),
+				entity -> entity instanceof Enemy && !(entity instanceof GraafFout));
+		enemies.forEach(Entity::discard);
+
+		layFloor(level, center);
+		return enemies.size();
+	}
+
+	/** Always day, no weather, no mobs, keep inventory: also the rules of a TafelBoem world. */
+	public static void applyRules(ServerLevel level) {
 		MinecraftServer server = level.getServer();
 		GameRules rules = level.getGameRules();
 		rules.set(GameRules.ADVANCE_TIME, false, server);
@@ -41,13 +53,6 @@ public final class ArenaSetup {
 		// Time and weather go through the vanilla commands: their APIs change between versions, the commands don't.
 		server.getCommands().performPrefixedCommand(server.createCommandSourceStack().withLevel(level).withSuppressedOutput(), "time set day");
 		server.getCommands().performPrefixedCommand(server.createCommandSourceStack().withLevel(level).withSuppressedOutput(), "weather clear");
-
-		List<Entity> enemies = level.getEntities((Entity) null, new AABB(center).inflate(CLEAR_RADIUS),
-				entity -> entity instanceof Enemy && !(entity instanceof GraafFout));
-		enemies.forEach(Entity::discard);
-
-		layFloor(level, center);
-		return enemies.size();
 	}
 
 	/** Purple and white rings, one block below the player, only where there is ground already. */
