@@ -1,5 +1,6 @@
 package nl.jeeninga.tafelboem.config;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -39,6 +40,18 @@ class TafelBoemConfigTest {
 	}
 
 	@Test
+	void anOlderFileGainsTheNewKeysAndKeepsItsOwnValues() throws IOException {
+		Path file = dir.resolve("tafelboem.json");
+		Files.writeString(file, "{\"correctionRetype\": true}");
+
+		TafelBoemConfig.load(file);
+
+		String written = Files.readString(file);
+		assertTrue(written.contains("\"stars\"") && written.contains("\"arenaCraters\""), "the parent can find the new toggles: " + written);
+		assertTrue(TafelBoemConfig.load(file).correctionRetype, "the parent's own value stays");
+	}
+
+	@Test
 	void aBrokenFileFallsBackToDefaults() throws IOException {
 		Path file = dir.resolve("tafelboem.json");
 		Files.writeString(file, "{ this is not json");
@@ -47,5 +60,6 @@ class TafelBoemConfigTest {
 
 		assertFalse(config.correctionRetype);
 		assertTrue(config.cameraAssist);
+		assertEquals("{ this is not json", Files.readString(file), "the parent's file stays as it was, to fix by hand");
 	}
 }
