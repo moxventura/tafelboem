@@ -318,7 +318,7 @@ public final class BossFight implements QuizListener {
 		String key = style == YeetStyle.HELICOPTER ? "tafelboem.message.yeet_height" : "tafelboem.message.yeet_distance";
 		Component message = Component.translatable(key, boss.getDisplayName(), blocks)
 				.withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD);
-		for (ServerPlayer player : participantPlayers()) {
+		for (ServerPlayer player : participantsNearBoss()) {
 			sessions.client().actionBar(player, message);
 		}
 	}
@@ -375,10 +375,20 @@ public final class BossFight implements QuizListener {
 		return players.get(turn++ % players.size());
 	}
 
+	/**
+	 * Everyone who joined the fight and is still in this world, however far away he is. The reward
+	 * goes to them: by then he has flown far up into the sky (playtest 2).
+	 */
 	private List<ServerPlayer> participantPlayers() {
 		return participants.stream()
 				.map(id -> level.getServer().getPlayerList().getPlayer(id))
-				.filter(player -> player != null && player.level() == level && player.distanceToSqr(boss) < ARENA_RADIUS * ARENA_RADIUS)
+				.filter(player -> player != null && player.level() == level)
+				.toList();
+	}
+
+	private List<ServerPlayer> participantsNearBoss() {
+		return participantPlayers().stream()
+				.filter(player -> player.distanceToSqr(boss) < ARENA_RADIUS * ARENA_RADIUS)
 				.toList();
 	}
 

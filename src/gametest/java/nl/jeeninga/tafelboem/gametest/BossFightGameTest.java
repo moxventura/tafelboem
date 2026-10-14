@@ -18,11 +18,13 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 
 import nl.jeeninga.tafelboem.boss.BossFight;
 import nl.jeeninga.tafelboem.boss.BossFights;
+import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.game.SessionManager;
 import nl.jeeninga.tafelboem.log.AnswerLog;
 import nl.jeeninga.tafelboem.log.Learners;
 import nl.jeeninga.tafelboem.net.QuizC2S;
 import nl.jeeninga.tafelboem.net.QuizS2C;
+import nl.jeeninga.tafelboem.registry.ModBlocks;
 
 /**
  * End to end: Graaf Fout throws, the bomb lands as a question, a correct answer kicks it back and
@@ -153,6 +155,44 @@ public class BossFightGameTest {
 						"wait until both yeets have landed, each followed by the kid who kicked");
 			}
 			fights.endAll();
+		});
+	}
+
+	/**
+	 * Playtest 2: a kid beat him and got nothing. The reward came after he had flown off into the
+	 * sky, and by then nobody counted as near him any more.
+	 */
+	@GameTest(maxTicks = 6000, padding = 48)
+	@SuppressWarnings("removal") // mock players are still the only way to test without a client
+	public void beatingGraafFoutGivesTheKidFourKippenbommen(GameTestHelper helper) {
+		OpenField.open(helper);
+		RecordingQuizClient client = new RecordingQuizClient();
+		SessionManager sessions = new SessionManager(helper.getLevel().getServer(), new Learners(new AnswerLog(tempDir())), client);
+		BossFights fights = new BossFights(sessions);
+
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		Vec3 stand = Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(1, 1, 1)));
+		player.teleportTo(stand.x, stand.y, stand.z);
+		helper.assertTrue(fights.summon(helper.getLevel(), stand.add(6, 1.5, 0)), "Graaf Fout should appear");
+		BossFight fight = fights.active().getFirst();
+
+		Set<Integer> answered = new HashSet<>();
+		helper.onEachTick(() -> {
+			sessions.tick();
+			fights.tick();
+			for (RecordingQuizClient.Sent sent : List.copyOf(client.sentTo)) {
+				QuizS2C question = sent.payload();
+				if (question.mode() == QuizS2C.ASK && answered.add(question.sessionId())) {
+					sessions.onClientAction(sent.player(), new QuizC2S(question.sessionId(), QuizC2S.ANSWER, question.a() * question.b(), QuizC2S.VIA_KEY));
+				}
+			}
+		});
+
+		helper.succeedWhen(() -> {
+			helper.assertTrue(fight.isOver(), "wait until Graaf Fout is beaten and gone");
+			int loot = player.getInventory().countItem(ModBlocks.bombItem(BombTier.KIPPENBOM));
+			helper.assertTrue(loot == 4, "after " + answered.size() + " answers he was beaten, but the kid got " + loot
+					+ " Kippenbommen instead of 4 (he was " + Math.round(player.distanceTo(fight.boss())) + " blocks away)");
 		});
 	}
 
