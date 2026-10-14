@@ -10,11 +10,11 @@ import org.junit.jupiter.api.Test;
 class StatsReportTest {
 	private static AnswerRecord answer(int a, int b, boolean correct, long ms) {
 		return new AnswerRecord(0L, "Sanne", a, b, correct ? a * b : 0, correct ? Outcome.CORRECT : Outcome.WRONG, ms, 1, "fight",
-				AnswerRecord.VIA_KEY, 0, "0.1.3");
+				AnswerRecord.VIA_KEY, 0, "0.1.3", 0);
 	}
 
 	private static AnswerRecord dontKnow(int a, int b, int typedDigits) {
-		return new AnswerRecord(0L, "Sanne", a, b, -1, Outcome.DONT_KNOW, 3000, 1, "fight", AnswerRecord.VIA_CLICK, typedDigits, "0.1.3");
+		return new AnswerRecord(0L, "Sanne", a, b, -1, Outcome.DONT_KNOW, 3000, 1, "fight", AnswerRecord.VIA_CLICK, typedDigits, "0.1.3", 0);
 	}
 
 	@Test

@@ -9,9 +9,10 @@ package nl.jeeninga.tafelboem.core;
  *                    null in logs from before R0.1
  * @param typedDigits for "?": how many digits were already typed, a sign of a mis-click; 0 otherwise
  * @param version     the TafelBoem version that asked, such as {@code 0.1.3}; null in logs from before 0.1.3
+ * @param level       the fight level: 1–3 in a TafelBoem arena, 0 elsewhere and in logs from before R1
  */
 public record AnswerRecord(long timestamp, String player, int a, int b, int answer, Outcome outcome,
-		long millis, int bombTier, String context, String via, int typedDigits, String version) {
+		long millis, int bombTier, String context, String via, int typedDigits, String version, int level) {
 	public static final String VIA_KEY = "key";
 	public static final String VIA_CLICK = "click";
 

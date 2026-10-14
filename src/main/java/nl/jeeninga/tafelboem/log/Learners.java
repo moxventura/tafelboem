@@ -11,6 +11,7 @@ import nl.jeeninga.tafelboem.TafelBoem;
 import nl.jeeninga.tafelboem.core.AnswerRecord;
 import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.Fact;
+import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.core.Outcome;
 import nl.jeeninga.tafelboem.core.QuestionPicker;
 
@@ -25,15 +26,15 @@ public final class Learners {
 		this.log = log;
 	}
 
-	public Fact nextQuestion(ServerPlayer player) {
-		return picker(player).next();
+	public Fact nextQuestion(ServerPlayer player, FightLevel level) {
+		return picker(player).next(level);
 	}
 
 	public void record(ServerPlayer player, Fact fact, Outcome outcome, int answer, long millis, BombTier tier, String context,
-			String via, int typedDigits) {
+			String via, int typedDigits, FightLevel level) {
 		picker(player).record(fact, outcome, millis);
 		log.append(new AnswerRecord(System.currentTimeMillis(), player.getPlainTextName(), fact.a(), fact.b(), answer,
-				outcome, millis, tier.tier(), context, via, typedDigits, TafelBoem.version()));
+				outcome, millis, tier.tier(), context, via, typedDigits, TafelBoem.version(), level.number()));
 	}
 
 	public AnswerLog log() {
