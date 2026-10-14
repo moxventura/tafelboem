@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -20,7 +21,6 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.WallSignBlock;
 import net.minecraft.world.level.block.entity.SignBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.minecraft.world.phys.AABB;
@@ -68,23 +68,33 @@ public final class ShapePlacer {
 
 	/**
 	 * Places a template. The kids arrive 3 blocks in front of its exit door, on the highest solid
-	 * block there; a template without one (a hub) puts them in its middle.
+	 * block there. A door faces whoever placed it, so one placed from outside the wall faces out:
+	 * without ground in front of it inside the template, they arrive 3 blocks behind it, facing away
+	 * from it. Failing that, and in a template without an exit door (a hub), they arrive in its
+	 * middle; never at the bottom of the world.
 	 */
 	public static PlacedArea placeTemplate(ServerLevel level, BlockPos corner, String name, StructureTemplate template) {
 		template.placeInWorld(level, corner, corner, new StructurePlaceSettings(), level.getRandom(), Block.UPDATE_CLIENTS);
 		Vec3i size = template.getSize();
 		ArenaBox bounds = ArenaBox.of(corner.getX(), corner.getY(), corner.getZ(), size.getX(), size.getY(), size.getZ());
 		Map<Integer, List<BlockPos>> doors = doors(level, bounds);
-		BlockPos middle = ground(level, (int) Math.floor(bounds.middleX()), (int) Math.floor(bounds.middleZ()), bounds);
+		int middleX = (int) Math.floor(bounds.middleX());
+		int middleZ = (int) Math.floor(bounds.middleZ());
+		BlockPos middle = ground(level, middleX, middleZ, bounds).orElse(new BlockPos(middleX, bounds.maxY() + 1, middleZ));
 
 		List<BlockPos> exits = doors.getOrDefault(0, List.of());
-		if (exits.isEmpty()) {
-			return new PlacedArea(name, bounds, middle, Direction.NORTH.toYRot(), Vec3.atBottomCenterOf(middle), doors);
+		if (!exits.isEmpty()) {
+			BlockPos exit = exits.getFirst();
+			Direction facing = level.getBlockState(exit).getValue(LevelDoorBlock.FACING);
+			for (Direction away : List.of(facing, facing.getOpposite())) {
+				BlockPos spot = exit.relative(away, 3);
+				Optional<BlockPos> stand = ground(level, spot.getX(), spot.getZ(), bounds);
+				if (stand.isPresent()) {
+					return new PlacedArea(name, bounds, stand.get(), away.toYRot(), Vec3.atBottomCenterOf(middle), doors);
+				}
+			}
 		}
-		BlockPos exit = exits.getFirst();
-		Direction facing = level.getBlockState(exit).getValue(LevelDoorBlock.FACING);
-		BlockPos front = exit.relative(facing, 3);
-		return new PlacedArea(name, bounds, ground(level, front.getX(), front.getZ(), bounds), facing.toYRot(), Vec3.atBottomCenterOf(middle), doors);
+		return new PlacedArea(name, bounds, middle, Direction.NORTH.toYRot(), Vec3.atBottomCenterOf(middle), doors);
 	}
 
 	/** Every level door in the area, by level, lowest blocks first. */
@@ -99,15 +109,18 @@ public final class ShapePlacer {
 		return doors;
 	}
 
-	/** The block above the highest solid block of this column inside the area. */
-	private static BlockPos ground(ServerLevel level, int x, int z, ArenaBox bounds) {
+	/** The block above the highest solid block of this column inside the area, if it has one. */
+	private static Optional<BlockPos> ground(ServerLevel level, int x, int z, ArenaBox bounds) {
+		if (!bounds.containsColumn(x, z)) {
+			return Optional.empty();
+		}
 		for (int y = bounds.maxY(); y >= bounds.minY(); y--) {
 			BlockPos pos = new BlockPos(x, y, z);
 			if (level.getBlockState(pos).isSolid()) {
-				return pos.above();
+				return Optional.of(pos.above());
 			}
 		}
-		return new BlockPos(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z), z);
+		return Optional.empty();
 	}
 
 	private static void placeSign(ServerLevel level, BlockPos pos, Shape.Sign sign) {
