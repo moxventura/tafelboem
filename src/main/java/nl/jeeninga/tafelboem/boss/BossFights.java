@@ -3,10 +3,14 @@ package nl.jeeninga.tafelboem.boss;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.phys.Vec3;
 
+import nl.jeeninga.tafelboem.core.ArenaBox;
+import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.game.SessionManager;
 import nl.jeeninga.tafelboem.registry.ModEntities;
 
@@ -33,19 +37,33 @@ public final class BossFights {
 	}
 
 	public boolean summon(ServerLevel level, Vec3 position) {
-		if (hasFightNear(level, position)) {
-			return false;
+		return summon(level, position, FightLevel.CLASSIC, null) != null;
+	}
+
+	/**
+	 * Starts a fight at a level. Outside an arena two fights may not be within 64 blocks; an arena
+	 * keeps its fight apart by itself.
+	 */
+	public @Nullable BossFight summon(ServerLevel level, Vec3 position, FightLevel fightLevel, @Nullable ArenaBox arena) {
+		if (arena == null && hasFightNear(level, position)) {
+			return null;
 		}
 		GraafFout boss = ModEntities.GRAAF_FOUT.create(level, EntitySpawnReason.TRIGGERED);
 		if (boss == null) {
-			return false;
+			return null;
 		}
 		boss.setPos(position);
-		BossFight fight = new BossFight(level, boss, sessions);
+		BossFight fight = new BossFight(level, boss, sessions, fightLevel, arena);
 		level.addFreshEntity(boss);
 		fights.add(fight);
 		fight.start();
-		return true;
+		return fight;
+	}
+
+	/** Ends one fight early: he poofs away and nobody gets a reward. */
+	public void end(BossFight fight) {
+		fight.end();
+		fights.remove(fight);
 	}
 
 	public void tick() {

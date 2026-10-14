@@ -1,7 +1,9 @@
 package nl.jeeninga.tafelboem.boss;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 
@@ -26,8 +28,11 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 import nl.jeeninga.tafelboem.block.BombBlock;
+import nl.jeeninga.tafelboem.core.ArenaBox;
 import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.Fight;
+import nl.jeeninga.tafelboem.core.FightLevel;
+import nl.jeeninga.tafelboem.core.FightTally;
 import nl.jeeninga.tafelboem.core.Outcome;
 import nl.jeeninga.tafelboem.core.YeetPicker;
 import nl.jeeninga.tafelboem.core.YeetStyle;
@@ -75,7 +80,10 @@ public final class BossFight implements QuizListener {
 	private final ServerLevel level;
 	private final GraafFout boss;
 	private final SessionManager sessions;
-	private final Fight fight = new Fight(1);
+	private final FightLevel fightLevel;
+	private final @Nullable ArenaBox arena;
+	private final Fight fight;
+	private final Map<UUID, FightTally> tallies = new HashMap<>();
 	private final ServerBossEvent bossBar;
 	private final List<UUID> participants = new ArrayList<>();
 	private Phase phase = Phase.COOLDOWN;
@@ -86,10 +94,13 @@ public final class BossFight implements QuizListener {
 	private @Nullable UUID lastKicker;
 	private final YeetPicker yeets = new YeetPicker(new Random());
 
-	BossFight(ServerLevel level, GraafFout boss, SessionManager sessions) {
+	BossFight(ServerLevel level, GraafFout boss, SessionManager sessions, FightLevel fightLevel, @Nullable ArenaBox arena) {
 		this.level = level;
 		this.boss = boss;
 		this.sessions = sessions;
+		this.fightLevel = fightLevel;
+		this.arena = arena;
+		this.fight = Fight.of(fightLevel);
 		this.bossBar = new ServerBossEvent(UUID.randomUUID(), boss.getDisplayName(), BossEvent.BossBarColor.PURPLE,
 				BossEvent.BossBarOverlay.NOTCHED_10);
 		boss.attach(this);
@@ -105,6 +116,29 @@ public final class BossFight implements QuizListener {
 
 	public boolean isOver() {
 		return phase == Phase.OVER;
+	}
+
+	@Override
+	public FightLevel fightLevel() {
+		return fightLevel;
+	}
+
+	/** The arena this fight is in; null for a fight from the summon item. Used from R1 on. */
+	public @Nullable ArenaBox arena() {
+		return arena;
+	}
+
+	public boolean isWon() {
+		return fight.isDefeated();
+	}
+
+	/** This kid's answers in this fight so far (empty for a kid who hasn't answered). */
+	public FightTally tally(UUID kid) {
+		return tallies.computeIfAbsent(kid, id -> new FightTally());
+	}
+
+	public List<UUID> participants() {
+		return List.copyOf(participants);
 	}
 
 	void start() {
@@ -169,7 +203,7 @@ public final class BossFight implements QuizListener {
 		if (throwCount % 3 == 0 || target.distanceToSqr(boss) > MAX_THROW_DISTANCE * MAX_THROW_DISTANCE) {
 			boss.teleportNear(level, target.position());
 		}
-		BombTier tier = throwCount % 3 == 2 ? BombTier.GEWONE_TNT : BombTier.KNALLETJE;
+		BombTier tier = fightLevel.bombForThrow(throwCount);
 
 		boss.getLookControl().setLookAt(target);
 		ThrownBomb bomb = ThrownBomb.thrown(level, boss, tier, this, target.getUUID());
@@ -236,6 +270,7 @@ public final class BossFight implements QuizListener {
 
 	@Override
 	public void onCorrect(ServerPlayer player, QuizSession session) {
+		tally(player.getUUID()).record(Outcome.CORRECT);
 		BlockPos pos = session.bombPos();
 		if (level.getBlockState(pos).getBlock() instanceof BombBlock) {
 			level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
@@ -256,6 +291,7 @@ public final class BossFight implements QuizListener {
 
 	@Override
 	public void onMiss(ServerPlayer player, QuizSession session, Outcome outcome) {
+		tally(player.getUUID()).record(outcome);
 		int a = session.fact().a();
 		int b = session.fact().b();
 		Component taunt = switch (outcome) {

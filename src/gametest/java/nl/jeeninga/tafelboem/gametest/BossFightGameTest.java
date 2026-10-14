@@ -19,6 +19,8 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import nl.jeeninga.tafelboem.boss.BossFight;
 import nl.jeeninga.tafelboem.boss.BossFights;
 import nl.jeeninga.tafelboem.core.BombTier;
+import nl.jeeninga.tafelboem.core.FightLevel;
+import nl.jeeninga.tafelboem.core.FightTally;
 import nl.jeeninga.tafelboem.game.SessionManager;
 import nl.jeeninga.tafelboem.log.AnswerLog;
 import nl.jeeninga.tafelboem.log.Learners;
@@ -193,6 +195,44 @@ public class BossFightGameTest {
 			int loot = player.getInventory().countItem(ModBlocks.bombItem(BombTier.KIPPENBOM));
 			helper.assertTrue(loot == 4, "after " + answered.size() + " answers he was beaten, but the kid got " + loot
 					+ " Kippenbommen instead of 4 (he was " + Math.round(player.distanceTo(fight.boss())) + " blocks away)");
+		});
+	}
+
+	@GameTest(maxTicks = 1200, padding = 48)
+	@SuppressWarnings("removal") // mock players are still the only way to test without a client
+	public void onTheHardLevelHeThrowsOnlyKippenbommenAndCountsEveryAnswer(GameTestHelper helper) {
+		OpenField.open(helper);
+		RecordingQuizClient client = new RecordingQuizClient();
+		SessionManager sessions = new SessionManager(helper.getLevel().getServer(), new Learners(new AnswerLog(tempDir())), client);
+		BossFights fights = new BossFights(sessions);
+
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		Vec3 stand = Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(1, 1, 1)));
+		player.teleportTo(stand.x, stand.y, stand.z);
+		BossFight fight = fights.summon(helper.getLevel(), stand.add(6, 1.5, 0), FightLevel.MOEILIJK, null);
+		helper.assertTrue(fight != null, "Graaf Fout should appear");
+		helper.assertTrue(fight.hitsRemaining() == 13, "level 3 needs 13 hits, not " + fight.hitsRemaining());
+
+		Set<Integer> answered = new HashSet<>();
+		helper.onEachTick(() -> {
+			sessions.tick();
+			fights.tick();
+			for (RecordingQuizClient.Sent sent : List.copyOf(client.sentTo)) {
+				QuizS2C question = sent.payload();
+				if (question.mode() == QuizS2C.ASK && answered.add(question.sessionId())) {
+					helper.assertTrue(question.tier() == BombTier.KIPPENBOM.tier(), "only Kippenbommen on level 3, got tier " + question.tier());
+					// The first answer is wrong, the rest right.
+					int answer = answered.size() == 1 ? question.a() * question.b() + 1 : question.a() * question.b();
+					sessions.onClientAction(sent.player(), new QuizC2S(question.sessionId(), QuizC2S.ANSWER, answer, QuizC2S.VIA_KEY));
+				}
+			}
+		});
+
+		helper.succeedWhen(() -> {
+			FightTally tally = fight.tally(player.getUUID());
+			helper.assertTrue(tally.answers() >= 3, "wait for three answers");
+			helper.assertTrue(tally.wrong() == 1, "one wrong answer counted, not " + tally.wrong());
+			fights.endAll();
 		});
 	}
 
