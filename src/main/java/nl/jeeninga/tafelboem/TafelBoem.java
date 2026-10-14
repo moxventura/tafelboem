@@ -1,10 +1,13 @@
 package nl.jeeninga.tafelboem;
 
 import java.nio.file.Path;
+import java.util.Optional;
+import java.util.Random;
 
 import org.jspecify.annotations.Nullable;
 
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.storage.LevelResource;
 
 import net.fabricmc.api.ModInitializer;
@@ -18,10 +21,12 @@ import net.fabricmc.loader.api.FabricLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import nl.jeeninga.tafelboem.block.LevelDoorBlock;
 import nl.jeeninga.tafelboem.boss.BossFights;
 import nl.jeeninga.tafelboem.command.TafelBoemCommand;
 import nl.jeeninga.tafelboem.config.TafelBoemConfig;
 import nl.jeeninga.tafelboem.game.BombEffects;
+import nl.jeeninga.tafelboem.game.ProtectedAreas;
 import nl.jeeninga.tafelboem.game.QuizClient;
 import nl.jeeninga.tafelboem.game.SessionManager;
 import nl.jeeninga.tafelboem.log.AnswerLog;
@@ -32,6 +37,10 @@ import nl.jeeninga.tafelboem.registry.ModBlocks;
 import nl.jeeninga.tafelboem.registry.ModCreativeTab;
 import nl.jeeninga.tafelboem.registry.ModEntities;
 import nl.jeeninga.tafelboem.registry.ModItems;
+import nl.jeeninga.tafelboem.world.ArenaCatalog;
+import nl.jeeninga.tafelboem.world.TafelBoemWorld;
+import nl.jeeninga.tafelboem.world.TafelBoemWorlds;
+import nl.jeeninga.tafelboem.world.WorldLayout;
 
 public class TafelBoem implements ModInitializer {
 	public static final String MOD_ID = "tafelboem";
@@ -41,6 +50,7 @@ public class TafelBoem implements ModInitializer {
 	private static @Nullable SessionManager sessions;
 	private static @Nullable BossFights fights;
 	private static @Nullable FightLog fightLog;
+	private static @Nullable TafelBoemWorld world;
 
 	@Override
 	public void onInitialize() {
@@ -58,6 +68,14 @@ public class TafelBoem implements ModInitializer {
 			fightLog = new FightLog(logDirectory);
 			sessions = new SessionManager(server, new Learners(log), QuizClient.NETWORK, config);
 			fights = new BossFights(sessions);
+
+			ServerLevel overworld = server.overworld();
+			if (TafelBoemWorlds.isTafelBoemWorld(overworld)) {
+				world = new TafelBoemWorld(overworld, WorldLayout.DEFAULT, fights, fightLog,
+						new ArenaCatalog(server.getStructureManager(), new Random(), ArenaCatalog.DEFAULT_FOLDER), QuizClient.NETWORK);
+				world.setUp();
+				LevelDoorBlock.use(world::queueDoor);
+			}
 		});
 		ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
 			if (fights != null) {
@@ -68,6 +86,9 @@ public class TafelBoem implements ModInitializer {
 			sessions = null;
 			fights = null;
 			fightLog = null;
+			world = null;
+			LevelDoorBlock.use(LevelDoorBlock.NOBODY);
+			ProtectedAreas.clear();
 		});
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			if (sessions != null) {
@@ -76,8 +97,19 @@ public class TafelBoem implements ModInitializer {
 			if (fights != null) {
 				fights.tick();
 			}
+			if (world != null) {
+				world.tick();
+			}
+		});
+		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+			if (world != null) {
+				world.onJoin(handler.player);
+			}
 		});
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+			if (world != null) {
+				world.onDisconnect(handler.player);
+			}
 			if (sessions != null) {
 				sessions.onDisconnect(handler.player);
 			}
@@ -115,6 +147,11 @@ public class TafelBoem implements ModInitializer {
 			throw new IllegalStateException("The TafelBoem fights log is only available while a server is running");
 		}
 		return fightLog;
+	}
+
+	/** Only there in a TafelBoem world; any other world plays as before. */
+	public static Optional<TafelBoemWorld> world() {
+		return Optional.ofNullable(world);
 	}
 
 	public static String version() {

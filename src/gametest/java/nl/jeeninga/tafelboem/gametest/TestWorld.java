@@ -1,14 +1,35 @@
 package nl.jeeninga.tafelboem.gametest;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.AABB;
 
+import nl.jeeninga.tafelboem.boss.BossFights;
 import nl.jeeninga.tafelboem.core.ArenaBox;
 import nl.jeeninga.tafelboem.core.FightLevel;
+import nl.jeeninga.tafelboem.game.ProtectedAreas;
+import nl.jeeninga.tafelboem.game.SessionManager;
+import nl.jeeninga.tafelboem.log.AnswerLog;
+import nl.jeeninga.tafelboem.log.FightLog;
+import nl.jeeninga.tafelboem.log.Learners;
+import nl.jeeninga.tafelboem.net.QuizC2S;
+import nl.jeeninga.tafelboem.net.QuizS2C;
+import nl.jeeninga.tafelboem.world.ArenaCatalog;
+import nl.jeeninga.tafelboem.world.TafelBoemWorld;
 import nl.jeeninga.tafelboem.world.WorldLayout;
 
 /**
@@ -22,6 +43,13 @@ final class TestWorld {
 	final GameTestHelper helper;
 	final ServerLevel level;
 	final WorldLayout layout;
+	final RecordingQuizClient client = new RecordingQuizClient();
+	SessionManager sessions;
+	BossFights fights;
+	FightLog log;
+	TafelBoemWorld world;
+	private final Set<Integer> answered = new HashSet<>();
+	private final Set<UUID> wrongOnce = new HashSet<>();
 
 	TestWorld(GameTestHelper helper) {
 		this.helper = helper;
@@ -40,6 +68,60 @@ final class TestWorld {
 				keepLoaded(layout.arenaSlot(fightLevel));
 			}
 		});
+	}
+
+	/** Runs a TafelBoem world in the layout: the hub placed, every question answered right. */
+	TestWorld running() {
+		Path dir = tempDir();
+		sessions = new SessionManager(level.getServer(), new Learners(new AnswerLog(dir)), client);
+		fights = new BossFights(sessions);
+		log = new FightLog(dir);
+		world = new TafelBoemWorld(level, layout, fights, log,
+				new ArenaCatalog(level.getServer().getStructureManager(), new Random(1), ArenaCatalog.DEFAULT_FOLDER), client);
+		world.placeHub();
+		helper.onEachTick(() -> {
+			sessions.tick();
+			fights.tick();
+			world.tick();
+			answerQuestions();
+		});
+		return this;
+	}
+
+	@SuppressWarnings("removal") // mock players are still the only way to test without a client
+	ServerPlayer kidInTheHub() {
+		ServerPlayer kid = helper.makeMockServerPlayerInLevel();
+		BlockPos at = world.hub().standAt();
+		kid.teleportTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5);
+		return kid;
+	}
+
+	/** This kid's next answer is wrong, the ones after it right. */
+	void answerWrongOnce(ServerPlayer kid) {
+		wrongOnce.add(kid.getUUID());
+	}
+
+	void close() {
+		fights.endAll();
+		ProtectedAreas.unprotect(level, layout.hubSlot());
+	}
+
+	private void answerQuestions() {
+		for (RecordingQuizClient.Sent sent : List.copyOf(client.sentTo)) {
+			QuizS2C question = sent.payload();
+			if (question.mode() == QuizS2C.ASK && answered.add(question.sessionId())) {
+				int answer = wrongOnce.remove(sent.player().getUUID()) ? question.a() * question.b() + 1 : question.a() * question.b();
+				sessions.onClientAction(sent.player(), new QuizC2S(question.sessionId(), QuizC2S.ANSWER, answer, QuizC2S.VIA_KEY));
+			}
+		}
+	}
+
+	private static Path tempDir() {
+		try {
+			return Files.createTempDirectory("tafelboem-gametest");
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
 	}
 
 	private static boolean inside(AABB padded, ArenaBox slot) {
