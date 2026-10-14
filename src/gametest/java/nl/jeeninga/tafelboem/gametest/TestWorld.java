@@ -115,7 +115,7 @@ final class TestWorld {
 
 	void close() {
 		fights.endAll();
-		ProtectedAreas.unprotect(level, layout.hubSlot());
+		ProtectedAreas.unprotect(level, world.hub().bounds());
 	}
 
 	private void answerQuestions() {

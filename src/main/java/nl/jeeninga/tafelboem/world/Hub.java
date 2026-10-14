@@ -5,6 +5,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Vec3i;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
@@ -14,13 +15,14 @@ import nl.jeeninga.tafelboem.TafelBoem;
 import nl.jeeninga.tafelboem.block.LevelDoorBlock;
 import nl.jeeninga.tafelboem.core.ArenaBox;
 import nl.jeeninga.tafelboem.core.HubShape;
+import nl.jeeninga.tafelboem.core.Shape;
 import nl.jeeninga.tafelboem.game.ProtectedAreas;
 import nl.jeeninga.tafelboem.registry.ModBlocks;
 
 /**
  * The hub of a TafelBoem world: built from code unless a template {@code tafelboem:hub} with all
  * three level doors exists. It is placed on every world load, so it repairs itself, and booms
- * break nothing in it.
+ * break nothing in it. Both are only about the hub's own box: what the kids build beside it is theirs.
  */
 public final class Hub {
 	public static final Identifier TEMPLATE = TafelBoem.id("hub");
@@ -28,22 +30,30 @@ public final class Hub {
 	private Hub() {
 	}
 
-	public static PlacedArea place(ServerLevel level, WorldLayout layout) {
-		return place(level, layout, TEMPLATE);
-	}
-
 	/** @param templateId {@link #TEMPLATE}; GameTests use their own, so a hub the mod ships can't change them */
 	public static PlacedArea place(ServerLevel level, WorldLayout layout, Identifier templateId) {
 		ArenaBox slot = layout.hubSlot();
-		ShapePlacer.clear(level, slot);
 		Optional<StructureTemplate> template = level.getServer().getStructureManager().get(templateId)
 				.filter(found -> hasAllDoors(templateId, found));
-		PlacedArea hub = template
-				.map(found -> ShapePlacer.placeTemplate(level, WorldLayout.cornerFor(slot, found.getSize().getX(), found.getSize().getZ()),
-						templateId.toString(), found))
-				.orElseGet(() -> ShapePlacer.placeShape(level, WorldLayout.cornerFor(slot, HubShape.SIZE, HubShape.SIZE), HubShape.standard()));
-		ProtectedAreas.protect(level, slot);
+		PlacedArea hub;
+		if (template.isPresent()) {
+			hub = ShapePlacer.placeTemplate(level, clearFor(level, slot, template.get().getSize()), templateId.toString(), template.get());
+		} else {
+			Shape shape = HubShape.standard();
+			hub = ShapePlacer.placeShape(level, clearFor(level, slot, new Vec3i(shape.sizeX(), shape.sizeY(), shape.sizeZ())), shape);
+		}
+		ProtectedAreas.protect(level, hub.bounds());
 		return hub;
+	}
+
+	/**
+	 * Clears only the box the hub is about to take up, and returns its corner: whatever the kids
+	 * built beside or above the hub stays.
+	 */
+	private static BlockPos clearFor(ServerLevel level, ArenaBox slot, Vec3i size) {
+		BlockPos corner = WorldLayout.cornerFor(slot, size.getX(), size.getZ());
+		ShapePlacer.clear(level, ArenaBox.of(corner.getX(), corner.getY(), corner.getZ(), size.getX(), size.getY(), size.getZ()));
+		return corner;
 	}
 
 	private static boolean hasAllDoors(Identifier templateId, StructureTemplate template) {

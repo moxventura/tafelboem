@@ -46,6 +46,7 @@ so the kids can also build there in creative.
 
 - **The hub.** You start on a stone platform facing three doors, one per level. A sign above each
   door says which level it is, and the bombs Graaf Fout throws there sit beside it in item frames.
+  Builds on the hub's own platform are reset every time the world loads; builds beside it stay.
 - **The levels.** Walk into a door to go to its arena. Level 1 asks the tables of 1, 2, 5 and 10,
   level 2 adds 3, 4 and 9, and level 3 asks all ten. About three seconds after you arrive, Graaf
   Fout appears and the fight starts. Anyone who walks through the same door while the fight runs

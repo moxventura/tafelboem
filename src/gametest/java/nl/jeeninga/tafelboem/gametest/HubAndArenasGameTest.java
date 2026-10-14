@@ -39,8 +39,8 @@ public class HubAndArenasGameTest {
 	@GameTest(padding = TestWorld.PADDING)
 	public void theHubHasADoorPerLevelWithItsSignAndBombs(GameTestHelper helper) {
 		TestWorld world = new TestWorld(helper);
+		PlacedArea hub = Hub.place(world.level, world.layout, TestWorld.HUB);
 		try {
-			PlacedArea hub = Hub.place(world.level, world.layout, TestWorld.HUB);
 			for (int level = 1; level <= 3; level++) {
 				helper.assertTrue(hub.doors().getOrDefault(level, List.of()).size() == 12, "a 3 × 4 door to level " + level);
 			}
@@ -54,7 +54,7 @@ public class HubAndArenasGameTest {
 			}
 			helper.assertTrue(bombs.size() == 5, "five bombs in frames beside the doors, found " + bombs);
 			int signs = 0;
-			for (BlockPos pos : BlockPos.betweenClosed(corner(world.layout.hubSlot()), far(world.layout.hubSlot()))) {
+			for (BlockPos pos : BlockPos.betweenClosed(corner(hub.bounds()), far(hub.bounds()))) {
 				if (world.level.getBlockEntity(pos) instanceof SignBlockEntity sign
 						&& sign.getFrontText().getMessage(1, false).getContents() instanceof TranslatableContents text
 						&& text.getKey().equals("tafelboem.door.sign")) {
@@ -63,7 +63,7 @@ public class HubAndArenasGameTest {
 			}
 			helper.assertTrue(signs == 3, "a sign above each door, found " + signs);
 		} finally {
-			ProtectedAreas.unprotect(world.level, world.layout.hubSlot());
+			ProtectedAreas.unprotect(world.level, hub.bounds());
 		}
 		helper.succeed();
 	}
@@ -71,8 +71,8 @@ public class HubAndArenasGameTest {
 	@GameTest(padding = TestWorld.PADDING)
 	public void aBoomInTheHubBreaksNothingAndTheHubRepairsItself(GameTestHelper helper) {
 		TestWorld world = new TestWorld(helper);
+		PlacedArea hub = Hub.place(world.level, world.layout, TestWorld.HUB);
 		try {
-			PlacedArea hub = Hub.place(world.level, world.layout, TestWorld.HUB);
 			BlockPos bomb = hub.standAt();
 			BlockPos floor = bomb.below();
 			BlockPos broken = floor.east(3);
@@ -84,7 +84,36 @@ public class HubAndArenasGameTest {
 			Hub.place(world.level, world.layout, TestWorld.HUB);
 			helper.assertTrue(world.level.getBlockState(broken).is(Blocks.STONE), "placing the hub again repairs it");
 		} finally {
-			ProtectedAreas.unprotect(world.level, world.layout.hubSlot());
+			ProtectedAreas.unprotect(world.level, hub.bounds());
+		}
+		helper.succeed();
+	}
+
+	@GameTest(padding = TestWorld.PADDING)
+	public void placingTheHubAgainKeepsWhatTheKidsBuiltBesideIt(GameTestHelper helper) {
+		TestWorld world = new TestWorld(helper);
+		PlacedArea hub = Hub.place(world.level, world.layout, TestWorld.HUB);
+		try {
+			ArenaBox box = hub.bounds();
+			BlockPos beside = new BlockPos(box.maxX() + 1, box.minY(), (int) box.middleZ());
+			BlockPos above = new BlockPos((int) box.middleX(), box.maxY() + 1, (int) box.middleZ());
+			ArenaBox slot = world.layout.hubSlot();
+			for (BlockPos build : List.of(beside, above)) {
+				helper.assertTrue(slot.contains(build.getX(), build.getY(), build.getZ()), "the build is in the hub's slot: " + build);
+				world.level.setBlockAndUpdate(build, Blocks.OAK_PLANKS.defaultBlockState());
+			}
+			BlockPos broken = hub.standAt().below().east(3);
+			world.level.setBlockAndUpdate(broken, Blocks.AIR.defaultBlockState());
+
+			Hub.place(world.level, world.layout, TestWorld.HUB);
+
+			helper.assertTrue(world.level.getBlockState(beside).is(Blocks.OAK_PLANKS), "the build beside the hub stays");
+			helper.assertTrue(world.level.getBlockState(above).is(Blocks.OAK_PLANKS), "the build above the hub stays");
+			helper.assertTrue(world.level.getBlockState(broken).is(Blocks.STONE), "the hub itself is repaired");
+			helper.assertTrue(ProtectedAreas.isProtected(world.level, hub.standAt().below()), "booms break nothing in the hub");
+			helper.assertFalse(ProtectedAreas.isProtected(world.level, beside), "but the build beside it is like any other");
+		} finally {
+			ProtectedAreas.unprotect(world.level, hub.bounds());
 		}
 		helper.succeed();
 	}
