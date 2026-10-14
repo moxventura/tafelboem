@@ -1,6 +1,7 @@
 package nl.jeeninga.tafelboem.boss;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +53,8 @@ import nl.jeeninga.tafelboem.registry.ModBlocks;
 public final class BossFight implements QuizListener {
 	static final double ARENA_RADIUS = 32;
 	static final double BOSS_BAR_RADIUS = 48;
+	/** Outside an arena he pops back to a kid this close; a kid who ran off further stays safe. */
+	static final double COME_BACK_RADIUS = 2 * BOSS_BAR_RADIUS;
 	static final int FIRST_THROW_DELAY = 60;
 	static final int COOLDOWN_TICKS = 50;
 	/** Long enough for the penalty and the correction on the HUD before the next bomb flies. */
@@ -201,6 +204,11 @@ public final class BossFight implements QuizListener {
 	private void throwNextBomb() {
 		ServerPlayer target = nextTarget();
 		if (target == null) {
+			// A big yeet can land him out of everyone's reach (P13); outside an arena he then comes back to a kid.
+			ServerPlayer kid = arena == null ? nearestKidToComeBackTo() : null;
+			if (kid != null) {
+				boss.teleportNear(level, kid.position(), arena);
+			}
 			cooldown(20);
 			return;
 		}
@@ -425,19 +433,37 @@ public final class BossFight implements QuizListener {
 		phaseTicks = ticks;
 	}
 
-	private ServerPlayer nextTarget() {
-		// Without an arena, look as far as the boss bar reaches: a big yeet can land him well away from the kids.
+	/**
+	 * Without an arena only kids within the boss bar's reach count; when a yeet leaves him with
+	 * nobody in reach, {@link #nearestKidToComeBackTo} finds the kid he pops back to.
+	 */
+	private @Nullable ServerPlayer nextTarget() {
 		List<ServerPlayer> players = participants.stream()
 				.map(id -> level.getServer().getPlayerList().getPlayer(id))
 				.filter(player -> player != null && player.level() == level)
 				.filter(player -> arena != null ? arena.holds(player.getX(), player.getY(), player.getZ())
 						: player.distanceToSqr(boss) < BOSS_BAR_RADIUS * BOSS_BAR_RADIUS)
-				.filter(player -> player.isAlive() && !player.isSpectator() && !sessions.isBusy(player))
+				.filter(this::canBeThrownAt)
 				.toList();
 		if (players.isEmpty()) {
 			return null;
 		}
 		return players.get(turn++ % players.size());
+	}
+
+	/** The nearest kid within {@link #COME_BACK_RADIUS} who could be thrown at, if there is one. */
+	private @Nullable ServerPlayer nearestKidToComeBackTo() {
+		return participants.stream()
+				.map(id -> level.getServer().getPlayerList().getPlayer(id))
+				.filter(player -> player != null && player.level() == level)
+				.filter(player -> player.distanceToSqr(boss) < COME_BACK_RADIUS * COME_BACK_RADIUS)
+				.filter(this::canBeThrownAt)
+				.min(Comparator.comparingDouble(player -> player.distanceToSqr(boss)))
+				.orElse(null);
+	}
+
+	private boolean canBeThrownAt(ServerPlayer player) {
+		return player.isAlive() && !player.isSpectator() && !sessions.isBusy(player);
 	}
 
 	/**
