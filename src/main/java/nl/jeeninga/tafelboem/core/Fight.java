@@ -16,6 +16,11 @@ public final class Fight {
 		this.hitsRequired = 10 + level;
 	}
 
+	/** The rules of one fight at a level: 10 + level hits, see {@link FightLevel#hitsRequired()}. */
+	public static Fight of(FightLevel level) {
+		return new Fight(Math.max(1, level.number()));
+	}
+
 	public int level() {
 		return level;
 	}
