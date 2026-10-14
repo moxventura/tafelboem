@@ -110,6 +110,17 @@ public class ArenaFightGameTest {
 		helper.succeed();
 	}
 
+	@GameTest
+	public void unprotectingAnUnknownAreaChangesNothing(GameTestHelper helper) {
+		BlockPos corner = helper.absolutePos(BlockPos.ZERO);
+		ProtectedAreas.clear();
+
+		ProtectedAreas.unprotect(helper.getLevel(), ArenaBox.of(corner.getX(), corner.getY(), corner.getZ(), 3, 3, 3));
+
+		helper.assertFalse(ProtectedAreas.isProtected(helper.getLevel(), corner), "nothing is protected");
+		helper.succeed();
+	}
+
 	private static boolean isFlewOut(Component message) {
 		return message.getContents() instanceof TranslatableContents translatable
 				&& translatable.getKey().equals("tafelboem.message.yeet_out");

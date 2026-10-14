@@ -30,7 +30,10 @@ public final class ProtectedAreas {
 	}
 
 	public static void unprotect(ServerLevel level, ArenaBox box) {
-		AREAS.getOrDefault(level.dimension(), List.of()).remove(box);
+		List<ArenaBox> boxes = AREAS.get(level.dimension());
+		if (boxes != null) {
+			boxes.remove(box);
+		}
 	}
 
 	public static boolean isProtected(ServerLevel level, BlockPos pos) {
