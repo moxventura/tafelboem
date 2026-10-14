@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -41,6 +42,16 @@ class FightLogTest {
 		log.append(fight("Sanne", 1, FightRecord.WON, 1));
 		Files.writeString(dir.resolve("fights-Sanne.jsonl"), "{ not json\n", StandardOpenOption.APPEND);
 		assertEquals(1, log.read("Sanne").size());
+	}
+
+	@Test
+	void aListenerHearsEveryFightThatIsWritten() {
+		FightLog log = new FightLog(dir);
+		List<FightRecord> heard = new ArrayList<>();
+		log.listen(heard::add);
+		log.append(fight("Sanne", 1, FightRecord.WON, 2));
+		log.append(fight("Daan", 3, FightRecord.LEFT, 0));
+		assertEquals(List.of(fight("Sanne", 1, FightRecord.WON, 2), fight("Daan", 3, FightRecord.LEFT, 0)), heard);
 	}
 
 	@Test

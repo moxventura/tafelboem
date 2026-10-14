@@ -17,4 +17,11 @@ public record FightRecord(long timestamp, String player, int level, String arena
 	public boolean won() {
 		return WON.equals(result);
 	}
+
+	/** The line the game log gets for this fight, for an evaluation from the shared log alone. */
+	public String describe() {
+		return player + ": level " + level + " in arena " + arena + ", " + result + (won() ? " " + "★".repeat(stars) : "")
+				+ " (" + answers + (answers == 1 ? " answer, " : " answers, ") + wrong + " wrong, " + dontKnow + " \"?\", " + chickenOut + " ESC, " + seconds + " s, "
+				+ kids + (kids == 1 ? " kid)" : " kids)");
+	}
 }

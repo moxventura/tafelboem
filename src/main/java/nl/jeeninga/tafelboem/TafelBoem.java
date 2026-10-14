@@ -32,6 +32,7 @@ import nl.jeeninga.tafelboem.game.SessionManager;
 import nl.jeeninga.tafelboem.log.AnswerLog;
 import nl.jeeninga.tafelboem.log.FightLog;
 import nl.jeeninga.tafelboem.log.Learners;
+import nl.jeeninga.tafelboem.log.PlaySummaries;
 import nl.jeeninga.tafelboem.net.ModNetworking;
 import nl.jeeninga.tafelboem.registry.ModBlocks;
 import nl.jeeninga.tafelboem.registry.ModCreativeTab;
@@ -51,6 +52,7 @@ public class TafelBoem implements ModInitializer {
 	private static @Nullable SessionManager sessions;
 	private static @Nullable BossFights fights;
 	private static @Nullable FightLog fightLog;
+	private static @Nullable PlaySummaries summaries;
 	private static @Nullable TafelBoemWorld world;
 
 	@Override
@@ -67,6 +69,14 @@ public class TafelBoem implements ModInitializer {
 			Path logDirectory = server.getWorldPath(LevelResource.ROOT).resolve(MOD_ID);
 			AnswerLog log = new AnswerLog(logDirectory);
 			fightLog = new FightLog(logDirectory);
+			// The playtest numbers go to the game log too, so the log the parent shares is the whole evaluation.
+			PlaySummaries playSummaries = new PlaySummaries();
+			summaries = playSummaries;
+			log.listen(playSummaries::answered);
+			fightLog.listen(fight -> {
+				LOGGER.info("TafelBoem fight: {}", fight.describe());
+				playSummaries.fought(fight);
+			});
 			sessions = new SessionManager(server, new Learners(log), QuizClient.NETWORK, config);
 			fights = new BossFights(sessions);
 
@@ -87,6 +97,7 @@ public class TafelBoem implements ModInitializer {
 			sessions = null;
 			fights = null;
 			fightLog = null;
+			summaries = null;
 			world = null;
 			LevelDoorBlock.use(LevelDoorBlock.NOBODY);
 			ProtectedAreas.clear();
@@ -103,6 +114,9 @@ public class TafelBoem implements ModInitializer {
 			}
 		});
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+			if (summaries != null) {
+				summaries.joined(handler.player.getPlainTextName(), System.currentTimeMillis());
+			}
 			if (world != null) {
 				world.onJoin(handler.player);
 			}
@@ -113,6 +127,11 @@ public class TafelBoem implements ModInitializer {
 			}
 			if (sessions != null) {
 				sessions.onDisconnect(handler.player);
+			}
+			// Also runs for everyone when the world closes, after their last fight line is written.
+			if (summaries != null) {
+				summaries.left(handler.player.getPlainTextName(), System.currentTimeMillis())
+						.ifPresent(line -> LOGGER.info("TafelBoem session: {}", line));
 			}
 		});
 		// Spectacle animals saved by a previous session (e.g. after a crash) poof instead of piling up,
