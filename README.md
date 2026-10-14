@@ -23,8 +23,10 @@ go/no-go (see the spec):
 | Release | Content | Status |
 |---|---|---|
 | **R0 "Graaf Fout komt!"** | Core question loop, 3 bombs, basic Graaf Fout (yeeted on every hit), LAN, answer log | ✅ playtest 1 done |
-| **R0.1 "Beter mikken"** | Fixes from playtest 1: clearer question screen, correction on the HUD, distinct bombs, camera assist, a simple kick, more yeets, world setup, better stats, self-updating Prism instance | 🚧 in progress |
-| R1 "Kies je level" | Hub with level doors, premade arenas (also built by the kids), yeet catalogue, counting Kippenbom, dodgeable bombs, Graaf Fout eats your mistake | backlog |
+| **R0.1 "Beter mikken"** | Fixes from playtest 1: clearer question screen, correction on the HUD, distinct bombs, camera assist, a simple kick, more yeets, world setup, better stats, self-updating Prism instance | ✅ playtest 2 done |
+| **R1 "Kies je level"** | TafelBoem world with a hub and a door per level, levels 1–3 with their own tables and bombs, arenas (random per level, replaceable by the kids' own), stars | 🚧 planned |
+| R1.1 | Yeet catalogue, full yeet-o-meter, counting Kippenbom, the kids' own arenas | backlog |
+| R1.2 | Experiments: dodgeable bombs, Graaf Fout eats your mistake | backlog |
 | R2 "Leren dat blijft" | Fact states, spaced practice, Tafelkaart, parent report, daily limit, "Kies je bom", leg-kick animation | backlog |
 | R3 "Meer boem" | Bombs 4–9, craters, particle shows, lives, co-op rescue | backlog |
 | R4 new villains | Tante Toverfout, Robo-Rekenaar 3000 | backlog |

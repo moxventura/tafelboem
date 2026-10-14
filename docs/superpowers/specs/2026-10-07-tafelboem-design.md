@@ -9,8 +9,8 @@ git repo pushed to a **private GitHub repo `tafelboem`**. Minecraft Java up to 2
 `C:\Users\jeejes\AppData\Roaming\.minecraft`, no mod loader). WSL is Debian 13 with no JDK.
 
 The design was shaped with Jesper and then reviewed from three angles: a kid's playthrough, a
-teacher's view and gamification theory. It was revised after R0 playtest 1 on 2026-10-11; see
-[`docs/evaluations/R0.md`](../../evaluations/R0.md). Decisions:
+teacher's view and gamification theory. It was revised after R0 playtest 1 on 2026-10-11 and after
+R0.1 playtest 2 on 2026-10-14; see [`docs/evaluations/`](../../evaluations/). Decisions:
 - **Delivered in small releases, each evaluated with the kids.**
   - **R0 POC** is the core question loop plus a simple Graaf Fout who gets **yeeted on every
     hit**, played over LAN on the woonkamer PC and the other PCs.
@@ -68,7 +68,9 @@ multiplayer sessions and a one-step deploy to every PC are part of R0.
 |---|---|---|---|
 | **R0 POC "Graaf Fout komt!"** (~1 week) | see the R0 scope below | The rooted-question loop with a yeetable villain is fun, and an 8-year-old can use the question screen | see the R0 evaluation below |
 | **R0.1 "Beter mikken"** (patch) | see the R0.1 scope below | With the playtest-1 blockers fixed, the kids see every consequence of their answers, "?" is only pressed on purpose, and a correction on the HUD sticks as well as the retype did | see the R0.1 evaluation below |
-| **R1 "Kies je level"** | a hub with a door per level and stars; levels 1–3 (easy, medium, hard) with their own bombs; premade arenas from structure templates, including arenas the kids build; the yeet catalogue and the full yeet-o-meter; the counting Kippenbom; experiments behind toggles: dodgeable bombs and "Graaf Fout eats your mistake" | Choosing a level and more variety keep them coming back, and over time they pick harder levels; dodging and healing don't cut answers per minute or add frustration | levels picked per session, answers per minute vs R0.1, the kids still asking, frustration tally |
+| **R1 "Kies je level"** | see the R1 scope below: the TafelBoem world with a hub and a door per level; levels 1–3 (easy, medium, hard) with their own tables, bombs and hits; arenas built from code or from structure templates, picked at random per level; stars | With a world of their own, a hub and three levels to choose from, the kids keep asking to play, and over time they pick harder levels and collect stars | see the R1 evaluation below |
+| R1.1 *(after the R1 evaluation)* | the yeet catalogue, the full yeet-o-meter, the counting Kippenbom; the kids' own arenas as they come | More variety keeps them coming back | answers per minute, the kids still asking |
+| R1.2 *(after R1.1)* | experiments behind toggles: dodgeable bombs and "Graaf Fout eats your mistake" | Dodging and healing don't cut answers per minute or add frustration | answers per minute vs R1, frustration tally |
 | **R2 "Leren dat blijft"** | fact states and spaced picker, a Tafelkaart screen (GUI), parent report, the daily limit, "Kies je bom", the full leg kick in third person | The practice spreads out and facts move toward Fluent | 2 weeks of logs: % Accurate/Fluent up, median time down, sessions spread over days, kids still asking |
 | **R3 "Meer boem"** | bombs 4–9, levels 4–9, particle choreographies, craters, escape aids, lethal tiers with 3 lives, inventory stash, signature reactions, co-op rescue sums, the lobby extras in the hub (Tafelkaart wall, trophy wall, animal pen) | Escalation keeps them climbing without frustration | level reached per week, favourite bombs, no tears at levels 7–9, FPS OK on the woonkamer PC |
 | R4 new villains *(when they ask for it)* | Tante Toverfout, then Robo-Rekenaar 3000 | Pulled by the kids beating Graaf Fout | |
@@ -282,16 +284,231 @@ A patch on R0 that fixes what playtest 1 found (P-numbers refer to `docs/evaluat
 - did they see the penalty and the yeet? did they notice the different bombs?
 - record the session on video, so laughs can be counted afterwards
 
+## R1 "Kies je level" (detailed scope)
+
+Decided with Jesper on 2026-10-14, after R0.1 playtest 2 (P-numbers refer to
+`docs/evaluations/R0.1.md`). R1 combines the level choice with the TafelBoem world, its hub and its
+arenas, because that is what the kids asked for: an easy way to choose the difficulty (P4) and a
+"server-style" world instead of creative superflat (P11). The yeet catalogue, the full yeet-o-meter
+and the counting Kippenbom moved to R1.1; the two toggle experiments to R1.2.
+
+**Hypothesis:** with a world of their own, a hub to come back to and three levels to choose from,
+the kids keep asking to play, and over time they pick harder levels and collect stars.
+
+### The TafelBoem world
+- **World type.** "Create New World → World Type: TafelBoem". It is a void world with the void biome
+  (no mobs): a `world_preset` data file plus an entry in the `minecraft:normal` world-preset tag, so
+  it shows on the World Type button.
+- **First load.** The mod places the hub at spawn, makes the hub the world spawn, and sets the
+  world rules of `/tafelboem arena`: always day, no weather, no mob spawning, keep inventory.
+- **Game mode** is not forced, so the kids can also build there in creative.
+- **No toggle needed.** The world type is a choice at world creation; other worlds play as in R0.1.
+- **Void safety.** A player who falls below the hub or an arena is teleported back without damage:
+  in a fight to that arena's arrival spot, otherwise to the hub. A player who logs in inside an
+  arena without a running fight goes to the hub.
+- **Other worlds keep working as in R0.1.** The summon item still starts the R0.1 fight there (all
+  tables, Knalletjes with every 3rd a Gewone TNT, 11 hits), and `/tafelboem arena` stays.
+
+### The hub
+- **Built from code**, unless a structure template `tafelboem:hub` exists (see "Hand-built hub and
+  arenas"). It is placed again every time the world loads, so it repairs itself.
+- **Default layout:** a round stone platform with the spawn on the south side, facing three doors
+  on the north side:
+
+  ```
+                          N
+      ┌─────────┐   ┌─────────┐   ┌─────────┐
+      │1 Makkel.│   │2 Gemidd.│   │3 Moeil. │   sign above each door
+      │  ▒▒▒▒▒  │   │  ▒▒▒▒▒  │   │  ▒▒▒▒▒  │   ▒ = walk-through level door
+     [K][G]      [G][C]          [C]            fixed item frames: that level's bombs
+         .   .   .   .   .   .   .   .   .
+       .                                   .
+      .           stone platform            .
+       .                                   .
+         .   .   .   .   ☺   .   .   .   .     spawn, facing the doors
+                          S
+  ```
+
+- **Level door:** a TafelBoem block with a level (1–3; level 0 is the exit door in the arenas),
+  walk-through, with a portal-like look in vanilla style. Walking into it takes you to that level's
+  arena. The signs use translatable text, so they follow each PC's game language. The item frames
+  are fixed, so their bombs can't be taken.
+- **Stars at the door.** Within 3 blocks of a level door, a kid's own action bar shows the level
+  and their best stars on it, for example "Gemiddeld: ★★☆". Each kid sees only their own stars: no
+  ranking between siblings.
+- **Protected.** Bombs placed in the hub still go boom (bang, chickens, knockback) but break no hub
+  blocks.
+
+### The arenas
+- **One arena slot per level**, far from the hub and from each other (512 blocks apart), so the
+  arenas can't see each other and their fights never mix.
+- **Default arenas, built from code,** at most 48 × 48 × 48 so they match one structure block:
+  level 1 round, level 2 square, level 3 round with a darker floor. Each has a bedrock bottom layer,
+  dirt, a top layer of its own (grass on levels 1 and 2), obsidian walls 4 high, open sky, and an
+  exit door in the middle of the south wall:
+
+  ```
+       level 1: round            level 2: square            level 3: round
+         ▓▓▓▓▓▓▓▓▓               ▓▓▓▓▓▓▓▓▓▓▓▓▓              (darker floor)
+       ▓▓         ▓▓             ▓           ▓
+      ▓      G      ▓            ▓     G     ▓              ▓ obsidian wall, 4 high
+      ▓             ▓            ▓           ▓              G Graaf Fout appears
+       ▓▓    ☺    ▓▓             ▓     ☺     ▓              ☺ kids arrive, facing G
+         ▓▓▓▓⌂▓▓▓▓               ▓▓▓▓▓▓⌂▓▓▓▓▓▓              ⌂ exit door, back to the hub
+                  S
+  ```
+
+- **Exit door:** the same door block with level 0, "back to the hub". The kids arrive 3 blocks in
+  front of it, on the highest solid block, facing away from it.
+- **Several arenas per level.** Templates for a level are named `tafelboem:level_<n>/<name>`. When
+  the first kid walks into an empty level, one of its templates is picked at random, never the same
+  one twice in a row. The plain arena from code is used only when a level has no template.
+- **Placed on entry.** Placing the chosen arena first clears the slot and removes leftover items,
+  bombs and chickens, so the craters of the last fight are gone too.
+- **Destructible inside, never outside.** Explosions follow vanilla blast resistance: bedrock and
+  obsidian never break, everything else can. The kicked bomb's boom on Graaf Fout now breaks blocks
+  (it broke nothing in R0.1), but never a block within 3 blocks of a kid in the fight. Config toggle
+  `arenaCraters`.
+
+### The course of a fight
+1. **Entering an empty level.** The arena is placed and the kid arrives at the arrival spot. About
+   3 s later Graaf Fout appears in the middle of the arena (hovering over the highest block there)
+   and the fight starts at that level; his first throw comes 3 s after that, as now.
+2. **Joining.** Any kid who walks through a level's door while its fight runs joins that fight,
+   however many kids there are. They take turns as now.
+3. **Flying out.** His strongest yeets reach 30+ blocks, so he sometimes flies over a wall. When he
+   drops below the bottom of the arena (inside it the bedrock stops him, so this means he flew out),
+   the yeet-o-meter says *"Graaf Fout vloog 34
+   blokken, de arena uit!"* and he poofs back near the kids, dizzy, as after a normal landing. A
+   fight is never lost because he fell into the void.
+4. **Win.** The finale, then 4 Kippenbommen for every kid still in the arena, and stars for every
+   kid still in the arena who answered at least one question in this fight. A kid with a new best
+   sees it, for example "★★ op Gemiddeld!". 5 s later everyone in the arena is back in the hub.
+5. **Leaving.** A kid who walks through the exit door goes back to the hub, without reward or
+   stars; the others play on. When the last kid has left or disconnected, Graaf Fout poofs away and
+   the fight ends without reward.
+
+### Levels and questions
+| Level | Tables | Bombs he throws | Hits |
+|---|---|---|---|
+| 1 Makkelijk | ×1 ×2 ×5 ×10 | Knalletjes, every 3rd a Gewone TNT | 11 |
+| 2 Gemiddeld | + ×3 ×4 ×9 | Gewone TNT, every 3rd a Kippenbom | 12 |
+| 3 Moeilijk | all ten | only Kippenbommen | 13 |
+
+- **A sum belongs to a table when either factor is that table**, so 7 × 2 is in the table of 2, as
+  at school. Of the 55 sum pairs (7 × 8 and 8 × 7 are one pair), level 1 asks 34, level 2 adds 15
+  and level 3 adds the last 6: 6×6, 6×7, 6×8, 7×7, 7×8 and 8×8.
+- **Half from the added tables.** On levels 2 and 3, about half of the questions come from the
+  pairs that level adds; the other half repeats the easier tables. Within each half the R0 weighting
+  stays: missed and slow sums come more often.
+- **Re-asks still come first.** A re-ask for a sum outside the current level waits until a level
+  that has it.
+- **Reward:** 4 Kippenbommen for a win on every level. Paying out the next bomb tier waits until
+  bomb 4 exists.
+
+### Stars
+- **Per kid, per level; the best result counts.**
+- ★ for a win, ★★ for a win with at most 2 wrong answers, ★★★ for a win without a wrong answer.
+- **Only typed wrong answers count.** "?" and ESC don't, so stars reward "?" over guessing.
+- Config toggle `stars`. When it is off, no stars are shown or announced; the fights log still has
+  them, for the evaluation.
+
+### Logs and stats
+- **Fights log.** `<world>/tafelboem/fights-<player>.jsonl`, next to the answer log, one line per
+  kid per fight, written when the fight ends for that kid (a win, the exit door or disconnecting):
+  time, level, arena name, result (`won`, `left` or `disconnected`), answers, wrong answers, "?"
+  and ESC, stars, seconds, how many kids took part, and the version. The stars at the doors come
+  from this log; there is no other saved state.
+- **Answer log.** Each answer also records its level: 1–3 in an arena, 0 elsewhere.
+- **`/tafelboem stats`:**
+  - a line per level played, for example "Gemiddeld: ★★☆, 3 of 4 won"
+  - **P16:** decimals in the game language of whoever runs the command ("4,0 s" in Dutch, "4.0 s" in
+    English); English from the server console
+  - **P17:** "Still practising" lists only sums that were missed or took more than 6 s (the picker's
+    "slow"), and says "nothing yet" otherwise
+
+### Hand-built hub and arenas
+The kids build in creative, in any world with cheats, and save with vanilla structure blocks:
+1. Build. Both door blocks are in the TafelBoem creative tab.
+2. `/give @s minecraft:structure_block`. Put one in each of two opposite corners in *Corner* mode,
+   and one beside the build in *Save* mode, all with the same name, such as
+   `tafelboem:level_2/kasteel`. Press **Detect**, then **Save**.
+3. Minecraft writes `saves/<world>/generated/tafelboem/structure/<name>.nbt`. Built in the TafelBoem
+   world itself, it is used there from the next entry. To ship it to every PC, the file goes into
+   the mod's `data/tafelboem/structure/`, and the door can carry the builders' names.
+
+**Rules for an arena:** at most 48 × 48 × 48; open sky over the play area (under a roof he would
+hover on the roof); exactly one exit door, where the kids should come in; bedrock or obsidian for
+what must never break. The floor may be uneven: the kick always counts, even when it hits a wall, and
+he follows the ground. An arena template without an exit door is skipped, with a chat message to the
+players that names it; another template or the plain arena is used instead. **Rules for a hub:**
+the three level doors. The kids spawn in its middle.
+
+### Out of R1
+- the kids' own arena: a later 1.0.Z build, once they have built one
+- R1.1: the yeet catalogue, the full yeet-o-meter (personal best; fast answers and streaks yeet
+  further), the counting Kippenbom
+- R1.2: dodgeable bombs and "Graaf Fout eats your mistake", behind toggles
+- the learning model (R2), and P13: the summon item isn't needed in the TafelBoem world, and its
+  cause is still open
+
+### Spike first (throwaway)
+Before the plan, a short spike on a separate branch checks the new Minecraft parts:
+1. The world-preset data file shows "TafelBoem" on the World Type button and makes a void world.
+2. A structure placed at spawn on first load, with the world spawn moved onto it.
+3. A template saved with a structure block in the world folder is found by name, and the templates
+   under `tafelboem:level_2/` can be listed.
+4. Teleporting into an arena slot 512 blocks away and back, with the fight ticking there.
+5. A client game test can create a world of this type, for screenshots.
+
+If item 1 fails, the fallback is a `/tafelboem hub` command run in vanilla's "The Void" superflat
+world.
+
+### R1 tests
+- **Unit tests** (pure Java): each level's tables, bombs and hits; the picker (only the level's
+  sums, about half from the added tables, re-asks outside the level wait); the star rule (0, ≤ 2 or
+  more wrong gives 3, 2 or 1 stars; "?" and ESC don't count; no answers gives no stars); the arena
+  shapes (within 48³, bedrock bottom, obsidian walls, exit and arrival spots free); the random arena
+  choice (never twice in a row); the fights log and best stars; the stats lines for P16 and P17.
+- **Game tests:** door → arena → a fight at that level; three kids through one door are in one
+  fight; a won fight on level 2 pays the reward, writes the stars and sends everyone to the hub; the
+  last kid leaving ends the fight; flying out brings him back; a crater spares obsidian, bedrock and
+  the floor near a kid; with two templates in `level_2`, one of them is used and not the plain arena.
+- **Client game test:** creates a TafelBoem world and takes screenshots of the hub and an arena.
+
+**R1 acceptance criteria** (manual, on the woonkamer PC and a second PC over LAN):
+1. A new TafelBoem world starts in the hub: always day, no monsters.
+2. Each door leads to its level, and level 3 throws only Kippenbommen.
+3. Two PCs through the same door end up in the same fight.
+4. A win gives 4 Kippenbommen and stars and returns everyone to the hub; the stars show at the door.
+5. No crater reaches the void, and nobody can fall into it.
+6. An arena saved with a structure block in the TafelBoem world is used.
+7. After `./gradlew publishPack` says "Live", Play installs 1.0.0 on both PCs.
+
+**R1 evaluation (playtest 3).** Record it in `docs/evaluations/R1.md`, in two parts. The numbers
+come from `/tafelboem stats` and the fights log (share `latest.log`, as with playtest 2). Jesper
+types the rest: who played, laughter, confusion and frustration as noticed, the three questions, and
+whether they asked to play again. There is no video session.
+
+**Go when:**
+- the kids ask to play again within 2 days, without being prompted
+- the fights log shows a harder level picked later on
+- answers per minute are at least R0.1's (about 5)
+- no frustration about the stars
+- the checks R0.1 couldn't measure hold: they see the penalty and the yeet, and the reward arrives
+
 ## Product vision (the backlog for R1+, re-prioritised after every evaluation)
 
 ### The TafelBoem world
 - **World type.** Pick "TafelBoem" at world creation. You spawn in the **hub** above the void.
-  The game mode is forced to Survival.
+  The game mode is not forced, so the kids can also build there in creative (decided 2026-10-14).
 - **Premade arenas (R1).** Each level is played in a premade arena, saved as a vanilla structure
   template (`.nbt`) and placed by the mod in the void world.
-  - Re-placing the template after a fight resets the arena, which replaces the procedural rebuild.
+  - Placing the arena fresh when the first kid walks in resets it (R1), which replaces the
+    procedural rebuild. A level with several arenas picks one at random.
   - **The kids build arenas too.** They build one in creative together and save it with a
-    structure block. It ships in the next version as a level, with their names on the door.
+    structure block. It ships in the next version as a level, with their names on the door
+    (from a 1.0.Z build).
   - The `.slime` format was considered and dropped: its implementation (Advanced Slime Paper) is a
     Paper server fork that runs plugins only, not Fabric mods.
 - **Hub (protected from craters):**
@@ -318,8 +535,8 @@ A patch on R0 that fixes what playtest 1 found (P-numbers refer to `docs/evaluat
   you to the hub. Neither kills you.
 - **Safe floor.** No block within about 4 blocks of a player in a fight is ever carved. Craters
   open on the boss's side.
-- **Self-repair.** After every fight the arena template is placed again, under a per-tick budget,
-  while the victory celebration plays.
+- **Self-repair.** The arena is placed fresh when the next fight starts (R1). Bedrock and obsidian
+  keep the outside intact during a fight.
 - **Arena themes.** Each boss has an arena theme, a set of premade arenas with its own palette and
   props:
   - Graaf Fout: castle courtyard with purple banners
@@ -352,7 +569,7 @@ A patch on R0 that fixes what playtest 1 found (P-numbers refer to `docs/evaluat
       siblings on LAN see each other kick. This needs a player-model pose plus a payload to the
       other clients. In first person your own legs aren't visible; a boot swinging into view is
       later polish.
-- **Dodgeable bombs (R1 experiment, toggle).** The kids wanted to dodge.
+- **Dodgeable bombs (R1.2 experiment, toggle).** The kids wanted to dodge.
   - A bomb you dodge lies on the ground with a visible fuse.
   - Running into it starts the question as before.
   - If the fuse runs out, it pops harmlessly: a soot puff, no question, no damage to the boss.
@@ -361,7 +578,7 @@ A patch on R0 that fixes what playtest 1 found (P-numbers refer to `docs/evaluat
   - A big bomb asks a fact the kid is still learning, deals more damage and gives a bigger yeet.
   - A small bomb asks a fact they know and deals 1 hit.
   - The kid chooses the challenge in the moment; the picker still decides *which* facts come up.
-- **Graaf Fout eats your mistake (R1 experiment, toggle).** The kids' idea.
+- **Graaf Fout eats your mistake (R1.2 experiment, toggle).** The kids' idea.
   - He loves mistakes, so on a wrong answer he catches the wrong number and eats it, and gets one
     hit back. The boss bar visibly goes up.
   - "?" and ESC never heal him: *"Hè, geen fout om op te eten!"* This makes "?" better than
@@ -423,7 +640,7 @@ A patch on R0 that fixes what playtest 1 found (P-numbers refer to `docs/evaluat
   every reaction includes a spin.
 - **Yeet-o-meter.** After every yeet, everyone in the fight sees how far he flew: *"Graaf Fout
   vloog 23 blokken!"* (R0.1). For the helicopter it says how high: *"…vloog 12 blokken hoog!"*,
-  so the helicopter doesn't always look like the weakest yeet. From R1 there is a personal best, and fast answers and streaks yeet
+  so the helicopter doesn't always look like the weakest yeet. From R1.1 there is a personal best, and fast answers and streaks yeet
   him further. Only personal bests, no ranking between siblings.
 - **Shared reaction moves** (used by every boss, with that boss's props):
   - **Yeet:** launched with a spin, landing head-first stuck in the ground, legs wiggling, then pops out.
@@ -517,7 +734,7 @@ A patch on R0 that fixes what playtest 1 found (P-numbers refer to `docs/evaluat
 |---|---|---|---|---|---|
 | 1 | Knalletje / Firecracker | bundle of red-yellow firecracker sticks (small model) | small pop + confetti fireworks | none needed | soot puff, blind 1.5 s |
 | 2 | Gewone TNT / Classic TNT | TNT-style block with "×" instead of "TNT" | vanilla-size blast | none needed | egg splat on screen, 2 s |
-| 3 | Kippenbom / Chicken Bomb | white feathered box, beak, red comb | blast + *a* chickens fly out, and each bursts into *b* more: 3 × 4 shows as 12 chickens in 3 groups (R1; at most 2 generations) | none needed | bucket of water from the sky + slowness, 3 s |
+| 3 | Kippenbom / Chicken Bomb | white feathered box, beak, red comb | blast + *a* chickens fly out, and each bursts into *b* more: 3 × 4 shows as 12 chickens in 3 groups (R1.1; at most 2 generations) | none needed | bucket of water from the sky + slowness, 3 s |
 | 4 | Boerderijbom / Farm Frenzy | red barn planks, white X-brace, hay on top | ~16 random farm animals burst out (cow, pig, random-colour sheep, goat, horse, rabbit, rare mooshroom), land unharmed, poof after 60 s; one moves to the lobby pen | none needed | a cow drops on your head (1 heart) |
 | 5 | Clusterbom / Cluster TNT | 8 mini-TNTs roped together (custom model) | splits into 8 bouncing bomblets | Speed I | slimed: slowness + green overlay, 2 hearts |
 | 6 | Aambeeldregen / Anvil Rain | iron-grey crate with an anvil on top | crater + anvils rain down | Speed II | anvils on your head (hurts, not lethal) |
