@@ -5,10 +5,11 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 import java.util.random.RandomGenerator;
 
 /**
- * Chooses the next sum for one child.
+ * Chooses the next sum for one child, from the tables of the level being played.
  *
  * <p>R0 version: every fact family is in play, missed and slow families are weighted up, and a
  * missed fact is asked again after exactly one other question (corrective feedback with
@@ -30,10 +31,15 @@ public final class QuestionPicker {
 		this.random = random;
 	}
 
+	/** Free play and the R0.1 fight: every table. */
 	public Fact next() {
-		Fact chosen = takeDueReask();
+		return next(FightLevel.CLASSIC);
+	}
+
+	public Fact next(FightLevel level) {
+		Fact chosen = takeDueReask(level);
 		if (chosen == null) {
-			chosen = weightedRandom();
+			chosen = weightedRandom(level);
 		}
 
 		for (PendingReask reask : pending) {
@@ -65,10 +71,11 @@ public final class QuestionPicker {
 		return pending.stream().map(reask -> reask.fact).toList();
 	}
 
-	private Fact takeDueReask() {
+	/** A re-ask the level doesn't have waits until a level that has it. */
+	private Fact takeDueReask(FightLevel level) {
 		for (Iterator<PendingReask> it = pending.iterator(); it.hasNext(); ) {
 			PendingReask reask = it.next();
-			if (reask.questionsToWait == 0 && !reask.fact.family().equals(lastFamily)) {
+			if (reask.questionsToWait == 0 && level.includes(reask.fact) && !reask.fact.family().equals(lastFamily)) {
 				it.remove();
 				return reask.fact;
 			}
@@ -76,16 +83,18 @@ public final class QuestionPicker {
 		return null;
 	}
 
-	private Fact weightedRandom() {
-		List<Fact> candidates = new ArrayList<>();
+	private Fact weightedRandom(FightLevel level) {
+		// On levels 2 and 3 a coin decides whether this question comes from the tables the level adds.
+		boolean fromAdded = level.focusesOnAdded() && random.nextBoolean();
+		List<Fact> candidates = candidates(level, fact -> !level.focusesOnAdded() || level.isAdded(fact) == fromAdded);
+		if (candidates.isEmpty()) {
+			candidates = candidates(level, fact -> true);
+		}
+
 		List<Double> weights = new ArrayList<>();
 		double total = 0;
-		for (Fact fact : Fact.all()) {
-			if (fact.a() > fact.b() || fact.equals(lastFamily) || isPending(fact)) {
-				continue;
-			}
+		for (Fact fact : candidates) {
 			double weight = weight(stats.get(fact));
-			candidates.add(fact);
 			weights.add(weight);
 			total += weight;
 		}
@@ -100,6 +109,18 @@ public final class QuestionPicker {
 			}
 		}
 		return random.nextBoolean() ? family : family.commuted();
+	}
+
+	/** The families the level asks, minus the one just asked and the ones waiting for a re-ask. */
+	private List<Fact> candidates(FightLevel level, Predicate<Fact> filter) {
+		List<Fact> candidates = new ArrayList<>();
+		for (Fact fact : Fact.all()) {
+			if (fact.a() > fact.b() || fact.equals(lastFamily) || isPending(fact) || !level.includes(fact) || !filter.test(fact)) {
+				continue;
+			}
+			candidates.add(fact);
+		}
+		return candidates;
 	}
 
 	private boolean isPending(Fact family) {

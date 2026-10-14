@@ -23,6 +23,7 @@ import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.DerivedFactTips;
 import nl.jeeninga.tafelboem.core.EscapeModel;
 import nl.jeeninga.tafelboem.core.Fact;
+import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.core.Outcome;
 import nl.jeeninga.tafelboem.core.Tip;
 import nl.jeeninga.tafelboem.log.Learners;
@@ -82,7 +83,7 @@ public final class SessionManager {
 			return null;
 		}
 
-		Fact fact = learners.nextQuestion(player);
+		Fact fact = learners.nextQuestion(player, levelOf(listener));
 		QuizSession session = new QuizSession(nextSessionId++, player.getUUID(), fact, tier, bombPos.immutable(),
 				player.position(), context, listener);
 		sessions.put(player.getUUID(), session);
@@ -135,7 +136,7 @@ public final class SessionManager {
 	private void correct(ServerPlayer player, QuizSession session, String via) {
 		long millis = session.elapsedMillis();
 		learners.record(player, session.fact(), Outcome.CORRECT, session.fact().product(), millis, session.tier(), session.context(),
-				via, 0);
+				via, 0, levelOf(session.listener()));
 
 		sessions.remove(player.getUUID());
 		RootLock.release(player);
@@ -155,7 +156,7 @@ public final class SessionManager {
 
 	private void miss(ServerPlayer player, QuizSession session, Outcome outcome, int answer, String via, int typedDigits) {
 		learners.record(player, session.fact(), outcome, answer, session.elapsedMillis(), session.tier(), session.context(),
-				via, typedDigits);
+				via, typedDigits, levelOf(session.listener()));
 
 		ServerLevel level = player.level();
 		switch (outcome) {
@@ -196,6 +197,10 @@ public final class SessionManager {
 		sessions.remove(player.getUUID());
 		RootLock.release(player);
 		client.send(player, QuizS2C.feedback(session.id(), fact.a(), fact.b(), tier, reason, tip.key(), tip.args()));
+	}
+
+	private static FightLevel levelOf(@Nullable QuizListener listener) {
+		return listener == null ? FightLevel.CLASSIC : listener.fightLevel();
 	}
 
 	private void finish(ServerPlayer player, QuizSession session) {

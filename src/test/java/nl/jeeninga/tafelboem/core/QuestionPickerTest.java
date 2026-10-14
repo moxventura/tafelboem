@@ -88,4 +88,40 @@ class QuestionPickerTest {
 		picker.replay(new Fact(6, 7), Outcome.WRONG, 5000);
 		assertTrue(picker.pendingReasks().isEmpty());
 	}
+
+	@Test
+	void anEasyLevelOnlyAsksItsOwnTables() {
+		for (int i = 0; i < 1000; i++) {
+			Fact fact = picker.next(FightLevel.MAKKELIJK);
+			assertTrue(FightLevel.MAKKELIJK.includes(fact), fact + " is not in the tables of 1, 2, 5 and 10");
+			picker.record(fact, i % 5 == 0 ? Outcome.WRONG : Outcome.CORRECT, 3000);
+		}
+	}
+
+	@Test
+	void aboutHalfOfTheQuestionsOnTheHardLevelAreTheSumsItAdds() {
+		int added = 0;
+		int total = 2000;
+		for (int i = 0; i < total; i++) {
+			Fact fact = picker.next(FightLevel.MOEILIJK);
+			if (FightLevel.MOEILIJK.isAdded(fact)) {
+				added++;
+			}
+			picker.record(fact, Outcome.CORRECT, 3000);
+		}
+		double share = (double) added / total;
+		assertTrue(share > 0.4 && share < 0.6, "share of 6×6, 6×7, 6×8, 7×7, 7×8 and 8×8: " + share);
+	}
+
+	@Test
+	void aReaskFromAHarderLevelWaitsUntilALevelThatHasIt() {
+		Fact hard = new Fact(7, 8);
+		picker.record(hard, Outcome.WRONG, 9000);
+		for (int i = 0; i < 20; i++) {
+			Fact fact = picker.next(FightLevel.MAKKELIJK);
+			assertNotEquals(hard.family(), fact.family());
+			picker.record(fact, Outcome.CORRECT, 2000);
+		}
+		assertEquals(hard, picker.next(FightLevel.MOEILIJK));
+	}
 }
