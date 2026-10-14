@@ -27,6 +27,7 @@ import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.core.FightRecord;
 import nl.jeeninga.tafelboem.core.FightTally;
 import nl.jeeninga.tafelboem.core.Stars;
+import nl.jeeninga.tafelboem.game.ProtectedAreas;
 import nl.jeeninga.tafelboem.game.QuizClient;
 import nl.jeeninga.tafelboem.log.FightLog;
 
@@ -75,6 +76,10 @@ public final class TafelBoemWorld {
 
 	/** @param template {@link Hub#TEMPLATE}; GameTests use their own */
 	public PlacedArea placeHub(Identifier template) {
+		if (hub != null) {
+			// Another hub can take up another box; only the one standing now is protected.
+			ProtectedAreas.unprotect(level, hub.bounds());
+		}
 		hub = Hub.place(level, layout, template);
 		return hub;
 	}
