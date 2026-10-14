@@ -168,3 +168,32 @@ if __name__ == "__main__":
 
     if len(sys.argv) == 3 and sys.argv[1] == "--graaf-fout":
         graaf_fout(sys.argv[2])
+
+
+# --- Level door -------------------------------------------------------------------------------
+# Usage: python3 tools/make_textures.py --level-door
+# A purple swirl like a portal, so the kids see at once that the door takes them somewhere.
+
+DOOR_DARK = (70, 25, 120)
+DOOR_LIGHT = (160, 80, 230)
+
+
+def level_door():
+    import math
+
+    img = blank(DOOR_DARK)
+    for x in range(16):
+        for y in range(16):
+            dx, dy = x - 7.5, y - 7.5
+            swirl = math.atan2(dy, dx) * 2 + math.hypot(dx, dy) * 0.9
+            if int(math.floor(swirl)) % 2 == 0:
+                img.putpixel((x, y), DOOR_LIGHT + (255,))
+    img.save(OUT / "level_door.png")
+    print("wrote level_door")
+
+
+if __name__ == "__main__":
+    import sys
+
+    if len(sys.argv) == 2 and sys.argv[1] == "--level-door":
+        level_door()
