@@ -28,3 +28,6 @@ desktop.ini
 
 # Logs
 *.log
+
+# Local git worktrees
+.worktrees/
