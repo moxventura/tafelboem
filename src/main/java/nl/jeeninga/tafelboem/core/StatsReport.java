@@ -57,9 +57,10 @@ public final class StatsReport {
 	}
 
 	/**
-	 * The fact families the child struggles with most: most mistakes first, then slowest.
+	 * The fact families the child is still practising: missed at least once or usually slower than
+	 * 6 s, most mistakes first, then slowest. Empty when everything went right and quickly.
 	 */
-	public List<Fact> hardestFacts(int limit) {
+	public List<Fact> stillPractising(int limit) {
 		Map<Fact, List<AnswerRecord>> byFamily = new HashMap<>();
 		for (AnswerRecord answer : answers) {
 			byFamily.computeIfAbsent(answer.fact().family(), family -> new java.util.ArrayList<>()).add(answer);
@@ -71,6 +72,8 @@ public final class StatsReport {
 				entry -> median(entry.getValue().stream().mapToLong(AnswerRecord::millis)));
 
 		return byFamily.entrySet().stream()
+				.filter(entry -> entry.getValue().stream().anyMatch(answer -> !answer.correct())
+						|| median(entry.getValue().stream().mapToLong(AnswerRecord::millis)) > QuestionPicker.SLOW_MILLIS)
 				.sorted(byMistakes.thenComparing(byTime).reversed())
 				.limit(limit)
 				.map(Map.Entry::getKey)

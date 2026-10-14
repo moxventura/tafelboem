@@ -23,6 +23,9 @@ public final class TafelBoemConfig {
 	/** Turn the view towards Graaf Fout during a fight question and while he gets yeeted. */
 	public boolean cameraAssist = true;
 
+	/** Stars at the doors, after a win and in the stats. When off they are still in the fights log. */
+	public boolean stars = true;
+
 	public static TafelBoemConfig load(Path file) {
 		if (!Files.exists(file)) {
 			TafelBoemConfig defaults = new TafelBoemConfig();

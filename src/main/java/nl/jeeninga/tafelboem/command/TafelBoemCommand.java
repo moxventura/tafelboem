@@ -16,10 +16,14 @@ import net.minecraft.server.level.ServerPlayer;
 
 import nl.jeeninga.tafelboem.TafelBoem;
 import nl.jeeninga.tafelboem.core.Fact;
+import nl.jeeninga.tafelboem.core.FightLevel;
+import nl.jeeninga.tafelboem.core.FightRecord;
+import nl.jeeninga.tafelboem.core.Stars;
+import nl.jeeninga.tafelboem.core.StatsFormat;
 import nl.jeeninga.tafelboem.core.StatsReport;
 
 /**
- * {@code /tafelboem stats [player]}: a parent-friendly summary of the answer log.
+ * {@code /tafelboem stats [player]}: a parent-friendly summary of the answer log and the fights log.
  * {@code /tafelboem arena}: make this world fit for TafelBoem (needs cheats, like {@code /gamerule}).
  */
 public final class TafelBoemCommand {
@@ -57,21 +61,40 @@ public final class TafelBoemCommand {
 		source.sendSuccess(() -> Component.translatable("tafelboem.stats.header", name, report.totalAnswers(), percent)
 				.withStyle(ChatFormatting.GOLD), false);
 
+		List<FightRecord> fights = TafelBoem.fightLog().read(name);
+		for (FightLevel fightLevel : FightLevel.DOORS) {
+			List<FightRecord> onLevel = fights.stream().filter(fight -> fight.level() == fightLevel.number()).toList();
+			if (onLevel.isEmpty()) {
+				continue;
+			}
+			long won = onLevel.stream().filter(FightRecord::won).count();
+			Component levelName = Component.translatable("tafelboem.level." + fightLevel.number());
+			Component line = TafelBoem.config().stars
+					? Component.translatable("tafelboem.stats.level", levelName, Stars.show(Stars.best(fights, fightLevel.number())), won, onLevel.size())
+					: Component.translatable("tafelboem.stats.level_no_stars", levelName, won, onLevel.size());
+			source.sendSuccess(() -> line, false);
+		}
+
+		String language = source.getPlayer() != null ? source.getPlayer().clientInformation().language() : null;
 		for (int table = Fact.MIN_FACTOR; table <= Fact.MAX_FACTOR; table++) {
 			StatsReport.TableStats stats = report.table(table);
 			if (stats.attempts() == 0) {
 				continue;
 			}
-			String seconds = String.format("%.1f", stats.medianCorrectMillis() / 1000.0);
+			String seconds = StatsFormat.seconds(stats.medianCorrectMillis(), language);
 			ChatFormatting color = stats.accuracyPercent() >= 90 ? ChatFormatting.GREEN
 					: stats.accuracyPercent() >= 70 ? ChatFormatting.YELLOW : ChatFormatting.RED;
 			source.sendSuccess(() -> Component.translatable("tafelboem.stats.table", stats.table(), stats.correct(),
 					stats.attempts(), seconds).withStyle(color), false);
 		}
 
-		List<Fact> hardest = report.hardestFacts(5);
-		String hardestText = hardest.stream().map(fact -> fact.a() + "×" + fact.b()).collect(Collectors.joining(", "));
-		source.sendSuccess(() -> Component.translatable("tafelboem.stats.hardest", hardestText), false);
+		List<Fact> practising = report.stillPractising(5);
+		if (practising.isEmpty()) {
+			source.sendSuccess(() -> Component.translatable("tafelboem.stats.hardest_none"), false);
+		} else {
+			String practisingText = practising.stream().map(fact -> fact.a() + "×" + fact.b()).collect(Collectors.joining(", "));
+			source.sendSuccess(() -> Component.translatable("tafelboem.stats.hardest", practisingText), false);
+		}
 
 		StatsReport.ReaskStats reasks = report.reasks();
 		if (reasks.asked() > 0) {
