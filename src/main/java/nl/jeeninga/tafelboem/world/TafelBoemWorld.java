@@ -50,6 +50,7 @@ public final class TafelBoemWorld {
 	private final FightLog fightLog;
 	private final ArenaCatalog catalog;
 	private final QuizClient client;
+	private final boolean catchEveryone;
 	private final Map<FightLevel, ArenaRun> runs = new EnumMap<>(FightLevel.class);
 	private final Map<UUID, QueuedDoor> queuedDoors = new LinkedHashMap<>();
 	private final Map<UUID, Integer> doorCooldown = new HashMap<>();
@@ -57,13 +58,20 @@ public final class TafelBoemWorld {
 	private PlacedArea hub;
 	private int ticks;
 
-	public TafelBoemWorld(ServerLevel level, WorldLayout layout, BossFights fights, FightLog fightLog, ArenaCatalog catalog, QuizClient client) {
+	/**
+	 * @param catchEveryone true in a real TafelBoem world: everyone who falls into the void is caught,
+	 *     wherever they are. GameTests share their level with other tests, so they only catch the
+	 *     players above their own hub and arenas.
+	 */
+	public TafelBoemWorld(ServerLevel level, WorldLayout layout, BossFights fights, FightLog fightLog, ArenaCatalog catalog, QuizClient client,
+			boolean catchEveryone) {
 		this.level = level;
 		this.layout = layout;
 		this.fights = fights;
 		this.fightLog = fightLog;
 		this.catalog = catalog;
 		this.client = client;
+		this.catchEveryone = catchEveryone;
 	}
 
 	/** On every world load: the world rules, a fresh hub, and the spawn in the middle of its spot. */
@@ -248,7 +256,7 @@ public final class TafelBoemWorld {
 	/** Falling is never fatal: back to the arena's arrival spot in a fight, otherwise to the hub. */
 	private void catchFallingKids() {
 		for (ServerPlayer player : level.players()) {
-			if (player.getY() >= layout.voidY() || !isOurs(player)) {
+			if (player.getY() >= layout.voidY() || !catchEveryone && !isOurs(player)) {
 				continue;
 			}
 			PlacedArea to = runOf(player).map(ArenaRun::arena).orElse(hub);
@@ -256,7 +264,7 @@ public final class TafelBoemWorld {
 		}
 	}
 
-	/** Above the hub or an arena slot: other worlds' players (and other GameTests') are none of our business. */
+	/** Above the hub or an arena slot; in a GameTest, other tests' players are none of our business. */
 	private boolean isOurs(ServerPlayer player) {
 		return layout.hubSlot().containsColumn(player.getX(), player.getZ()) || layout.arenaAt(player.getX(), player.getZ()).isPresent();
 	}

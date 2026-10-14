@@ -89,7 +89,7 @@ final class TestWorld {
 		fights = new BossFights(sessions);
 		log = new FightLog(dir);
 		world = new TafelBoemWorld(level, layout, fights, log,
-				new ArenaCatalog(level.getServer().getStructureManager(), new Random(1), ARENAS), client);
+				new ArenaCatalog(level.getServer().getStructureManager(), new Random(1), ARENAS), client, false);
 		world.placeHub(HUB);
 		helper.onEachTick(() -> {
 			sessions.tick();

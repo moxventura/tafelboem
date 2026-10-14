@@ -60,8 +60,8 @@ so the kids can also build there in creative.
 - **The exit door.** Every arena has one exit door, and you arrive 3 blocks in front of it. Walking
   through it takes you back to the hub without a reward, and the others play on. When the last kid
   has left, Graaf Fout poofs away.
-- **Falling is safe.** Anyone who falls below the hub or an arena is put back, without damage: at
-  the arrival spot in a fight, otherwise in the hub.
+- **Falling is safe.** Anyone who falls into the void, anywhere in the world, is put back without
+  damage: at the arrival spot in a fight, otherwise in the hub.
 - **Other worlds.** Every other world still works as before: the summon item starts the R0.1 fight
   with all tables, and `/tafelboem arena` still sets one up. In a TafelBoem world the summon item
   only says to use the doors.
