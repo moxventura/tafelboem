@@ -20,6 +20,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 
+import nl.jeeninga.tafelboem.core.ArenaBox;
 import nl.jeeninga.tafelboem.core.YeetPose;
 import nl.jeeninga.tafelboem.core.YeetStyle;
 
@@ -228,13 +229,56 @@ public class GraafFout extends Evoker {
 		playSound(SoundEvents.EVOKER_HURT, 2.0F, 0.6F);
 	}
 
-	public void teleportNear(ServerLevel level, Vec3 around) {
-		double angle = random.nextDouble() * Math.PI * 2;
-		double distance = 7 + random.nextDouble() * 3;
-		double x = around.x + Math.cos(angle) * distance;
-		double z = around.z + Math.sin(angle) * distance;
-		double y = level.getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(x), Mth.floor(z)) + HOVER_HEIGHT;
+	/**
+	 * He flew out of the arena (or fell through a gap): poof back near the kids, dizzy as after a
+	 * normal landing when he was being yeeted.
+	 *
+	 * @return how far he flew in this yeet, or -1 when he wasn't being yeeted
+	 */
+	public int comeBack(ServerLevel level, Vec3 nearKid, ArenaBox arena) {
+		boolean wasYeeted = airborne;
+		int blocks = wasYeeted ? (int) Math.round(style == YeetStyle.HELICOPTER ? highest : furthest) : -1;
+		airborne = false;
+		setYeetPose(YeetPose.NONE);
+		setDeltaMovement(Vec3.ZERO);
+		armsUp(false);
+		teleportNear(level, nearKid, arena);
+		if (wasYeeted) {
+			dizzyTicks = DIZZY_TICKS;
+			setNoGravity(false);
+		} else {
+			setNoGravity(true);
+		}
+		return blocks;
+	}
 
+	public void teleportNear(ServerLevel level, Vec3 around) {
+		teleportNear(level, around, null);
+	}
+
+	/**
+	 * Pops up 7 to 10 blocks from {@code around}. In an arena only over its footprint, and only where
+	 * there is ground (outside the arena the heightmap is the void's).
+	 */
+	public void teleportNear(ServerLevel level, Vec3 around, @Nullable ArenaBox arena) {
+		for (int attempt = 0; attempt < 12; attempt++) {
+			double angle = random.nextDouble() * Math.PI * 2;
+			double distance = 7 + random.nextDouble() * 3;
+			double x = around.x + Math.cos(angle) * distance;
+			double z = around.z + Math.sin(angle) * distance;
+			int ground = level.getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(x), Mth.floor(z));
+			if (arena == null || arena.containsColumn(x, z) && ground > arena.minY()) {
+				appear(level, x, ground + HOVER_HEIGHT, z);
+				return;
+			}
+		}
+		// No ground around the kid (say, in a corner): the middle of the arena always has some.
+		double x = arena.middleX();
+		double z = arena.middleZ();
+		appear(level, x, level.getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(x), Mth.floor(z)) + HOVER_HEIGHT, z);
+	}
+
+	private void appear(ServerLevel level, double x, double y, double z) {
 		level.sendParticles(ParticleTypes.POOF, getX(), getY() + 1, getZ(), 20, 0.3, 0.6, 0.3, 0.02);
 		teleportTo(x, y, z);
 		level.sendParticles(ParticleTypes.POOF, x, y + 1, z, 20, 0.3, 0.6, 0.3, 0.02);

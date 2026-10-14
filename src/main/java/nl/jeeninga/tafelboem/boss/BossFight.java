@@ -21,12 +21,14 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ExplosionDamageCalculator;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
+import nl.jeeninga.tafelboem.TafelBoem;
 import nl.jeeninga.tafelboem.block.BombBlock;
 import nl.jeeninga.tafelboem.core.ArenaBox;
 import nl.jeeninga.tafelboem.core.BombTier;
@@ -58,6 +60,8 @@ public final class BossFight implements QuizListener {
 	static final int FINALE_TICKS = 60;
 	static final int LOOT_COUNT = 4;
 	static final double MAX_THROW_DISTANCE = 16;
+	/** A crater never takes the floor this close to a kid. */
+	static final double SAFE_FLOOR_RADIUS = 3;
 	/**
 	 * After the kick the view follows Graaf Fout until he has landed; this is only the safety net
 	 * for a kick that never arrives. Landing then shortens it to the time he lies dizzy.
@@ -154,6 +158,9 @@ public final class BossFight implements QuizListener {
 			end();
 			return;
 		}
+		if (arena != null && phase != Phase.FINALE && boss.getY() < arena.minY()) {
+			flewOut();
+		}
 
 		updateParticipants();
 		phaseTicks--;
@@ -201,7 +208,7 @@ public final class BossFight implements QuizListener {
 		throwCount++;
 		// Every third throw he pops up somewhere new, and after a big yeet he comes back to the kids.
 		if (throwCount % 3 == 0 || target.distanceToSqr(boss) > MAX_THROW_DISTANCE * MAX_THROW_DISTANCE) {
-			boss.teleportNear(level, target.position());
+			boss.teleportNear(level, target.position(), arena);
 		}
 		BombTier tier = fightLevel.bombForThrow(throwCount);
 
@@ -319,8 +326,12 @@ public final class BossFight implements QuizListener {
 			return;
 		}
 		// The bigger the bomb, the bigger the bang and the further he flies.
-		level.explode(null, null, PlayerSafeExplosion.SHOW, boss.getX(), boss.getY() + 1, boss.getZ(), tier.blastRadius(), false,
-				Level.ExplosionInteraction.NONE);
+		boolean craters = arena != null && TafelBoem.config().arenaCraters;
+		ExplosionDamageCalculator boom = craters
+				? PlayerSafeExplosion.sparing(participantPlayers().stream().map(ServerPlayer::position).toList(), SAFE_FLOOR_RADIUS)
+				: PlayerSafeExplosion.SHOW;
+		level.explode(null, null, boom, boss.getX(), boss.getY() + 1, boss.getZ(), tier.blastRadius(), false,
+				craters ? Level.ExplosionInteraction.TNT : Level.ExplosionInteraction.NONE);
 		fight.registerHit();
 		bossBar.setProgress(fight.healthFraction());
 
@@ -357,6 +368,22 @@ public final class BossFight implements QuizListener {
 		for (ServerPlayer player : participantsNearBoss()) {
 			sessions.client().actionBar(player, message);
 		}
+	}
+
+	/** Out of the arena and into the void: say how far he got, then he comes straight back. */
+	private void flewOut() {
+		ServerPlayer kid = kicker() != null ? kicker() : participantPlayers().stream().findFirst().orElse(null);
+		Vec3 near = kid != null ? kid.position() : new Vec3(arena.middleX(), arena.minY() + 3, arena.middleZ());
+		int blocks = boss.comeBack(level, near, arena);
+		if (blocks < 0) {
+			return;
+		}
+		Component message = Component.translatable("tafelboem.message.yeet_out", boss.getDisplayName(), blocks)
+				.withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD);
+		for (ServerPlayer player : participantPlayers()) {
+			sessions.client().actionBar(player, message);
+		}
+		followKickerFor(LANDED_CAM_TICKS);
 	}
 
 	/** Keeps the kicker's view on Graaf Fout for a little longer, then lets go. */
@@ -399,10 +426,12 @@ public final class BossFight implements QuizListener {
 	}
 
 	private ServerPlayer nextTarget() {
-		// Look as far as the boss bar reaches: a big yeet can land him well away from the kids.
+		// Without an arena, look as far as the boss bar reaches: a big yeet can land him well away from the kids.
 		List<ServerPlayer> players = participants.stream()
 				.map(id -> level.getServer().getPlayerList().getPlayer(id))
-				.filter(player -> player != null && player.level() == level && player.distanceToSqr(boss) < BOSS_BAR_RADIUS * BOSS_BAR_RADIUS)
+				.filter(player -> player != null && player.level() == level)
+				.filter(player -> arena != null ? arena.holds(player.getX(), player.getY(), player.getZ())
+						: player.distanceToSqr(boss) < BOSS_BAR_RADIUS * BOSS_BAR_RADIUS)
 				.filter(player -> player.isAlive() && !player.isSpectator() && !sessions.isBusy(player))
 				.toList();
 		if (players.isEmpty()) {
@@ -413,16 +442,21 @@ public final class BossFight implements QuizListener {
 
 	/**
 	 * Everyone who joined the fight and is still in this world, however far away he is. The reward
-	 * goes to them: by then he has flown far up into the sky (playtest 2).
+	 * goes to them: by then he has flown far up into the sky (playtest 2). In an arena, only the
+	 * kids still in it.
 	 */
 	private List<ServerPlayer> participantPlayers() {
 		return participants.stream()
 				.map(id -> level.getServer().getPlayerList().getPlayer(id))
 				.filter(player -> player != null && player.level() == level)
+				.filter(player -> arena == null || arena.holds(player.getX(), player.getY(), player.getZ()))
 				.toList();
 	}
 
 	private List<ServerPlayer> participantsNearBoss() {
+		if (arena != null) {
+			return participantPlayers();
+		}
 		return participantPlayers().stream()
 				.filter(player -> player.distanceToSqr(boss) < ARENA_RADIUS * ARENA_RADIUS)
 				.toList();
@@ -430,13 +464,16 @@ public final class BossFight implements QuizListener {
 
 	private void updateParticipants() {
 		for (ServerPlayer player : level.players()) {
-			boolean near = player.distanceToSqr(boss) < BOSS_BAR_RADIUS * BOSS_BAR_RADIUS;
+			// In an arena, being in it is all it takes; outside one, the boss bar and the fight have a radius.
+			boolean near = arena != null ? arena.holds(player.getX(), player.getY(), player.getZ())
+					: player.distanceToSqr(boss) < BOSS_BAR_RADIUS * BOSS_BAR_RADIUS;
+			boolean joins = arena != null ? near : near && player.distanceToSqr(boss) < ARENA_RADIUS * ARENA_RADIUS;
 			if (near && !bossBar.getPlayers().contains(player)) {
 				bossBar.addPlayer(player);
 			} else if (!near && bossBar.getPlayers().contains(player)) {
 				bossBar.removePlayer(player);
 			}
-			if (near && player.distanceToSqr(boss) < ARENA_RADIUS * ARENA_RADIUS && !participants.contains(player.getUUID())) {
+			if (joins && !participants.contains(player.getUUID())) {
 				participants.add(player.getUUID());
 			}
 		}
