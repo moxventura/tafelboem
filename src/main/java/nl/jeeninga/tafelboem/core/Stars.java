@@ -25,8 +25,9 @@ public final class Stars {
 				.orElse(0);
 	}
 
-	/** For the doors and the stats, such as "★★☆". */
+	/** For the doors and the stats, such as "★★☆". A hand-edited fights log can't make it throw. */
 	public static String show(int stars) {
-		return "★".repeat(stars) + "☆".repeat(MAX - stars);
+		int shown = Math.clamp(stars, 0, MAX);
+		return "★".repeat(shown) + "☆".repeat(MAX - shown);
 	}
 }

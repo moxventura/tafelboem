@@ -11,6 +11,7 @@ import java.util.List;
 import com.google.gson.Gson;
 import com.google.gson.JsonParseException;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,9 +55,10 @@ final class JsonLines<T> {
 				if (line.isBlank()) {
 					continue;
 				}
-				try {
-					records.add(GSON.fromJson(line, type));
-				} catch (JsonParseException e) {
+				T record = parse(line);
+				if (record != null) {
+					records.add(record);
+				} else {
 					LOGGER.warn("Skipping an unreadable {} log line for {}: {}", prefix, player, line);
 				}
 			}
@@ -64,6 +66,15 @@ final class JsonLines<T> {
 			LOGGER.error("Could not read the {} log for {}", prefix, player, e);
 		}
 		return records;
+	}
+
+	/** The record on this line, or null when the line is broken or a literal {@code null}. */
+	private @Nullable T parse(String line) {
+		try {
+			return GSON.fromJson(line, type);
+		} catch (JsonParseException e) {
+			return null;
+		}
 	}
 
 	private Path file(String player) {

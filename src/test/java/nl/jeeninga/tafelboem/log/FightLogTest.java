@@ -42,4 +42,12 @@ class FightLogTest {
 		Files.writeString(dir.resolve("fights-Sanne.jsonl"), "{ not json\n", StandardOpenOption.APPEND);
 		assertEquals(1, log.read("Sanne").size());
 	}
+
+	@Test
+	void aNullLineIsSkipped() throws IOException {
+		FightLog log = new FightLog(dir);
+		log.append(fight("Sanne", 1, FightRecord.WON, 1));
+		Files.writeString(dir.resolve("fights-Sanne.jsonl"), "null\n", StandardOpenOption.APPEND);
+		assertEquals(List.of(fight("Sanne", 1, FightRecord.WON, 1)), log.read("Sanne"));
+	}
 }

@@ -77,4 +77,10 @@ class StarsTest {
 		assertEquals("☆☆☆", Stars.show(0));
 		assertEquals("★★★", Stars.show(3));
 	}
+
+	@Test
+	void aHandEditedLogCannotShowMoreThanThreeStarsOrFewerThanNone() {
+		assertEquals("★★★", Stars.show(7));
+		assertEquals("☆☆☆", Stars.show(-1));
+	}
 }
