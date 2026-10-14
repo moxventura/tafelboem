@@ -23,6 +23,7 @@ class TafelBoemConfigTest {
 		assertFalse(config.correctionRetype);
 		assertTrue(config.cameraAssist);
 		assertTrue(config.stars);
+		assertTrue(config.arenaCraters);
 		assertTrue(Files.readString(file).contains("correctionRetype"), "the parent can find the toggles in the file");
 	}
 

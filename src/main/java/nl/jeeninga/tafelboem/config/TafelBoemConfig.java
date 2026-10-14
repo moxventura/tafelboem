@@ -26,6 +26,9 @@ public final class TafelBoemConfig {
 	/** Stars at the doors, after a win and in the stats. When off they are still in the fights log. */
 	public boolean stars = true;
 
+	/** In an arena the kicked bomb breaks blocks (never bedrock, obsidian or the floor near a kid). */
+	public boolean arenaCraters = true;
+
 	public static TafelBoemConfig load(Path file) {
 		if (!Files.exists(file)) {
 			TafelBoemConfig defaults = new TafelBoemConfig();

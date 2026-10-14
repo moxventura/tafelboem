@@ -48,5 +48,6 @@
   "tafelboem.boss.graaf_fout.throws": "Pas op: een %s!",
   "tafelboem.message.yeet_distance": "%s vloog %s blokken!",
   "tafelboem.message.yeet_height": "%s vloog %s blokken hoog!",
+  "tafelboem.message.yeet_out": "%s vloog %s blokken, de arena uit!",
   "tafelboem.arena.done": "Klaar voor TafelBoem: altijd dag, geen monsters, een arena onder je voeten. %s monsters weggehaald."
 }
