@@ -88,6 +88,10 @@ public final class TafelBoemWorld {
 		return hub;
 	}
 
+	public ServerLevel level() {
+		return level;
+	}
+
 	public Optional<ArenaRun> run(FightLevel fightLevel) {
 		return Optional.ofNullable(runs.get(fightLevel));
 	}

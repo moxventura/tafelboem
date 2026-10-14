@@ -48,6 +48,7 @@
   "tafelboem.boss.graaf_fout.defeated": "Noooo! All those right answers... that's not fair! I'll be back!",
   "tafelboem.message.loot": "You got %s× %s!",
   "tafelboem.message.boss_already_here": "Count Wrong is already here!",
+  "tafelboem.message.use_the_doors": "In this world you fight Count Wrong through the doors!",
   "tafelboem.stats.reasks": "Asked again after a miss: %s of %s right (%s%%)",
   "tafelboem.stats.misclicks": "Probably pressed ? by accident: %s times",
   "tafelboem.boss.graaf_fout.throws": "Look out: a %s!",
