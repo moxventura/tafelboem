@@ -40,7 +40,7 @@ public class HubAndArenasGameTest {
 	public void theHubHasADoorPerLevelWithItsSignAndBombs(GameTestHelper helper) {
 		TestWorld world = new TestWorld(helper);
 		try {
-			PlacedArea hub = Hub.place(world.level, world.layout);
+			PlacedArea hub = Hub.place(world.level, world.layout, TestWorld.HUB);
 			for (int level = 1; level <= 3; level++) {
 				helper.assertTrue(hub.doors().getOrDefault(level, List.of()).size() == 12, "a 3 × 4 door to level " + level);
 			}
@@ -72,7 +72,7 @@ public class HubAndArenasGameTest {
 	public void aBoomInTheHubBreaksNothingAndTheHubRepairsItself(GameTestHelper helper) {
 		TestWorld world = new TestWorld(helper);
 		try {
-			PlacedArea hub = Hub.place(world.level, world.layout);
+			PlacedArea hub = Hub.place(world.level, world.layout, TestWorld.HUB);
 			BlockPos bomb = hub.standAt();
 			BlockPos floor = bomb.below();
 			BlockPos broken = floor.east(3);
@@ -81,7 +81,7 @@ public class HubAndArenasGameTest {
 			BombEffects.boom(world.level, bomb, BombTier.GEWONE_TNT);
 			helper.assertTrue(world.level.getBlockState(floor).is(Blocks.STONE), "the hub floor under the boom stays");
 
-			Hub.place(world.level, world.layout);
+			Hub.place(world.level, world.layout, TestWorld.HUB);
 			helper.assertTrue(world.level.getBlockState(broken).is(Blocks.STONE), "placing the hub again repairs it");
 		} finally {
 			ProtectedAreas.unprotect(world.level, world.layout.hubSlot());

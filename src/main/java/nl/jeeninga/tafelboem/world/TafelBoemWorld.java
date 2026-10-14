@@ -12,6 +12,7 @@ import java.util.UUID;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.gamerules.GameRules;
@@ -67,13 +68,14 @@ public final class TafelBoemWorld {
 	/** On every world load: the world rules, a fresh hub, and the spawn in the middle of its spot. */
 	public void setUp() {
 		ArenaSetup.applyRules(level);
-		placeHub();
+		placeHub(Hub.TEMPLATE);
 		level.setRespawnData(LevelData.RespawnData.of(level.dimension(), hub.standAt(), hub.yaw(), 0F));
 		level.getGameRules().set(GameRules.RESPAWN_RADIUS, 0, level.getServer());
 	}
 
-	public PlacedArea placeHub() {
-		hub = Hub.place(level, layout);
+	/** @param template {@link Hub#TEMPLATE}; GameTests use their own */
+	public PlacedArea placeHub(Identifier template) {
+		hub = Hub.place(level, layout, template);
 		return hub;
 	}
 

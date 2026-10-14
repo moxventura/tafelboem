@@ -29,23 +29,29 @@ public final class Hub {
 	}
 
 	public static PlacedArea place(ServerLevel level, WorldLayout layout) {
+		return place(level, layout, TEMPLATE);
+	}
+
+	/** @param templateId {@link #TEMPLATE}; GameTests use their own, so a hub the mod ships can't change them */
+	public static PlacedArea place(ServerLevel level, WorldLayout layout, Identifier templateId) {
 		ArenaBox slot = layout.hubSlot();
 		ShapePlacer.clear(level, slot);
-		Optional<StructureTemplate> template = level.getServer().getStructureManager().get(TEMPLATE).filter(Hub::hasAllDoors);
+		Optional<StructureTemplate> template = level.getServer().getStructureManager().get(templateId)
+				.filter(found -> hasAllDoors(templateId, found));
 		PlacedArea hub = template
 				.map(found -> ShapePlacer.placeTemplate(level, WorldLayout.cornerFor(slot, found.getSize().getX(), found.getSize().getZ()),
-						TEMPLATE.toString(), found))
+						templateId.toString(), found))
 				.orElseGet(() -> ShapePlacer.placeShape(level, WorldLayout.cornerFor(slot, HubShape.SIZE, HubShape.SIZE), HubShape.standard()));
 		ProtectedAreas.protect(level, slot);
 		return hub;
 	}
 
-	private static boolean hasAllDoors(StructureTemplate template) {
+	private static boolean hasAllDoors(Identifier templateId, StructureTemplate template) {
 		Set<Integer> levels = template.filterBlocks(BlockPos.ZERO, new StructurePlaceSettings(), ModBlocks.LEVEL_DOOR).stream()
 				.map(info -> info.state().getValue(LevelDoorBlock.LEVEL))
 				.collect(Collectors.toSet());
 		if (!levels.containsAll(Set.of(1, 2, 3))) {
-			TafelBoem.LOGGER.warn("The hub template {} needs a door to level 1, 2 and 3; using the plain hub", TEMPLATE);
+			TafelBoem.LOGGER.warn("The hub template {} needs a door to level 1, 2 and 3; using the plain hub", templateId);
 			return false;
 		}
 		return true;
