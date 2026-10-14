@@ -12,12 +12,14 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.decoration.ItemFrame;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.presets.WorldPreset;
 import net.minecraft.world.phys.AABB;
 
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
+import net.fabricmc.fabric.api.client.gametest.v1.world.TestWorldSave;
 
 import nl.jeeninga.tafelboem.TafelBoem;
 import nl.jeeninga.tafelboem.block.LevelDoorBlock;
@@ -29,8 +31,8 @@ import nl.jeeninga.tafelboem.world.TafelBoemWorlds;
 
 /**
  * R1 in a real client: a TafelBoem world from the World Type button, the hub, a walk through each
- * door into its arena, a fight on level 2, and the exit door home. Screenshots land in
- * {@code build/run/clientGameTest/screenshots}.
+ * door into its arena, a fight on level 2, the exit door home, and the same world loaded again.
+ * Screenshots land in {@code build/run/clientGameTest/screenshots}.
  */
 @SuppressWarnings("UnstableApiUsage")
 public class WorldClientGameTest implements FabricClientGameTest {
@@ -38,6 +40,9 @@ public class WorldClientGameTest implements FabricClientGameTest {
 
 	@Override
 	public void runTest(ClientGameTestContext context) {
+		TestWorldSave save;
+		BlockPos[] beside = new BlockPos[1];
+		BlockPos[] broken = new BlockPos[1];
 		try (TestSingleplayerContext world = context.worldBuilder().adjustSettings(WorldClientGameTest::chooseTafelBoem).create()) {
 			world.getConnection().waitForChunksRender();
 			context.waitTicks(20);
@@ -73,6 +78,37 @@ public class WorldClientGameTest implements FabricClientGameTest {
 			waitUntil(context, () -> world.getServer().computeOnServer(server -> hubFrames(server).size() == 5), "the hub's 5 bomb frames back");
 			check(world.getServer().computeOnServer(server -> hubFrames(server).stream().allMatch(ItemFrame::isLoadedFromDisk)),
 					"the hub's frames were loaded from disk again (or this check proves nothing)");
+
+			// Something for the reload to keep or repair: a kid's block beside the hub, and a hole in its floor.
+			world.getServer().runOnServer(server -> {
+				ArenaBox hub = tafelBoem().hub().bounds();
+				beside[0] = new BlockPos(hub.maxX() + 2, hub.minY(), (int) hub.middleZ());
+				broken[0] = tafelBoem().hub().standAt().below().east(3);
+				server.overworld().setBlockAndUpdate(beside[0], Blocks.OAK_PLANKS.defaultBlockState());
+				server.overworld().setBlockAndUpdate(broken[0], Blocks.AIR.defaultBlockState());
+			});
+			save = world.getWorldSave();
+		}
+
+		// GameTests can't load a world twice, so the reload is checked here: the hub is placed again, its saved
+		// frames come back from disk and must go, and the arena slots are cleared once.
+		try (TestSingleplayerContext world = save.open()) {
+			world.getConnection().waitForChunksRender();
+			waitUntil(context, () -> world.getServer().computeOnServer(server -> hubFrames(server).size() >= 5), "the hub's frames after the reload");
+			context.waitTicks(40);
+			check(world.getServer().computeOnServer(server -> hubFrames(server).size() == 5), "still exactly 5 bomb frames after a reload, not 10");
+			check(world.getServer().computeOnServer(server -> server.overworld().getBlockState(beside[0]).is(Blocks.OAK_PLANKS)),
+					"the kid's block beside the hub survives the reload");
+			check(world.getServer().computeOnServer(server -> server.overworld().getBlockState(broken[0]).is(Blocks.STONE)),
+					"the reload repairs the hub");
+			context.getInput().lookAt(door(world, 2).above(2));
+			context.waitTicks(5);
+			context.takeScreenshot("r1-06-hub-after-reload");
+
+			walkInto(context, world, door(world, 1));
+			waitUntil(context, () -> world.getServer().computeOnServer(server -> tafelBoem().run(FightLevel.MAKKELIJK).isPresent()),
+					"into arena 1 after the reload");
+			walkOut(context, world, FightLevel.MAKKELIJK);
 		}
 	}
 
