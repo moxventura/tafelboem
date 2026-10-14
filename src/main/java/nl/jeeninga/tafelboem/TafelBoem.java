@@ -38,6 +38,7 @@ import nl.jeeninga.tafelboem.registry.ModCreativeTab;
 import nl.jeeninga.tafelboem.registry.ModEntities;
 import nl.jeeninga.tafelboem.registry.ModItems;
 import nl.jeeninga.tafelboem.world.ArenaCatalog;
+import nl.jeeninga.tafelboem.world.Hub;
 import nl.jeeninga.tafelboem.world.TafelBoemWorld;
 import nl.jeeninga.tafelboem.world.TafelBoemWorlds;
 import nl.jeeninga.tafelboem.world.WorldLayout;
@@ -114,9 +115,11 @@ public class TafelBoem implements ModInitializer {
 				sessions.onDisconnect(handler.player);
 			}
 		});
-		// Spectacle animals saved by a previous session (e.g. after a crash) poof instead of piling up.
+		// Spectacle animals saved by a previous session (e.g. after a crash) poof instead of piling up,
+		// and so do hub frames of an earlier world load: every load places them again.
 		ServerEntityEvents.ENTITY_LOAD.register((entity, level) -> {
-			if (entity.isLoadedFromDisk() && entity.entityTags().contains(BombEffects.SPECTACLE_TAG)) {
+			if (entity.isLoadedFromDisk()
+					&& (entity.entityTags().contains(BombEffects.SPECTACLE_TAG) || Hub.isLeftOverFrame(entity, world == null ? null : world.hub()))) {
 				entity.discard();
 			}
 		});

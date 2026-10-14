@@ -48,7 +48,11 @@ public class HubAndArenasGameTest {
 				helper.assertTrue(hub.doors().getOrDefault(level, List.of()).size() == 12, "a 3 × 4 door to level " + level);
 			}
 			List<BombTier> bombs = new ArrayList<>();
-			for (ItemFrame frame : world.level.getEntitiesOfClass(ItemFrame.class, aabb(world.layout.hubSlot()))) {
+			helper.assertTrue(hub.frames().size() == 5, "the hub knows its five frames: " + hub.frames());
+			for (ItemFrame frame : world.level.getEntitiesOfClass(ItemFrame.class, aabb(hub.bounds()))) {
+				// A world load can't be simulated in a GameTest; this tag is what lets the next load drop these frames.
+				helper.assertTrue(frame.entityTags().contains(BombEffects.HUB_TAG), "every frame is tagged as the hub's: " + frame);
+				helper.assertFalse(Hub.isLeftOverFrame(frame, hub), "and is one this hub placed: " + frame);
 				for (BombTier tier : BombTier.values()) {
 					if (frame.getItem().is(ModBlocks.bombItem(tier))) {
 						bombs.add(tier);
@@ -86,6 +90,26 @@ public class HubAndArenasGameTest {
 
 			Hub.place(world.level, world.layout, TestWorld.HUB);
 			helper.assertTrue(world.level.getBlockState(broken).is(Blocks.STONE), "placing the hub again repairs it");
+		} finally {
+			ProtectedAreas.unprotect(world.level, hub.bounds());
+		}
+		helper.succeed();
+	}
+
+	@GameTest(padding = TestWorld.PADDING)
+	public void theFramesOfAnEarlierLoadAreLeftOversAndTheHubsOwnAreNot(GameTestHelper helper) {
+		TestWorld world = new TestWorld(helper);
+		PlacedArea earlier = Hub.place(world.level, world.layout, TestWorld.HUB);
+		List<ItemFrame> saved = world.level.getEntitiesOfClass(ItemFrame.class, aabb(earlier.bounds()));
+		PlacedArea hub = Hub.place(world.level, world.layout, TestWorld.HUB);
+		try {
+			// Saved frames come back with their chunk after the load placed the hub again: these go when they do.
+			helper.assertTrue(saved.size() == 5 && saved.stream().allMatch(frame -> Hub.isLeftOverFrame(frame, hub)),
+					"the frames of the earlier load are left-overs: " + saved);
+			// The hub's own frames come back like that too when a kid was far away; they stay.
+			List<ItemFrame> own = world.level.getEntitiesOfClass(ItemFrame.class, aabb(hub.bounds()));
+			helper.assertTrue(own.size() == 5 && own.stream().noneMatch(frame -> Hub.isLeftOverFrame(frame, hub)),
+					"the hub's own frames are not: " + own);
 		} finally {
 			ProtectedAreas.unprotect(world.level, hub.bounds());
 		}

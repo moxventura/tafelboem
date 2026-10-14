@@ -9,8 +9,11 @@ import net.minecraft.client.gui.screens.worldselection.WorldCreationUiState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.level.levelgen.presets.WorldPreset;
+import net.minecraft.world.phys.AABB;
 
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
@@ -19,6 +22,7 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContex
 import nl.jeeninga.tafelboem.TafelBoem;
 import nl.jeeninga.tafelboem.block.LevelDoorBlock;
 import nl.jeeninga.tafelboem.client.QuestionScreen;
+import nl.jeeninga.tafelboem.core.ArenaBox;
 import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.world.TafelBoemWorld;
 import nl.jeeninga.tafelboem.world.TafelBoemWorlds;
@@ -64,7 +68,18 @@ public class WorldClientGameTest implements FabricClientGameTest {
 				}
 				walkOut(context, world, level);
 			}
+
+			// The arenas are 512+ blocks away, so the hub's chunks were saved and loaded again meanwhile.
+			waitUntil(context, () -> world.getServer().computeOnServer(server -> hubFrames(server).size() == 5), "the hub's 5 bomb frames back");
+			check(world.getServer().computeOnServer(server -> hubFrames(server).stream().allMatch(ItemFrame::isLoadedFromDisk)),
+					"the hub's frames were loaded from disk again (or this check proves nothing)");
 		}
+	}
+
+	private static List<ItemFrame> hubFrames(MinecraftServer server) {
+		ArenaBox box = tafelBoem().hub().bounds();
+		return server.overworld().getEntitiesOfClass(ItemFrame.class,
+				new AABB(box.minX(), box.minY(), box.minZ(), box.maxX() + 1, box.maxY() + 1, box.maxZ() + 1));
 	}
 
 	/** Walks through the arena's exit door. His bomb may have rooted the kid by now: answer, then walk on. */

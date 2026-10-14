@@ -4,10 +4,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.jspecify.annotations.Nullable;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 
@@ -16,6 +19,7 @@ import nl.jeeninga.tafelboem.block.LevelDoorBlock;
 import nl.jeeninga.tafelboem.core.ArenaBox;
 import nl.jeeninga.tafelboem.core.HubShape;
 import nl.jeeninga.tafelboem.core.Shape;
+import nl.jeeninga.tafelboem.game.BombEffects;
 import nl.jeeninga.tafelboem.game.ProtectedAreas;
 import nl.jeeninga.tafelboem.registry.ModBlocks;
 
@@ -44,6 +48,15 @@ public final class Hub {
 		}
 		ProtectedAreas.protect(level, hub.bounds());
 		return hub;
+	}
+
+	/**
+	 * A hub frame saved by an earlier world load. Every load places the frames again, but the saved
+	 * ones only load after that, with their chunk, so clearing can't catch them: they go when they
+	 * load. The frames this hub placed are saved and loaded with their chunk too, and stay.
+	 */
+	public static boolean isLeftOverFrame(Entity entity, @Nullable PlacedArea hub) {
+		return entity.entityTags().contains(BombEffects.HUB_TAG) && (hub == null || !hub.frames().contains(entity.getUUID()));
 	}
 
 	/**
