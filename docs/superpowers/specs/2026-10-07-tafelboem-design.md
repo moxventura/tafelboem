@@ -452,17 +452,26 @@ the three level doors. The kids spawn in its middle.
 - the learning model (R2), and P13: the summon item isn't needed in the TafelBoem world, and its
   cause is still open
 
-### Spike first (throwaway)
-Before the plan, a short spike on a separate branch checks the new Minecraft parts:
-1. The world-preset data file shows "TafelBoem" on the World Type button and makes a void world.
-2. A structure placed at spawn on first load, with the world spawn moved onto it.
-3. A template saved with a structure block in the world folder is found by name, and the templates
-   under `tafelboem:level_2/` can be listed.
-4. Teleporting into an arena slot 512 blocks away and back, with the fight ticking there.
-5. A client game test can create a world of this type, for screenshots.
-
-If item 1 fails, the fallback is a `/tafelboem hub` command run in vanilla's "The Void" superflat
-world.
+### Spike results (2026-10-14)
+A throwaway spike (local branch `spike/r1-world`, one client game test) checked the new Minecraft
+parts. All five worked, so the fallback (a `/tafelboem hub` command in vanilla's "The Void" world)
+is not needed:
+1. **World type.** A `world_preset` file `tafelboem:tafelboem` (flat generator, one layer of air,
+   `"features": false`, biome `tafelboem:void`) plus an entry in the `minecraft:normal` tag puts
+   "TafelBoem" on the World Type button. The name comes from the lang key
+   `generator.tafelboem.tafelboem`.
+2. **Recognising the world and placing at spawn.** A world doesn't remember its world type, so the
+   mod recognises a TafelBoem world by its overworld: a flat generator with the `tafelboem:void`
+   biome. That biome is vanilla's `the_void` without its stone start platform. Placing the hub on
+   `SERVER_STARTED` and moving the spawn there (`setRespawnData`, game rule `respawn_radius` 0) puts
+   a new kid in the middle of the hub.
+3. **Templates.** A template saved the way a structure block saves lands in
+   `<world>/generated/tafelboem/structure/level_2/<name>.nbt`, and `listTemplates()` finds it by
+   the `level_2/` prefix.
+4. **Far arenas.** After a teleport 512 blocks away, the fight there runs: he threw, the question
+   came, and the kick cost him a hit.
+5. **Client game test.** `adjustSettings` with `getNormalPresetList()` and `setWorldType` creates a
+   TafelBoem world, so the R1 client game test can take screenshots of the hub and the arenas.
 
 ### R1 tests
 - **Unit tests** (pure Java): each level's tables, bombs and hits; the picker (only the level's
