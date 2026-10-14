@@ -14,6 +14,9 @@ import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.decoration.ItemFrame;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.SignBlockEntity;
@@ -241,6 +244,43 @@ public class HubAndArenasGameTest {
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * Walking through a door must not stall the game: once the slot is known, placing an arena only
+	 * clears where the last one stood (stray entities still go from the whole slot).
+	 */
+	@GameTest(padding = TestWorld.PADDING)
+	public void placingAnArenaAgainOnlyClearsWhereTheLastOneStood(GameTestHelper helper) {
+		TestWorld world = new TestWorld(helper);
+		world.whenLoaded(() -> {
+			ServerLevel level = world.level;
+			ArenaCatalog catalog = new ArenaCatalog(level.getServer().getStructureManager(), new Random(9), TestWorld.ARENAS);
+			ArenaBox slot = world.layout.arenaSlot(FightLevel.GEMIDDELD);
+			// High in the slot, far above any plain arena (they are 7 blocks high).
+			BlockPos stray = new BlockPos(slot.minX() + 10, slot.minY() + 30, slot.minZ() + 10);
+
+			level.setBlockAndUpdate(stray, Blocks.OAK_PLANKS.defaultBlockState());
+			catalog.place(level, world.layout, FightLevel.GEMIDDELD, name -> helper.fail("skipped " + name));
+			helper.assertTrue(level.getBlockState(stray).isAir(), "the first placement doesn't know the slot, so it clears all of it");
+
+			level.setBlockAndUpdate(stray, Blocks.OAK_PLANKS.defaultBlockState());
+			ItemEntity item = new ItemEntity(level, stray.getX() + 0.5, stray.getY() + 1, stray.getZ() + 0.5, new ItemStack(Items.DIRT));
+			item.setNoGravity(true);
+			level.addFreshEntity(item);
+			PlacedArea arena = catalog.place(level, world.layout, FightLevel.GEMIDDELD, name -> helper.fail("skipped " + name));
+			helper.assertTrue(level.getBlockState(stray).is(Blocks.OAK_PLANKS), "the next one clears only where the last arena stood");
+			helper.assertTrue(item.isRemoved(), "stray items go from the whole slot");
+			helper.assertTrue(level.getBlockState(arena.standAt().below()).is(Blocks.GRASS_BLOCK), "and the arena is there");
+
+			catalog.clearSlots(level, world.layout);
+			helper.assertTrue(level.getBlockState(stray).isAir(), "a world load clears every slot once");
+			helper.assertTrue(level.getBlockState(arena.standAt().below()).isAir(), "arena and all");
+			level.setBlockAndUpdate(stray, Blocks.OAK_PLANKS.defaultBlockState());
+			catalog.place(level, world.layout, FightLevel.GEMIDDELD, name -> helper.fail("skipped " + name));
+			helper.assertTrue(level.getBlockState(stray).is(Blocks.OAK_PLANKS), "after which the slot is known to be empty");
+			helper.succeed();
+		});
 	}
 
 	private static BlockPos corner(ArenaBox box) {
