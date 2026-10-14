@@ -11,7 +11,13 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.TicketType;
+import net.minecraft.util.Mth;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
@@ -33,6 +39,9 @@ import nl.jeeninga.tafelboem.registry.ModBlocks;
  * costs him a hit.
  */
 public class BossFightGameTest {
+	/** Out of the boss bar's reach (48), but within the 96 he may come back from. */
+	private static final int FAR_AWAY = 60;
+
 	@GameTest(maxTicks = 600)
 	@SuppressWarnings("removal") // mock players are still the only way to test without a client
 	public void aCorrectAnswerKicksTheBombBackAndHitsGraafFout(GameTestHelper helper) {
@@ -195,6 +204,65 @@ public class BossFightGameTest {
 			int loot = player.getInventory().countItem(ModBlocks.bombItem(BombTier.KIPPENBOM));
 			helper.assertTrue(loot == 4, "after " + answered.size() + " answers he was beaten, but the kid got " + loot
 					+ " Kippenbommen instead of 4 (he was " + Math.round(player.distanceTo(fight.boss())) + " blocks away)");
+		});
+	}
+
+	/**
+	 * Playtest 2 (P13): the strongest yeets land him 58 to 62 blocks from the kids, further than the
+	 * boss bar reaches, and he used to hover out there for good. Here he starts out on a pad that far
+	 * away; he has to come back to the kid and throw.
+	 */
+	@GameTest(maxTicks = 400, padding = 72)
+	@SuppressWarnings("removal") // mock players are still the only way to test without a client
+	public void afterAYeetThatLandsHimFarAwayHeComesBackAndThrowsAgain(GameTestHelper helper) {
+		OpenField.open(helper);
+		ServerLevel level = helper.getLevel();
+		RecordingQuizClient client = new RecordingQuizClient();
+		SessionManager sessions = new SessionManager(level.getServer(), new Learners(new AnswerLog(tempDir())), client);
+		BossFights fights = new BossFights(sessions);
+
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		Vec3 stand = Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(1, 1, 1)));
+		player.teleportTo(stand.x, stand.y, stand.z);
+		helper.assertTrue(fights.summon(level, stand.add(6, 1.5, 0)), "Graaf Fout should appear");
+		BossFight fight = fights.active().getFirst();
+
+		// Past OpenField's floor the test world is void, so he needs a pad of his own to hover over.
+		BlockPos pad = helper.absolutePos(new BlockPos(1 + FAR_AWAY, -1, 1));
+		for (BlockPos pos : BlockPos.betweenClosed(pad.offset(-1, 0, -1), pad.offset(1, 0, 1))) {
+			level.setBlockAndUpdate(pos, Blocks.STONE.defaultBlockState());
+		}
+		helper.assertTrue(level.getHeight(Heightmap.Types.MOTION_BLOCKING, pad.getX(), pad.getZ())
+				== level.getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(stand.x), Mth.floor(stand.z)),
+				"the pad lies at the height of the floor");
+		// Same trick as OpenField: only the test's own chunks are force-loaded.
+		helper.onEachTick(() -> level.getChunkSource().addTicketWithRadius(TicketType.PORTAL, ChunkPos.containing(pad), 5));
+
+		// Before his first throw: where a big yeet would have left him, out of the boss bar's reach (48 blocks).
+		fight.boss().teleportTo(pad.getX() + 0.5, pad.getY() + 1 + 1.5, pad.getZ() + 0.5);
+		helper.assertTrue(fight.boss().distanceTo(player) > 48 && fight.boss().distanceTo(player) < 96,
+				"he starts out of reach but not too far: " + Math.round(fight.boss().distanceTo(player)) + " blocks");
+
+		Set<Integer> answered = new HashSet<>();
+		helper.onEachTick(() -> {
+			sessions.tick();
+			fights.tick();
+			for (RecordingQuizClient.Sent sent : List.copyOf(client.sentTo)) {
+				QuizS2C question = sent.payload();
+				if (question.mode() == QuizS2C.ASK && answered.add(question.sessionId())) {
+					if (answered.size() == 1) {
+						helper.assertTrue(fight.boss().distanceToSqr(Vec3.atCenterOf(pad)) > 30 * 30,
+								"he asked the first question but is still over the pad, " + Math.round(fight.boss().distanceTo(player)) + " blocks from the kid");
+					}
+					sessions.onClientAction(sent.player(), new QuizC2S(question.sessionId(), QuizC2S.ANSWER, question.a() * question.b(), QuizC2S.VIA_KEY));
+				}
+			}
+		});
+
+		helper.succeedWhen(() -> {
+			helper.assertFalse(answered.isEmpty(), "wait until the kid is asked a question; Graaf Fout hovers "
+					+ Math.round(fight.boss().distanceTo(player)) + " blocks away");
+			fights.endAll();
 		});
 	}
 
