@@ -36,14 +36,17 @@ import nl.jeeninga.tafelboem.world.TafelBoemWorld;
 import nl.jeeninga.tafelboem.world.WorldLayout;
 
 /**
- * A TafelBoem world inside a GameTest: the hub slot at the test's corner and the arena slots around
- * it in a square, 56 blocks apart. Use {@code padding = TestWorld.PADDING} so neighbouring tests stay
- * clear. Minecraft sends every test to a real client (the client game tests), and that only accepts
- * a padding of at most 128, which is why the slots form a square and not a row.
+ * A TafelBoem world inside a GameTest: the hub slot and the three arena slots in a square, 56 blocks
+ * apart and centred on the test's corner. Use {@code padding = TestWorld.PADDING} so neighbouring tests
+ * stay clear. Before each test the runner clears its whole padded box, which grows with the cube of
+ * the padding, so the slots sit as close around the corner as they fit: padding 128 made the runner
+ * clear about 17 million blocks per world test, 56 about 1.5 million. Client game tests accept at
+ * most 128 anyway.
  */
 final class TestWorld {
 	static final int SPACING = 56;
-	static final int PADDING = 128;
+	/** The slots reach 52 blocks to one side of the corner and 51 to the other. */
+	static final int PADDING = 56;
 	/** No template is ever saved under these, so a hub or arena the mod ships can't change the tests. */
 	static final Identifier HUB = TafelBoem.id("test_world_hub");
 	static final String ARENAS = "test_world_level_";
@@ -62,11 +65,11 @@ final class TestWorld {
 	TestWorld(GameTestHelper helper) {
 		this.helper = helper;
 		this.level = helper.getLevel();
-		BlockPos corner = helper.absolutePos(BlockPos.ZERO);
-		this.layout = new WorldLayout(corner, Map.of(
-				FightLevel.MAKKELIJK, corner.offset(SPACING, 0, 0),
-				FightLevel.GEMIDDELD, corner.offset(0, 0, SPACING),
-				FightLevel.MOEILIJK, corner.offset(SPACING, 0, SPACING)));
+		BlockPos hub = helper.absolutePos(BlockPos.ZERO).offset(-(SPACING - 4), 0, -(SPACING - 4));
+		this.layout = new WorldLayout(hub, Map.of(
+				FightLevel.MAKKELIJK, hub.offset(SPACING, 0, 0),
+				FightLevel.GEMIDDELD, hub.offset(0, 0, SPACING),
+				FightLevel.MOEILIJK, hub.offset(SPACING, 0, SPACING)));
 		// Placing clears a slot, entities included, so a slot must never reach into a neighbouring test.
 		AABB padded = helper.getBoundsWithPadding();
 		helper.assertTrue(inside(padded, layout.hubSlot()), "the hub slot stays inside the test's padded area " + padded);
@@ -74,12 +77,23 @@ final class TestWorld {
 			helper.assertTrue(inside(padded, layout.arenaSlot(fightLevel)), "the arena slot of level " + fightLevel.number() + " stays inside the test's padded area " + padded);
 		}
 		// Only the test's own chunks are force-loaded; keep the slots ticking too (see OpenField).
-		helper.onEachTick(() -> {
-			keepLoaded(layout.hubSlot());
-			for (FightLevel fightLevel : FightLevel.DOORS) {
-				keepLoaded(layout.arenaSlot(fightLevel));
-			}
-		});
+		keepSlotsLoaded();
+		helper.onEachTick(this::keepSlotsLoaded);
+	}
+
+	/**
+	 * Runs the test body a few ticks later, once the slots' chunks have loaded: an entity in a chunk
+	 * that isn't loaded yet (an item frame, say) can't be found.
+	 */
+	void whenLoaded(Runnable body) {
+		helper.runAfterDelay(5, body);
+	}
+
+	private void keepSlotsLoaded() {
+		keepLoaded(layout.hubSlot());
+		for (FightLevel fightLevel : FightLevel.DOORS) {
+			keepLoaded(layout.arenaSlot(fightLevel));
+		}
 	}
 
 	/** Runs a TafelBoem world in the layout: the hub placed, every question answered right. */
