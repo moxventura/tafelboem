@@ -2,6 +2,7 @@ package nl.jeeninga.tafelboem.log;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.function.Consumer;
 
 import nl.jeeninga.tafelboem.core.FightRecord;
 
@@ -22,5 +23,10 @@ public final class FightLog {
 
 	public List<FightRecord> read(String player) {
 		return lines.read(player);
+	}
+
+	/** Hears every fight appended from now on. */
+	public void listen(Consumer<FightRecord> listener) {
+		lines.listen(listener);
 	}
 }

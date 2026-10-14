@@ -2,6 +2,7 @@ package nl.jeeninga.tafelboem.log;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.function.Consumer;
 
 import nl.jeeninga.tafelboem.core.AnswerRecord;
 
@@ -22,5 +23,10 @@ public final class AnswerLog {
 
 	public List<AnswerRecord> read(String player) {
 		return lines.read(player);
+	}
+
+	/** Hears every answer appended from now on. */
+	public void listen(Consumer<AnswerRecord> listener) {
+		lines.listen(listener);
 	}
 }

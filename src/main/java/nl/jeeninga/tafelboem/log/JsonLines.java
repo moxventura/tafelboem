@@ -7,6 +7,8 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonParseException;
@@ -26,6 +28,7 @@ final class JsonLines<T> {
 	private final Path directory;
 	private final String prefix;
 	private final Class<T> type;
+	private final List<Consumer<T>> listeners = new CopyOnWriteArrayList<>();
 
 	JsonLines(Path directory, String prefix, Class<T> type) {
 		this.directory = directory;
@@ -41,6 +44,12 @@ final class JsonLines<T> {
 		} catch (IOException e) {
 			LOGGER.error("Could not write the {} log for {}", prefix, player, e);
 		}
+		listeners.forEach(listener -> listener.accept(record));
+	}
+
+	/** Hears every record appended from now on, also when writing the file failed. */
+	void listen(Consumer<T> listener) {
+		listeners.add(listener);
 	}
 
 	List<T> read(String player) {
