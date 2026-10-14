@@ -13,12 +13,14 @@ import java.util.UUID;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.AABB;
 
+import nl.jeeninga.tafelboem.TafelBoem;
 import nl.jeeninga.tafelboem.boss.BossFights;
 import nl.jeeninga.tafelboem.core.ArenaBox;
 import nl.jeeninga.tafelboem.core.FightLevel;
@@ -42,6 +44,9 @@ import nl.jeeninga.tafelboem.world.WorldLayout;
 final class TestWorld {
 	static final int SPACING = 56;
 	static final int PADDING = 128;
+	/** No template is ever saved under these, so a hub or arena the mod ships can't change the tests. */
+	static final Identifier HUB = TafelBoem.id("test_world_hub");
+	static final String ARENAS = "test_world_level_";
 
 	final GameTestHelper helper;
 	final ServerLevel level;
@@ -84,8 +89,8 @@ final class TestWorld {
 		fights = new BossFights(sessions);
 		log = new FightLog(dir);
 		world = new TafelBoemWorld(level, layout, fights, log,
-				new ArenaCatalog(level.getServer().getStructureManager(), new Random(1), ArenaCatalog.DEFAULT_FOLDER), client);
-		world.placeHub();
+				new ArenaCatalog(level.getServer().getStructureManager(), new Random(1), ARENAS), client);
+		world.placeHub(HUB);
 		helper.onEachTick(() -> {
 			sessions.tick();
 			fights.tick();
