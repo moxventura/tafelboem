@@ -5,6 +5,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.phys.AABB;
 
 import nl.jeeninga.tafelboem.core.ArenaBox;
 import nl.jeeninga.tafelboem.core.FightLevel;
@@ -26,6 +27,12 @@ final class TestWorld {
 		this.helper = helper;
 		this.level = helper.getLevel();
 		this.layout = WorldLayout.at(helper.absolutePos(BlockPos.ZERO), SPACING);
+		// Placing clears a slot, entities included, so a slot must never reach into a neighbouring test.
+		AABB padded = helper.getBoundsWithPadding();
+		helper.assertTrue(inside(padded, layout.hubSlot()), "the hub slot stays inside the test's padded area " + padded);
+		for (FightLevel fightLevel : FightLevel.DOORS) {
+			helper.assertTrue(inside(padded, layout.arenaSlot(fightLevel)), "the arena slot of level " + fightLevel.number() + " stays inside the test's padded area " + padded);
+		}
 		// Only the test's own chunks are force-loaded; keep the slots ticking too (see OpenField).
 		helper.onEachTick(() -> {
 			keepLoaded(layout.hubSlot());
@@ -33,6 +40,10 @@ final class TestWorld {
 				keepLoaded(layout.arenaSlot(fightLevel));
 			}
 		});
+	}
+
+	private static boolean inside(AABB padded, ArenaBox slot) {
+		return padded.contains(slot.minX(), slot.minY(), slot.minZ()) && padded.contains(slot.maxX() + 0.5, slot.maxY() + 0.5, slot.maxZ() + 0.5);
 	}
 
 	private void keepLoaded(ArenaBox slot) {
