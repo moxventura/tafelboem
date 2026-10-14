@@ -31,3 +31,6 @@ desktop.ini
 
 # Local git worktrees
 .worktrees/
+
+# Log4j output of the test JVM
+/logs/
