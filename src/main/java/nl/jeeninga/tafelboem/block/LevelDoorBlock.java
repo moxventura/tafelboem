@@ -2,11 +2,16 @@ package nl.jeeninga.tafelboem.block;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.InsideBlockEffectApplier;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.BlockItemStateProperties;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
@@ -49,6 +54,21 @@ public class LevelDoorBlock extends Block {
 	@Override
 	public BlockState getStateForPlacement(BlockPlaceContext context) {
 		return defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+	}
+
+	/** Picking a placed door gives a door to the same level, as the creative tab has it. */
+	@Override
+	protected ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state, boolean includeData) {
+		return withLevel(super.getCloneItemStack(level, pos, state, includeData), state.getValue(LEVEL));
+	}
+
+	/** Makes this door item lead to the level (0 is the exit), with its name from the creative tab. */
+	public static ItemStack withLevel(ItemStack door, int level) {
+		door.set(DataComponents.BLOCK_STATE, BlockItemStateProperties.EMPTY.with(LEVEL, level));
+		door.set(DataComponents.ITEM_NAME, level == 0
+				? Component.translatable("tafelboem.door.item.exit")
+				: Component.translatable("tafelboem.door.item.level", Component.translatable("tafelboem.level." + level)));
+		return door;
 	}
 
 	@Override
