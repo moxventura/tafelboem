@@ -44,12 +44,22 @@ public final class ShapePlacer {
 
 	/** Empties a slot: every block to air, every entity but the players gone (items, chickens, frames). */
 	public static void clear(ServerLevel level, ArenaBox slot) {
-		for (BlockPos pos : BlockPos.betweenClosed(slot.minX(), slot.minY(), slot.minZ(), slot.maxX(), slot.maxY(), slot.maxZ())) {
+		clearBlocks(level, slot);
+		clearEntities(level, slot);
+	}
+
+	/** Every block in the box to air. */
+	public static void clearBlocks(ServerLevel level, ArenaBox box) {
+		for (BlockPos pos : BlockPos.betweenClosed(box.minX(), box.minY(), box.minZ(), box.maxX(), box.maxY(), box.maxZ())) {
 			if (!level.getBlockState(pos).isAir()) {
 				level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
 			}
 		}
-		level.getEntities((Entity) null, aabb(slot), entity -> !(entity instanceof Player)).forEach(Entity::discard);
+	}
+
+	/** Every entity in the box but the players: items, chickens, bombs in flight, frames. */
+	public static void clearEntities(ServerLevel level, ArenaBox box) {
+		level.getEntities((Entity) null, aabb(box), entity -> !(entity instanceof Player)).forEach(Entity::discard);
 	}
 
 	public static PlacedArea placeShape(ServerLevel level, BlockPos corner, Shape shape) {

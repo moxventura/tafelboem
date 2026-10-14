@@ -36,12 +36,25 @@ public final class ArenaCatalog {
 	private final Random random;
 	private final String folder;
 	private final Map<FightLevel, ArenaPicker> pickers = new EnumMap<>(FightLevel.class);
+	/** Where each level's last arena stands: empty when its slot is known to be empty, missing when not known. */
+	private final Map<FightLevel, Optional<ArenaBox>> lastPlaced = new EnumMap<>(FightLevel.class);
 
 	/** @param folder {@link #DEFAULT_FOLDER}; GameTests use their own, so their templates don't mix */
 	public ArenaCatalog(StructureTemplateManager templates, Random random, String folder) {
 		this.templates = templates;
 		this.random = random;
 		this.folder = folder;
+	}
+
+	/**
+	 * Empties every arena slot. A world load does this once, before anyone plays: from then on a door
+	 * only clears where that level's last arena stood, so walking through it doesn't stall the game.
+	 */
+	public void clearSlots(ServerLevel level, WorldLayout layout) {
+		for (FightLevel fightLevel : FightLevel.DOORS) {
+			ShapePlacer.clear(level, layout.arenaSlot(fightLevel));
+			lastPlaced.put(fightLevel, Optional.empty());
+		}
 	}
 
 	public List<Identifier> templatesFor(FightLevel level) {
@@ -66,15 +79,21 @@ public final class ArenaCatalog {
 			}
 		}
 
-		ShapePlacer.clear(level, slot);
+		// Blocks only where the last arena stood (all of the slot when that isn't known); stray entities anywhere in it.
+		lastPlaced.getOrDefault(fightLevel, Optional.of(slot)).ifPresent(box -> ShapePlacer.clearBlocks(level, box));
+		ShapePlacer.clearEntities(level, slot);
+		PlacedArea arena;
 		if (!usable.isEmpty()) {
 			ArenaPicker picker = pickers.computeIfAbsent(fightLevel, key -> new ArenaPicker(random));
 			String name = picker.pick(List.copyOf(usable.keySet()));
 			StructureTemplate found = usable.get(name);
-			return ShapePlacer.placeTemplate(level, WorldLayout.cornerFor(slot, found.getSize().getX(), found.getSize().getZ()), name, found);
+			arena = ShapePlacer.placeTemplate(level, WorldLayout.cornerFor(slot, found.getSize().getX(), found.getSize().getZ()), name, found);
+		} else {
+			Shape shape = ArenaShape.forLevel(fightLevel.number());
+			arena = ShapePlacer.placeShape(level, WorldLayout.cornerFor(slot, shape.sizeX(), shape.sizeZ()), shape);
 		}
-		Shape shape = ArenaShape.forLevel(fightLevel.number());
-		return ShapePlacer.placeShape(level, WorldLayout.cornerFor(slot, shape.sizeX(), shape.sizeZ()), shape);
+		lastPlaced.put(fightLevel, Optional.of(arena.bounds()));
+		return arena;
 	}
 
 	public static boolean hasExitDoor(StructureTemplate template) {

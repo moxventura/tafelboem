@@ -78,6 +78,8 @@ public final class TafelBoemWorld {
 	public void setUp() {
 		ArenaSetup.applyRules(level);
 		placeHub(Hub.TEMPLATE);
+		// Now, while nobody plays yet, so walking through a door later doesn't stall the game.
+		catalog.clearSlots(level, layout);
 		level.setRespawnData(LevelData.RespawnData.of(level.dimension(), hub.standAt(), hub.yaw(), 0F));
 		level.getGameRules().set(GameRules.RESPAWN_RADIUS, 0, level.getServer());
 	}
