@@ -24,6 +24,8 @@ import nl.jeeninga.tafelboem.core.BombTier;
  */
 public final class BombEffects {
 	public static final String SPECTACLE_TAG = "tafelboem_spectacle";
+	/** On the item frames beside the hub's doors, which every world load places again. */
+	public static final String HUB_TAG = "tafelboem_hub";
 	private static final int KIPPENBOM_CHICKENS = 12;
 
 	private BombEffects() {

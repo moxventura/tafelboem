@@ -6,9 +6,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.Vec3i;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -29,6 +31,7 @@ import net.minecraft.world.phys.Vec3;
 import nl.jeeninga.tafelboem.block.LevelDoorBlock;
 import nl.jeeninga.tafelboem.core.ArenaBox;
 import nl.jeeninga.tafelboem.core.Shape;
+import nl.jeeninga.tafelboem.game.BombEffects;
 import nl.jeeninga.tafelboem.registry.ModBlocks;
 
 /**
@@ -56,14 +59,15 @@ public final class ShapePlacer {
 		for (Shape.Sign sign : shape.signs()) {
 			placeSign(level, corner.offset(sign.x(), sign.y(), sign.z()), sign);
 		}
+		List<UUID> frames = new ArrayList<>();
 		for (Shape.Frame frame : shape.frames()) {
-			placeFrame(level, corner.offset(frame.x(), frame.y(), frame.z()), frame);
+			frames.add(placeFrame(level, corner.offset(frame.x(), frame.y(), frame.z()), frame));
 		}
 		ArenaBox bounds = ArenaBox.of(corner.getX(), corner.getY(), corner.getZ(), shape.sizeX(), shape.sizeY(), shape.sizeZ());
 		Shape.Spot stand = shape.standAt();
 		Shape.Spot middle = shape.middle();
 		return new PlacedArea(shape.name(), bounds, corner.offset(stand.x(), stand.y(), stand.z()), Materials.direction(stand.facing()).toYRot(),
-				Vec3.atBottomCenterOf(corner.offset(middle.x(), middle.y(), middle.z())), doors(level, bounds));
+				Vec3.atBottomCenterOf(corner.offset(middle.x(), middle.y(), middle.z())), doors(level, bounds), List.copyOf(frames));
 	}
 
 	/**
@@ -90,11 +94,11 @@ public final class ShapePlacer {
 				BlockPos spot = exit.relative(away, 3);
 				Optional<BlockPos> stand = ground(level, spot.getX(), spot.getZ(), bounds);
 				if (stand.isPresent()) {
-					return new PlacedArea(name, bounds, stand.get(), away.toYRot(), Vec3.atBottomCenterOf(middle), doors);
+					return new PlacedArea(name, bounds, stand.get(), away.toYRot(), Vec3.atBottomCenterOf(middle), doors, List.of());
 				}
 			}
 		}
-		return new PlacedArea(name, bounds, middle, Direction.NORTH.toYRot(), Vec3.atBottomCenterOf(middle), doors);
+		return new PlacedArea(name, bounds, middle, Direction.NORTH.toYRot(), Vec3.atBottomCenterOf(middle), doors, List.of());
 	}
 
 	/** Every level door in the area, by level, lowest blocks first. */
@@ -140,15 +144,21 @@ public final class ShapePlacer {
 	/**
 	 * Item frames can only be made fixed through their saved data, so the vanilla command does it.
 	 * A frame loads its block position from that data and wants it near its own position, hence both.
+	 * Its id is chosen here, so the hub knows its own frames (see {@link Hub#isLeftOverFrame}).
 	 */
-	private static void placeFrame(ServerLevel level, BlockPos pos, Shape.Frame frame) {
+	private static UUID placeFrame(ServerLevel level, BlockPos pos, Shape.Frame frame) {
+		UUID id = UUID.randomUUID();
+		int[] uuid = UUIDUtil.uuidToIntArray(id);
 		String item = BuiltInRegistries.ITEM.getKey(ModBlocks.bombItem(frame.bomb())).toString();
 		Vec3 centre = Vec3.atBottomCenterOf(pos);
-		String data = String.format(Locale.ROOT, "{Pos:[%.1fd,%.1fd,%.1fd],block_pos:[I;%d,%d,%d],Facing:%db,Fixed:1b,Item:{id:\"%s\",count:1}}",
-				centre.x, centre.y, centre.z, pos.getX(), pos.getY(), pos.getZ(), Materials.direction(frame.facing()).get3DDataValue(), item);
+		String data = String.format(Locale.ROOT,
+				"{UUID:[I;%d,%d,%d,%d],Pos:[%.1fd,%.1fd,%.1fd],block_pos:[I;%d,%d,%d],Facing:%db,Fixed:1b,Item:{id:\"%s\",count:1},Tags:[\"%s\"]}",
+				uuid[0], uuid[1], uuid[2], uuid[3], centre.x, centre.y, centre.z, pos.getX(), pos.getY(), pos.getZ(),
+				Materials.direction(frame.facing()).get3DDataValue(), item, BombEffects.HUB_TAG);
 		String command = String.format(Locale.ROOT, "summon minecraft:item_frame %.1f %.1f %.1f %s", centre.x, centre.y, centre.z, data);
 		MinecraftServer server = level.getServer();
 		server.getCommands().performPrefixedCommand(server.createCommandSourceStack().withLevel(level).withSuppressedOutput(), command);
+		return id;
 	}
 
 	private static AABB aabb(ArenaBox box) {
