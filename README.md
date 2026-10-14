@@ -63,7 +63,8 @@ so the kids can also build there in creative.
 - **Falling is safe.** Anyone who falls below the hub or an arena is put back, without damage: at
   the arrival spot in a fight, otherwise in the hub.
 - **Other worlds.** Every other world still works as before: the summon item starts the R0.1 fight
-  with all tables, and `/tafelboem arena` still sets one up.
+  with all tables, and `/tafelboem arena` still sets one up. In a TafelBoem world the summon item
+  only says to use the doors.
 
 Each fight is written to `tafelboem/fights-<player>.jsonl` in the world folder, next to the answer
 log. `/tafelboem stats` shows a line per level, for example "Medium: ★★☆, 3 of 4 won".
