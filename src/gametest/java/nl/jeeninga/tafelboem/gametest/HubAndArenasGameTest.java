@@ -4,7 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import org.jspecify.annotations.Nullable;
+
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.contents.TranslatableContents;
@@ -122,8 +125,8 @@ public class HubAndArenasGameTest {
 	public void withTwoTemplatesInALevelOneOfThemIsUsedAndNeverTwiceInARow(GameTestHelper helper) {
 		TestWorld world = new TestWorld(helper);
 		String folder = "test_choice_level_";
-		saveTemplate(world, folder + "2/gold", Blocks.GOLD_BLOCK, true);
-		saveTemplate(world, folder + "2/diamond", Blocks.DIAMOND_BLOCK, true);
+		saveTemplate(world, folder + "2/gold", Blocks.GOLD_BLOCK, Direction.NORTH);
+		saveTemplate(world, folder + "2/diamond", Blocks.DIAMOND_BLOCK, Direction.NORTH);
 		ArenaCatalog catalog = new ArenaCatalog(world.level.getServer().getStructureManager(), new Random(7), folder);
 
 		String previous = null;
@@ -142,7 +145,7 @@ public class HubAndArenasGameTest {
 	public void aTemplateWithoutAnExitDoorIsSkipped(GameTestHelper helper) {
 		TestWorld world = new TestWorld(helper);
 		String folder = "test_skip_level_";
-		saveTemplate(world, folder + "3/no_exit", Blocks.GOLD_BLOCK, false);
+		saveTemplate(world, folder + "3/no_exit", Blocks.GOLD_BLOCK, null);
 		ArenaCatalog catalog = new ArenaCatalog(world.level.getServer().getStructureManager(), new Random(8), folder);
 		List<String> skipped = new ArrayList<>();
 
@@ -154,8 +157,31 @@ public class HubAndArenasGameTest {
 		helper.succeed();
 	}
 
-	/** Builds a 9 × 3 × 9 arena at the test's corner and saves it the way a structure block does. */
-	private static void saveTemplate(TestWorld world, String path, Block marker, boolean exitDoor) {
+	@GameTest(padding = TestWorld.PADDING)
+	public void anExitDoorFacingOutOfTheArenaStillLandsTheKidsInIt(GameTestHelper helper) {
+		TestWorld world = new TestWorld(helper);
+		String folder = "test_outward_level_";
+		// A door faces whoever placed it: built from outside the wall, 3 blocks in front of it is outside the arena.
+		saveTemplate(world, folder + "1/outward", Blocks.GOLD_BLOCK, Direction.SOUTH);
+		ArenaCatalog catalog = new ArenaCatalog(world.level.getServer().getStructureManager(), new Random(9), folder);
+
+		PlacedArea arena = catalog.place(world.level, world.layout, FightLevel.MAKKELIJK, name -> helper.fail("skipped " + name));
+
+		BlockPos stand = arena.standAt();
+		ArenaBox box = arena.bounds();
+		helper.assertTrue(box.containsColumn(stand.getX() + 0.5, stand.getZ() + 0.5), "the kids arrive inside the arena: " + stand + " in " + box);
+		helper.assertTrue(stand.getY() > box.minY() && stand.getY() <= box.maxY() + 1, "at the arena's height, not the world's bottom: " + stand);
+		helper.assertTrue(world.level.getBlockState(stand.below()).isSolid(), "on a solid block");
+		helper.assertTrue(arena.yaw() == Direction.NORTH.toYRot(), "facing into the arena, away from the door");
+		helper.succeed();
+	}
+
+	/**
+	 * Builds a 9 × 3 × 9 arena at the test's corner and saves it the way a structure block does.
+	 *
+	 * @param exitDoor which way its exit door on the south edge faces (NORTH is into the arena); null for none
+	 */
+	private static void saveTemplate(TestWorld world, String path, Block marker, @Nullable Direction exitDoor) {
 		ServerLevel level = world.level;
 		// 60 blocks above the test's corner: clear of the hub slot, which is 48 high.
 		BlockPos build = world.helper.absolutePos(new BlockPos(0, 60, 0));
@@ -166,8 +192,9 @@ public class HubAndArenasGameTest {
 			level.setBlockAndUpdate(pos, Blocks.BEDROCK.defaultBlockState());
 		}
 		level.setBlockAndUpdate(build.offset(4, 1, 4), marker.defaultBlockState());
-		if (exitDoor) {
-			level.setBlockAndUpdate(build.offset(4, 1, 8), ModBlocks.LEVEL_DOOR.defaultBlockState().setValue(LevelDoorBlock.LEVEL, 0));
+		if (exitDoor != null) {
+			level.setBlockAndUpdate(build.offset(4, 1, 8),
+					ModBlocks.LEVEL_DOOR.defaultBlockState().setValue(LevelDoorBlock.LEVEL, 0).setValue(LevelDoorBlock.FACING, exitDoor));
 		}
 		StructureTemplateManager manager = level.getServer().getStructureManager();
 		Identifier id = TafelBoem.id(path);
