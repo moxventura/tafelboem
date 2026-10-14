@@ -42,37 +42,39 @@ public class HubAndArenasGameTest {
 	@GameTest(padding = TestWorld.PADDING)
 	public void theHubHasADoorPerLevelWithItsSignAndBombs(GameTestHelper helper) {
 		TestWorld world = new TestWorld(helper);
-		PlacedArea hub = Hub.place(world.level, world.layout, TestWorld.HUB);
-		try {
-			for (int level = 1; level <= 3; level++) {
-				helper.assertTrue(hub.doors().getOrDefault(level, List.of()).size() == 12, "a 3 × 4 door to level " + level);
-			}
-			List<BombTier> bombs = new ArrayList<>();
-			helper.assertTrue(hub.frames().size() == 5, "the hub knows its five frames: " + hub.frames());
-			for (ItemFrame frame : world.level.getEntitiesOfClass(ItemFrame.class, aabb(hub.bounds()))) {
-				// A world load can't be simulated in a GameTest; this tag is what lets the next load drop these frames.
-				helper.assertTrue(frame.entityTags().contains(BombEffects.HUB_TAG), "every frame is tagged as the hub's: " + frame);
-				helper.assertFalse(Hub.isLeftOverFrame(frame, hub), "and is one this hub placed: " + frame);
-				for (BombTier tier : BombTier.values()) {
-					if (frame.getItem().is(ModBlocks.bombItem(tier))) {
-						bombs.add(tier);
+		world.whenLoaded(() -> {
+			PlacedArea hub = Hub.place(world.level, world.layout, TestWorld.HUB);
+			try {
+				for (int level = 1; level <= 3; level++) {
+					helper.assertTrue(hub.doors().getOrDefault(level, List.of()).size() == 12, "a 3 × 4 door to level " + level);
+				}
+				List<BombTier> bombs = new ArrayList<>();
+				helper.assertTrue(hub.frames().size() == 5, "the hub knows its five frames: " + hub.frames());
+				for (ItemFrame frame : world.level.getEntitiesOfClass(ItemFrame.class, aabb(hub.bounds()))) {
+					// A world load can't be simulated in a GameTest; this tag is what lets the next load drop these frames.
+					helper.assertTrue(frame.entityTags().contains(BombEffects.HUB_TAG), "every frame is tagged as the hub's: " + frame);
+					helper.assertFalse(Hub.isLeftOverFrame(frame, hub), "and is one this hub placed: " + frame);
+					for (BombTier tier : BombTier.values()) {
+						if (frame.getItem().is(ModBlocks.bombItem(tier))) {
+							bombs.add(tier);
+						}
 					}
 				}
-			}
-			helper.assertTrue(bombs.size() == 5, "five bombs in frames beside the doors, found " + bombs);
-			int signs = 0;
-			for (BlockPos pos : BlockPos.betweenClosed(corner(hub.bounds()), far(hub.bounds()))) {
-				if (world.level.getBlockEntity(pos) instanceof SignBlockEntity sign
-						&& sign.getFrontText().getMessage(1, false).getContents() instanceof TranslatableContents text
-						&& text.getKey().equals("tafelboem.door.sign")) {
-					signs++;
+				helper.assertTrue(bombs.size() == 5, "five bombs in frames beside the doors, found " + bombs);
+				int signs = 0;
+				for (BlockPos pos : BlockPos.betweenClosed(corner(hub.bounds()), far(hub.bounds()))) {
+					if (world.level.getBlockEntity(pos) instanceof SignBlockEntity sign
+							&& sign.getFrontText().getMessage(1, false).getContents() instanceof TranslatableContents text
+							&& text.getKey().equals("tafelboem.door.sign")) {
+						signs++;
+					}
 				}
+				helper.assertTrue(signs == 3, "a sign above each door, found " + signs);
+			} finally {
+				ProtectedAreas.unprotect(world.level, hub.bounds());
 			}
-			helper.assertTrue(signs == 3, "a sign above each door, found " + signs);
-		} finally {
-			ProtectedAreas.unprotect(world.level, hub.bounds());
-		}
-		helper.succeed();
+			helper.succeed();
+		});
 	}
 
 	@GameTest(padding = TestWorld.PADDING)
@@ -99,21 +101,23 @@ public class HubAndArenasGameTest {
 	@GameTest(padding = TestWorld.PADDING)
 	public void theFramesOfAnEarlierLoadAreLeftOversAndTheHubsOwnAreNot(GameTestHelper helper) {
 		TestWorld world = new TestWorld(helper);
-		PlacedArea earlier = Hub.place(world.level, world.layout, TestWorld.HUB);
-		List<ItemFrame> saved = world.level.getEntitiesOfClass(ItemFrame.class, aabb(earlier.bounds()));
-		PlacedArea hub = Hub.place(world.level, world.layout, TestWorld.HUB);
-		try {
-			// Saved frames come back with their chunk after the load placed the hub again: these go when they do.
-			helper.assertTrue(saved.size() == 5 && saved.stream().allMatch(frame -> Hub.isLeftOverFrame(frame, hub)),
-					"the frames of the earlier load are left-overs: " + saved);
-			// The hub's own frames come back like that too when a kid was far away; they stay.
-			List<ItemFrame> own = world.level.getEntitiesOfClass(ItemFrame.class, aabb(hub.bounds()));
-			helper.assertTrue(own.size() == 5 && own.stream().noneMatch(frame -> Hub.isLeftOverFrame(frame, hub)),
-					"the hub's own frames are not: " + own);
-		} finally {
-			ProtectedAreas.unprotect(world.level, hub.bounds());
-		}
-		helper.succeed();
+		world.whenLoaded(() -> {
+			PlacedArea earlier = Hub.place(world.level, world.layout, TestWorld.HUB);
+			List<ItemFrame> saved = world.level.getEntitiesOfClass(ItemFrame.class, aabb(earlier.bounds()));
+			PlacedArea hub = Hub.place(world.level, world.layout, TestWorld.HUB);
+			try {
+				// Saved frames come back with their chunk after the load placed the hub again: these go when they do.
+				helper.assertTrue(saved.size() == 5 && saved.stream().allMatch(frame -> Hub.isLeftOverFrame(frame, hub)),
+						"the frames of the earlier load are left-overs: " + saved);
+				// The hub's own frames come back like that too when a kid was far away; they stay.
+				List<ItemFrame> own = world.level.getEntitiesOfClass(ItemFrame.class, aabb(hub.bounds()));
+				helper.assertTrue(own.size() == 5 && own.stream().noneMatch(frame -> Hub.isLeftOverFrame(frame, hub)),
+						"the hub's own frames are not: " + own);
+			} finally {
+				ProtectedAreas.unprotect(world.level, hub.bounds());
+			}
+			helper.succeed();
+		});
 	}
 
 	@GameTest(padding = TestWorld.PADDING)
@@ -207,8 +211,8 @@ public class HubAndArenasGameTest {
 	 */
 	private static void saveTemplate(TestWorld world, String path, Block marker, @Nullable Direction exitDoor) {
 		ServerLevel level = world.level;
-		// 60 blocks above the test's corner: clear of the hub slot, which is 48 high.
-		BlockPos build = world.helper.absolutePos(new BlockPos(0, 60, 0));
+		// 50 blocks above the test's corner: above the slots, which are 48 high, and inside the padding.
+		BlockPos build = world.helper.absolutePos(new BlockPos(0, 50, 0));
 		for (BlockPos pos : BlockPos.betweenClosed(build, build.offset(8, 2, 8))) {
 			level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
 		}
