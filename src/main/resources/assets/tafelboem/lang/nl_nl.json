@@ -54,5 +54,9 @@
   "tafelboem.message.yeet_distance": "%s vloog %s blokken!",
   "tafelboem.message.yeet_height": "%s vloog %s blokken hoog!",
   "tafelboem.message.yeet_out": "%s vloog %s blokken, de arena uit!",
-  "tafelboem.arena.done": "Klaar voor TafelBoem: altijd dag, geen monsters, een arena onder je voeten. %s monsters weggehaald."
+  "tafelboem.arena.done": "Klaar voor TafelBoem: altijd dag, geen monsters, een arena onder je voeten. %s monsters weggehaald.",
+  "tafelboem.stars.new_best": "%s op %s!",
+  "tafelboem.door.stars": "%s: %s",
+  "tafelboem.door.busy": "Even wachten, de anderen komen net terug!",
+  "tafelboem.arena.skipped": "Arena %s heeft geen uitgang en is overgeslagen."
 }

@@ -54,5 +54,9 @@
   "tafelboem.message.yeet_distance": "%s flew %s blocks!",
   "tafelboem.message.yeet_height": "%s flew %s blocks high!",
   "tafelboem.message.yeet_out": "%s flew %s blocks, right out of the arena!",
-  "tafelboem.arena.done": "Ready for TafelBoem: always day, no monsters, an arena under your feet. Removed %s monsters."
+  "tafelboem.arena.done": "Ready for TafelBoem: always day, no monsters, an arena under your feet. Removed %s monsters.",
+  "tafelboem.stars.new_best": "%s on %s!",
+  "tafelboem.door.stars": "%s: %s",
+  "tafelboem.door.busy": "Just a moment, the others are on their way back!",
+  "tafelboem.arena.skipped": "Arena %s has no exit door, so it was skipped."
 }
