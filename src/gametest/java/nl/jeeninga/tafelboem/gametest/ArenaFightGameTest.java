@@ -112,12 +112,22 @@ public class ArenaFightGameTest {
 
 	@GameTest
 	public void unprotectingAnUnknownAreaChangesNothing(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		// Nothing protects anything in the nether, so this takes the path for a dimension without areas,
+		// without clearing the areas other tests are using right now.
+		ServerLevel nether = level.getServer().getLevel(Level.NETHER);
+		helper.assertTrue(nether != null, "the test server has a nether");
 		BlockPos corner = helper.absolutePos(BlockPos.ZERO);
-		ProtectedAreas.clear();
+		ArenaBox here = ArenaBox.of(corner.getX(), corner.getY(), corner.getZ(), 1, 1, 1);
+		ProtectedAreas.protect(level, here);
+		try {
+			ProtectedAreas.unprotect(nether, here);
 
-		ProtectedAreas.unprotect(helper.getLevel(), ArenaBox.of(corner.getX(), corner.getY(), corner.getZ(), 3, 3, 3));
-
-		helper.assertFalse(ProtectedAreas.isProtected(helper.getLevel(), corner), "nothing is protected");
+			helper.assertFalse(ProtectedAreas.isProtected(nether, corner), "nothing is protected in the nether");
+			helper.assertTrue(ProtectedAreas.isProtected(level, corner), "the same box here is still protected");
+		} finally {
+			ProtectedAreas.unprotect(level, here);
+		}
 		helper.succeed();
 	}
 
