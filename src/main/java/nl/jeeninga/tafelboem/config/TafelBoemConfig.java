@@ -36,8 +36,11 @@ public final class TafelBoemConfig {
 			return defaults;
 		}
 		try {
-			TafelBoemConfig config = GSON.fromJson(Files.readString(file, StandardCharsets.UTF_8), TafelBoemConfig.class);
-			return config == null ? new TafelBoemConfig() : config;
+			TafelBoemConfig read = GSON.fromJson(Files.readString(file, StandardCharsets.UTF_8), TafelBoemConfig.class);
+			TafelBoemConfig config = read == null ? new TafelBoemConfig() : read;
+			// Written back, so a file from an older version shows the parent the switches added since.
+			config.save(file);
+			return config;
 		} catch (IOException | JsonParseException e) {
 			// Keep playing with the defaults; the parent can fix the file later.
 			return new TafelBoemConfig();
