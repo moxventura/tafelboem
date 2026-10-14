@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
@@ -33,12 +34,14 @@ import nl.jeeninga.tafelboem.world.TafelBoemWorld;
 import nl.jeeninga.tafelboem.world.WorldLayout;
 
 /**
- * A TafelBoem world inside a GameTest: the hub slot at the test's corner and the arena slots beside
- * it, 56 blocks apart. Use {@code padding = 232} so neighbouring tests stay clear.
+ * A TafelBoem world inside a GameTest: the hub slot at the test's corner and the arena slots around
+ * it in a square, 56 blocks apart. Use {@code padding = TestWorld.PADDING} so neighbouring tests stay
+ * clear. Minecraft sends every test to a real client (the client game tests), and that only accepts
+ * a padding of at most 128, which is why the slots form a square and not a row.
  */
 final class TestWorld {
 	static final int SPACING = 56;
-	static final int PADDING = 232;
+	static final int PADDING = 128;
 
 	final GameTestHelper helper;
 	final ServerLevel level;
@@ -54,7 +57,11 @@ final class TestWorld {
 	TestWorld(GameTestHelper helper) {
 		this.helper = helper;
 		this.level = helper.getLevel();
-		this.layout = WorldLayout.at(helper.absolutePos(BlockPos.ZERO), SPACING);
+		BlockPos corner = helper.absolutePos(BlockPos.ZERO);
+		this.layout = new WorldLayout(corner, Map.of(
+				FightLevel.MAKKELIJK, corner.offset(SPACING, 0, 0),
+				FightLevel.GEMIDDELD, corner.offset(0, 0, SPACING),
+				FightLevel.MOEILIJK, corner.offset(SPACING, 0, SPACING)));
 		// Placing clears a slot, entities included, so a slot must never reach into a neighbouring test.
 		AABB padded = helper.getBoundsWithPadding();
 		helper.assertTrue(inside(padded, layout.hubSlot()), "the hub slot stays inside the test's padded area " + padded);
