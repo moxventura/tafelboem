@@ -73,7 +73,8 @@ log. `/tafelboem stats` shows a line per level, for example "Medium: ★★☆, 
 
 The kids can build their own hub and arenas in creative, in any world with cheats on, and save them
 with vanilla structure blocks. The mod picks one of the arenas for a level at random, never the same
-one twice in a row, and uses the plain arena it builds itself only when a level has none.
+one twice in a row. It uses the plain arena it builds itself only when a level has none, or when all
+of its arenas are skipped.
 
 1. Build it. The door blocks, one per level and an exit, are in the **TafelBoem** creative tab.
 2. Run `/give @s minecraft:structure_block`. Put one structure block in each of two opposite
@@ -88,11 +89,14 @@ one twice in a row, and uses the plain arena it builds itself only when a level 
 **Rules for an arena:**
 - At most 48 × 48 × 48, which is what one structure block can save.
 - Open sky over the play area. Under a roof Graaf Fout would hover on the roof.
-- Exactly one exit door (level 0), placed where the kids should come in. They arrive 3 blocks in
-  front of it. An arena without an exit door is skipped, with a chat message to the players that
-  names it, and another arena is used instead.
-- Use bedrock or obsidian for what must never break. Explosions break everything else, though never
-  a block within 3 blocks of a kid. Set `arenaCraters` to `false` in the config to switch that off.
+- Exactly one exit door, placed where the kids should come in. They arrive 3 blocks in front of
+  it; a door placed from outside the wall faces out, and then they arrive 3 blocks behind it, inside.
+  An arena without an exit door is skipped, with a chat message to the players that names it, and
+  another arena is used instead.
+- Use bedrock or obsidian for what must never break. The kicked bomb that hits Graaf Fout breaks
+  everything else, though never a block within 3 blocks of a kid; set `arenaCraters` to `false` in
+  the config to switch that off. Bombs the kids place themselves always blow craters, also right
+  next to them.
 - An uneven floor is fine: the kick always counts, even when it hits a wall, and Graaf Fout follows
   the ground.
 
@@ -188,7 +192,7 @@ version, and the mod warns when they don't match, even when two builds are only 
 | `correctionRetype` | `false` | `true` brings back the R0 screen where the child retypes the correct fact after a miss |
 | `cameraAssist` | `true` | Turns the view to Graaf Fout during a fight question and while he gets yeeted |
 | `stars` | `true` | Shows stars at the doors, after a win and in the stats. `false` hides them; the fights log still has them |
-| `arenaCraters` | `true` | In an arena, the kicked bomb breaks blocks (never bedrock, obsidian or the floor near a kid) |
+| `arenaCraters` | `true` | In an arena, the kicked bomb that hits Graaf Fout breaks blocks (never bedrock, obsidian or the floor near a kid). `false` makes it a show only. Bombs the kids place themselves blow craters either way |
 
 `/tafelboem stats [player]` shows accuracy and typical time per table, the hardest facts, how often a
 missed fact is right when it comes back, and how often "?" was probably pressed by accident.
