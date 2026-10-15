@@ -1,7 +1,5 @@
 package nl.jeeninga.tafelboem.boss;
 
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,12 +12,10 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.BossEvent;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ExplosionDamageCalculator;
@@ -51,10 +47,6 @@ import nl.jeeninga.tafelboem.registry.ModBlocks;
  * question, and every correct answer kicks the bomb back and yeets him.
  */
 public final class BossFight implements QuizListener {
-	static final double ARENA_RADIUS = 32;
-	static final double BOSS_BAR_RADIUS = 48;
-	/** Outside an arena he pops back to a kid this close; a kid who ran off further stays safe. */
-	static final double COME_BACK_RADIUS = 2 * BOSS_BAR_RADIUS;
 	static final int FIRST_THROW_DELAY = 60;
 	static final int COOLDOWN_TICKS = 50;
 	/** Long enough for the penalty and the correction on the HUD before the next bomb flies. */
@@ -91,12 +83,10 @@ public final class BossFight implements QuizListener {
 	private final @Nullable ArenaBox arena;
 	private final Fight fight;
 	private final Map<UUID, FightTally> tallies = new HashMap<>();
-	private final ServerBossEvent bossBar;
-	private final List<UUID> participants = new ArrayList<>();
+	private final Participants participants;
 	private Phase phase = Phase.COOLDOWN;
 	private int phaseTicks = FIRST_THROW_DELAY;
 	private int throwCount;
-	private int turn;
 	private UUID currentTarget;
 	private @Nullable UUID lastKicker;
 	private final YeetPicker yeets = new YeetPicker(new Random());
@@ -108,8 +98,7 @@ public final class BossFight implements QuizListener {
 		this.fightLevel = fightLevel;
 		this.arena = arena;
 		this.fight = Fight.of(fightLevel);
-		this.bossBar = new ServerBossEvent(UUID.randomUUID(), boss.getDisplayName(), BossEvent.BossBarColor.PURPLE,
-				BossEvent.BossBarOverlay.NOTCHED_10);
+		this.participants = new Participants(level, boss, arena, sessions);
 		boss.attach(this);
 	}
 
@@ -145,12 +134,12 @@ public final class BossFight implements QuizListener {
 	}
 
 	public List<UUID> participants() {
-		return List.copyOf(participants);
+		return participants.ids();
 	}
 
 	void start() {
-		updateParticipants();
-		say(Component.translatable("tafelboem.boss.graaf_fout.intro"));
+		participants.update();
+		participants.say(Component.translatable("tafelboem.boss.graaf_fout.intro"));
 	}
 
 	void tick() {
@@ -165,7 +154,7 @@ public final class BossFight implements QuizListener {
 			flewOut();
 		}
 
-		updateParticipants();
+		participants.update();
 		phaseTicks--;
 		switch (phase) {
 			case COOLDOWN -> {
@@ -202,10 +191,10 @@ public final class BossFight implements QuizListener {
 	}
 
 	private void throwNextBomb() {
-		ServerPlayer target = nextTarget();
+		ServerPlayer target = participants.nextTarget();
 		if (target == null) {
 			// A big yeet can land him out of everyone's reach (P13); outside an arena he then comes back to a kid.
-			ServerPlayer kid = arena == null ? nearestKidToComeBackTo() : null;
+			ServerPlayer kid = arena == null ? participants.nearestToComeBackTo() : null;
 			if (kid != null) {
 				boss.teleportNear(level, kid.position(), arena);
 			}
@@ -314,7 +303,7 @@ public final class BossFight implements QuizListener {
 			case CHICKEN_OUT -> Component.translatable("tafelboem.boss.graaf_fout.taunt.chicken_out");
 			default -> Component.translatable("tafelboem.boss.graaf_fout.taunt.dont_know", a, b);
 		};
-		say(taunt);
+		participants.say(taunt);
 		boss.playSound(SoundEvents.EVOKER_CELEBRATE, 1.0F, 1.2F);
 		cooldown(AFTER_MISS_COOLDOWN);
 	}
@@ -325,7 +314,7 @@ public final class BossFight implements QuizListener {
 		Component warning = Component.translatable("tafelboem.boss.graaf_fout.throws", name);
 		sessions.client().actionBar(target, warning.copy().withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
 		if (tier != BombTier.KNALLETJE) {
-			say(warning);
+			participants.say(warning);
 		}
 	}
 
@@ -336,18 +325,18 @@ public final class BossFight implements QuizListener {
 		// The bigger the bomb, the bigger the bang and the further he flies.
 		boolean craters = arena != null && TafelBoem.config().arenaCraters;
 		ExplosionDamageCalculator boom = craters
-				? PlayerSafeExplosion.sparing(participantPlayers().stream().map(ServerPlayer::position).toList(), SAFE_FLOOR_RADIUS)
+				? PlayerSafeExplosion.sparing(participants.players().stream().map(ServerPlayer::position).toList(), SAFE_FLOOR_RADIUS)
 				: PlayerSafeExplosion.SHOW;
 		level.explode(null, null, boom, boss.getX(), boss.getY() + 1, boss.getZ(), tier.blastRadius(), false,
 				craters ? Level.ExplosionInteraction.TNT : Level.ExplosionInteraction.NONE);
 		fight.registerHit();
-		bossBar.setProgress(fight.healthFraction());
+		participants.showHealth(fight.healthFraction());
 
 		if (fight.isDefeated()) {
 			boss.finalYeet();
 			level.sendParticles(ParticleTypes.FIREWORK, boss.getX(), boss.getY() + 1, boss.getZ(), 200, 1.5, 1.5, 1.5, 0.3);
 			level.playSound(null, boss.getX(), boss.getY(), boss.getZ(), SoundEvents.FIREWORK_ROCKET_LARGE_BLAST, SoundSource.HOSTILE, 3.0F, 1.0F);
-			say(Component.translatable("tafelboem.boss.graaf_fout.defeated"));
+			participants.say(Component.translatable("tafelboem.boss.graaf_fout.defeated"));
 			followKickerFor(FINALE_CAM_TICKS);
 			phase = Phase.FINALE;
 			phaseTicks = FINALE_TICKS;
@@ -374,14 +363,14 @@ public final class BossFight implements QuizListener {
 		String key = yeet.measuresHeight() ? "tafelboem.message.yeet_height" : "tafelboem.message.yeet_distance";
 		Component message = Component.translatable(key, boss.getDisplayName(), blocks)
 				.withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD);
-		for (ServerPlayer player : participantsNearBoss()) {
+		for (ServerPlayer player : participants.nearBoss()) {
 			sessions.client().actionBar(player, message);
 		}
 	}
 
 	/** Out of the arena and into the void: say how far he got, then he comes straight back. */
 	private void flewOut() {
-		ServerPlayer kid = kicker() != null ? kicker() : participantPlayers().stream().findFirst().orElse(null);
+		ServerPlayer kid = kicker() != null ? kicker() : participants.players().stream().findFirst().orElse(null);
 		Vec3 near = kid != null ? kid.position() : new Vec3(arena.middleX(), arena.minY() + 3, arena.middleZ());
 		int blocks = boss.comeBack(level, near, arena);
 		if (blocks < 0) {
@@ -389,7 +378,7 @@ public final class BossFight implements QuizListener {
 		}
 		Component message = Component.translatable("tafelboem.message.yeet_out", boss.getDisplayName(), blocks)
 				.withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD);
-		for (ServerPlayer player : participantPlayers()) {
+		for (ServerPlayer player : participants.players()) {
 			sessions.client().actionBar(player, message);
 		}
 		followKickerFor(LANDED_CAM_TICKS);
@@ -408,7 +397,7 @@ public final class BossFight implements QuizListener {
 	}
 
 	private void reward() {
-		for (ServerPlayer player : participantPlayers()) {
+		for (ServerPlayer player : participants.players()) {
 			ItemStack loot = new ItemStack(ModBlocks.bombItem(BombTier.KIPPENBOM), LOOT_COUNT);
 			if (!player.getInventory().add(loot)) {
 				player.drop(loot, false, false);
@@ -422,7 +411,7 @@ public final class BossFight implements QuizListener {
 
 	void end() {
 		phase = Phase.OVER;
-		bossBar.removeAllPlayers();
+		participants.hideBossBar();
 		if (boss.isAlive()) {
 			BombEffects.poof(level, boss.position());
 			boss.discard();
@@ -432,84 +421,5 @@ public final class BossFight implements QuizListener {
 	private void cooldown(int ticks) {
 		phase = Phase.COOLDOWN;
 		phaseTicks = ticks;
-	}
-
-	/**
-	 * Without an arena only kids within the boss bar's reach count; when a yeet leaves him with
-	 * nobody in reach, {@link #nearestKidToComeBackTo} finds the kid he pops back to.
-	 */
-	private @Nullable ServerPlayer nextTarget() {
-		List<ServerPlayer> players = participants.stream()
-				.map(id -> level.getServer().getPlayerList().getPlayer(id))
-				.filter(player -> player != null && player.level() == level)
-				.filter(player -> arena != null ? arena.holds(player.getX(), player.getY(), player.getZ())
-						: player.distanceToSqr(boss) < BOSS_BAR_RADIUS * BOSS_BAR_RADIUS)
-				.filter(this::canBeThrownAt)
-				.toList();
-		if (players.isEmpty()) {
-			return null;
-		}
-		return players.get(turn++ % players.size());
-	}
-
-	/** The nearest kid within {@link #COME_BACK_RADIUS} who could be thrown at, if there is one. */
-	private @Nullable ServerPlayer nearestKidToComeBackTo() {
-		return participants.stream()
-				.map(id -> level.getServer().getPlayerList().getPlayer(id))
-				.filter(player -> player != null && player.level() == level)
-				.filter(player -> player.distanceToSqr(boss) < COME_BACK_RADIUS * COME_BACK_RADIUS)
-				.filter(this::canBeThrownAt)
-				.min(Comparator.comparingDouble(player -> player.distanceToSqr(boss)))
-				.orElse(null);
-	}
-
-	private boolean canBeThrownAt(ServerPlayer player) {
-		return player.isAlive() && !player.isSpectator() && !sessions.isBusy(player);
-	}
-
-	/**
-	 * Everyone who joined the fight and is still in this world, however far away he is. The reward
-	 * goes to them: by then he has flown far up into the sky (playtest 2). In an arena, only the
-	 * kids still in it.
-	 */
-	private List<ServerPlayer> participantPlayers() {
-		return participants.stream()
-				.map(id -> level.getServer().getPlayerList().getPlayer(id))
-				.filter(player -> player != null && player.level() == level)
-				.filter(player -> arena == null || arena.holds(player.getX(), player.getY(), player.getZ()))
-				.toList();
-	}
-
-	private List<ServerPlayer> participantsNearBoss() {
-		if (arena != null) {
-			return participantPlayers();
-		}
-		return participantPlayers().stream()
-				.filter(player -> player.distanceToSqr(boss) < ARENA_RADIUS * ARENA_RADIUS)
-				.toList();
-	}
-
-	private void updateParticipants() {
-		for (ServerPlayer player : level.players()) {
-			// In an arena, being in it is all it takes; outside one, the boss bar and the fight have a radius.
-			boolean near = arena != null ? arena.holds(player.getX(), player.getY(), player.getZ())
-					: player.distanceToSqr(boss) < BOSS_BAR_RADIUS * BOSS_BAR_RADIUS;
-			boolean joins = arena != null ? near : near && player.distanceToSqr(boss) < ARENA_RADIUS * ARENA_RADIUS;
-			if (near && !bossBar.getPlayers().contains(player)) {
-				bossBar.addPlayer(player);
-			} else if (!near && bossBar.getPlayers().contains(player)) {
-				bossBar.removePlayer(player);
-			}
-			if (joins && !participants.contains(player.getUUID())) {
-				participants.add(player.getUUID());
-			}
-		}
-	}
-
-	private void say(Component message) {
-		Component line = Component.translatable("tafelboem.boss.says", boss.getDisplayName(), message).withStyle(ChatFormatting.LIGHT_PURPLE);
-		for (ServerPlayer player : bossBar.getPlayers()) {
-			player.sendSystemMessage(line);
-		}
 	}
 }
