@@ -7,6 +7,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
@@ -81,7 +82,8 @@ public class TafelBoemWorldGameTest {
 			helper.assertTrue(fights.size() == 1 && fights.getFirst().won(), "wait for the win");
 			FightRecord won = fights.getFirst();
 			helper.assertTrue(won.level() == 2 && won.wrong() == 1 && won.stars() == 2, "one wrong answer is ★★: " + won);
-			helper.assertTrue(kid.getInventory().countItem(ModBlocks.bombItem(BombTier.KIPPENBOM)) == 4, "4 Kippenbommen");
+			helper.assertTrue(kid.getInventory().countItem(Items.COOKED_CHICKEN) == 4, "4 cooked chicken, to heal the hearts");
+			helper.assertTrue(kid.getInventory().countItem(ModBlocks.bombItem(BombTier.KIPPENBOM)) == 0, "no Kippenbommen any more");
 			helper.assertTrue(test.world.run(FightLevel.GEMIDDELD).isEmpty(), "wait until everyone is home");
 			helper.assertTrue(test.world.hub().bounds().containsColumn(kid.getX(), kid.getZ()), "back in the hub");
 			test.close();

@@ -32,6 +32,9 @@ public final class TafelBoemConfig {
 	/** A typed wrong answer costs 1 heart on Gemiddeld and 2 on Moeilijk, never the last half heart. */
 	public boolean wrongAnswerDamage = true;
 
+	/** A win on a door level gives 4 cooked chicken, to heal the hearts; off, it gives 4 Kippenbommen as in R1.0. */
+	public boolean foodReward = true;
+
 	public static TafelBoemConfig load(Path file) {
 		if (!Files.exists(file)) {
 			TafelBoemConfig defaults = new TafelBoemConfig();
