@@ -24,6 +24,8 @@ human or agent.
 - The villain never states a wrong fact and never comments on a kid's ability.
 - No timers in normal play. A wrong answer is always shorter and less fun than a right one.
 - Our booms never hurt players (`PlayerSafeExplosion`); a correct answer never hurts the kid.
+- A typed wrong answer costs hearts on Gemiddeld and Moeilijk (`FightLevel.wrongAnswerDamage`), never
+  the last half heart; "?" and ESC never do.
 - Vanilla look: vanilla blocks, widgets and menu conventions, no new colours on screens.
 - Every user-facing string goes in both `en_us.json` and `nl_nl.json` with the same arguments
   (`LanguageFilesTest`). Game terms stay Dutch in code: Knalletje, Gewone TNT, Kippenbom, Graaf Fout.
@@ -31,6 +33,27 @@ human or agent.
 - Outside a TafelBoem world, R0.1 behaviour stays, unless a change says otherwise.
 - Work in small releases, each one played by the kids and evaluated before the next. Don't build
   backlog features ahead of an evaluation.
+
+## The load contract
+
+Most late R1 bugs sat where Minecraft's save and the mod's rebuild meet: a world load, a chunk that
+loads again, a kid walking into an arena. Every rule for those moments is in this table, with the
+test that checks it on a real reload. A change that rebuilds or throws away something new adds a row
+and a check. Put new world work on arena entry rather than on world load.
+
+| When | What | Rule | Checked by |
+|---|---|---|---|
+| world load | hub blocks | placed again; the kids' builds beside it stay | `WorldClientGameTest` |
+| world load | hub frames | exactly 5; frames from disk go (`Hub.isLeftOverFrame`) | `WorldClientGameTest` |
+| world load | spawn | in the hub | `WorldClientGameTest` |
+| world load | arena slots | all blocks cleared | `HubAndArenasGameTest` |
+| chunk or world load | anything but a player in an arena slot | loaded from disk = a leftover; it goes | `WorldClientGameTest` |
+| chunk or world load | spectacle animals, anywhere | loaded from disk, they go | `WorldClientGameTest` |
+| arena entry | the arena | cleared where the last one stood, placed fresh; plain arenas have obsidian under the walls | `HubAndArenasGameTest`, `ArenaShapeTest` |
+| arena entry | arrival | 3 blocks from the exit door, inside the arena | `HubAndArenasGameTest` |
+| arena entry | music | the slot gets its level's biome (`ArenaBiomes`) | `WorldClientGameTest` |
+| login | a kid inside an arena without a fight | to the hub | `TafelBoemWorldGameTest` |
+| any time | the void | everyone who falls is caught, never fatally | `TafelBoemWorldGameTest` |
 
 ## Code style
 
