@@ -27,6 +27,8 @@ public final class BombEffects {
 	/** On the item frames beside the hub's doors, which every world load places again. */
 	public static final String HUB_TAG = "tafelboem_hub";
 	private static final int KIPPENBOM_CHICKENS = 12;
+	/** After a wrong answer: fewer and lower than after a right one, so a wrong answer stays less fun. */
+	private static final int WRONG_ANSWER_CHICKENS = 3;
 
 	private BombEffects() {
 	}
@@ -60,24 +62,35 @@ public final class BombEffects {
 				level.playSound(null, pos, SoundEvents.FIREWORK_ROCKET_BLAST, SoundSource.BLOCKS, 1.5f, 1.0f);
 			}
 			case GEWONE_TNT -> level.sendParticles(ParticleTypes.LARGE_SMOKE, center.x, center.y + 1, center.z, 40, 1.0, 0.5, 1.0, 0.05);
-			case KIPPENBOM -> spawnFlyingChickens(level, center);
+			case KIPPENBOM -> flyingChickens(level, center);
 		}
 	}
 
-	private static void spawnFlyingChickens(ServerLevel level, Vec3 center) {
-		for (int i = 0; i < KIPPENBOM_CHICKENS; i++) {
+	/** A Kippenbom going off: 12 chickens fly out in a ring. */
+	public static void flyingChickens(ServerLevel level, Vec3 center) {
+		releaseChickens(level, center, KIPPENBOM_CHICKENS, 0.6, 0.7);
+		level.sendParticles(ParticleTypes.CLOUD, center.x, center.y + 1, center.z, 30, 0.5, 0.5, 0.5, 0.1);
+		level.playSound(null, center.x, center.y, center.z, SoundEvents.CHICKEN_EGG, SoundSource.NEUTRAL, 2.0f, 0.8f);
+	}
+
+	/** A wrong answer on a Kippenbom: a few chickens hop out at the kid, nothing like the real boom. */
+	public static void hoppingChickens(ServerLevel level, Vec3 at) {
+		releaseChickens(level, at, WRONG_ANSWER_CHICKENS, 0.2, 0.3);
+		level.playSound(null, at.x, at.y, at.z, SoundEvents.CHICKEN_EGG, SoundSource.NEUTRAL, 1.0f, 1.5f);
+	}
+
+	private static void releaseChickens(ServerLevel level, Vec3 center, int count, double speed, double lift) {
+		for (int i = 0; i < count; i++) {
 			Chicken chicken = EntityTypes.CHICKEN.create(level, EntitySpawnReason.TRIGGERED);
 			if (chicken == null) {
 				continue;
 			}
-			double angle = (Math.PI * 2 * i) / KIPPENBOM_CHICKENS;
+			double angle = (Math.PI * 2 * i) / count;
 			chicken.setPos(center.x, center.y + 0.5, center.z);
-			chicken.setDeltaMovement(Math.cos(angle) * 0.6, 0.7 + level.getRandom().nextDouble() * 0.4, Math.sin(angle) * 0.6);
+			chicken.setDeltaMovement(Math.cos(angle) * speed, lift + level.getRandom().nextDouble() * lift * 0.5, Math.sin(angle) * speed);
 			chicken.addTag(SPECTACLE_TAG);
 			level.addFreshEntity(chicken);
 		}
-		level.sendParticles(ParticleTypes.CLOUD, center.x, center.y + 1, center.z, 30, 0.5, 0.5, 0.5, 0.1);
-		level.playSound(null, center.x, center.y, center.z, SoundEvents.CHICKEN_EGG, SoundSource.NEUTRAL, 2.0f, 0.8f);
 	}
 
 	/**

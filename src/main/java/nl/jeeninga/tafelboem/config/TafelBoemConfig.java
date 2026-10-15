@@ -35,6 +35,9 @@ public final class TafelBoemConfig {
 	/** A win on a door level gives 4 cooked chicken, to heal the hearts; off, it gives 4 Kippenbommen as in R1.0. */
 	public boolean foodReward = true;
 
+	/** A Kippenbom lets chickens loose after a right answer (12, at Graaf Fout) and a wrong one (3, at the kid). */
+	public boolean kippenbomChickens = true;
+
 	public static TafelBoemConfig load(Path file) {
 		if (!Files.exists(file)) {
 			TafelBoemConfig defaults = new TafelBoemConfig();
