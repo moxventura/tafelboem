@@ -20,6 +20,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 
+import nl.jeeninga.tafelboem.boss.yeet.Yeet;
 import nl.jeeninga.tafelboem.core.ArenaBox;
 import nl.jeeninga.tafelboem.core.YeetPose;
 import nl.jeeninga.tafelboem.core.YeetStyle;
@@ -36,37 +37,12 @@ public class GraafFout extends Evoker {
 
 	private static final double HOVER_HEIGHT = 1.5;
 	static final int DIZZY_TICKS = 30;
-	private static final int MAX_AIRBORNE_TICKS = 100;
-	private static final int MAX_BOUNCES = 3;
-	/** Each bounce is lower and shorter, so even the strongest bomb keeps him near the arena (about 18 blocks). */
-	private static final double BOUNCE_LAUNCH = 0.6;
-	private static final double BOUNCE_REBOUND = 0.45;
-	private static final double BOUNCE_DAMPING = 0.6;
-	/** The helicopter rises this many ticks per unit of yeet power: a bigger bomb, a higher flight. */
-	private static final double HELICOPTER_RISE_TICKS_PER_POWER = 22;
-	private static final int BOOMERANG_OUT_TICKS = 12;
-	private static final int BOOMERANG_MAX_TICKS = 45;
-	/** The boomerang drops this far in front of the kid, so his face lands just short of their feet. */
-	private static final double BOOMERANG_STOP = 4;
 
 	private @Nullable BossFight fight;
-	private boolean airborne;
-	private int airborneTicks;
+	/** The flight he is on, while he is being yeeted. */
+	private @Nullable Yeet yeet;
 	private int dizzyTicks;
 	private boolean finale;
-
-	/** The current yeet: how he flies, where from, and how far he got (for the yeet-o-meter). */
-	private YeetStyle style = YeetStyle.CLASSIC;
-	private Vec3 launchPos = Vec3.ZERO;
-	private Vec3 away = Vec3.ZERO;
-	private Vec3 returnTo = Vec3.ZERO;
-	private double power;
-	private double furthest;
-	private double launchGround;
-	private double highest;
-	private int helicopterRiseTicks;
-	private int bounces;
-	private int stageTicks;
 
 	/** Client side: when the pose last changed and what came before, so the renderer can ease in and out. */
 	private YeetPose shownPose = YeetPose.NONE;
@@ -104,7 +80,7 @@ public class GraafFout extends Evoker {
 		return YeetPose.values()[entityData.get(DATA_YEET_POSE)];
 	}
 
-	private void setYeetPose(YeetPose pose) {
+	public void setYeetPose(YeetPose pose) {
 		entityData.set(DATA_YEET_POSE, (byte) pose.ordinal());
 	}
 
@@ -131,7 +107,7 @@ public class GraafFout extends Evoker {
 	}
 
 	public boolean isReacting() {
-		return airborne || dizzyTicks > 0;
+		return yeet != null || dizzyTicks > 0;
 	}
 
 	@Override
@@ -163,8 +139,10 @@ public class GraafFout extends Evoker {
 				discard();
 			} else if (finale) {
 				flyAway(level);
-			} else if (airborne) {
-				tumble(level);
+			} else if (yeet != null) {
+				if (yeet.tick(level)) {
+					land(level);
+				}
 			} else if (dizzyTicks > 0) {
 				dizzy(level);
 			} else {
@@ -174,7 +152,8 @@ public class GraafFout extends Evoker {
 	}
 
 	/**
-	 * A kid kicked a bomb back: launch him away from the explosion, spinning and flailing.
+	 * A kid kicked a bomb back: launch him away from the explosion, spinning and flailing. How he
+	 * flies is up to the style's {@link Yeet}.
 	 *
 	 * @param kicker where the kid who kicked stands; the boomerang comes back to them
 	 */
@@ -183,38 +162,12 @@ public class GraafFout extends Evoker {
 		if (direction.lengthSqr() < 1.0E-4) {
 			direction = new Vec3(random.nextDouble() - 0.5, 0, random.nextDouble() - 0.5);
 		}
-		this.away = direction.normalize();
-		this.style = style;
-		this.power = power;
-		this.launchPos = position();
-		this.furthest = 0;
-		this.launchGround = level().getHeight(Heightmap.Types.MOTION_BLOCKING, getBlockX(), getBlockZ());
-		this.highest = 0;
-		this.helicopterRiseTicks = (int) Math.round(HELICOPTER_RISE_TICKS_PER_POWER * power);
-		this.bounces = 0;
-		this.stageTicks = 0;
-		// The boomerang faceplants in front of the kid, never on top of them.
-		this.returnTo = kicker.add(launchPos.subtract(kicker).multiply(1, 0, 1).normalize().scale(BOOMERANG_STOP));
-		setYeetPose(style == YeetStyle.TUMBLE ? YeetPose.TUMBLE : YeetPose.NONE);
-
-		airborne = true;
-		airborneTicks = 0;
+		yeet = Yeet.start(style, this, direction.normalize(), power, kicker);
+		setYeetPose(yeet.startPose());
 		dizzyTicks = 0;
-		switch (style) {
-			case CLASSIC -> launch(power, 0.6 + power * 0.6, false);
-			case BOUNCE -> launch(power * BOUNCE_LAUNCH, 0.5 + power * 0.3, false);
-			case HELICOPTER -> launch(0.15, 0.22, true);
-			case BOOMERANG -> launch(power * 0.9, 0.35, true);
-			case TUMBLE -> launch(power * 0.85, 0.55 + power * 0.55, false);
-		}
 		needsSync = true;
 		armsUp(true);
 		playSound(SoundEvents.EVOKER_HURT, 1.5F, 1.9F);
-	}
-
-	private void launch(double horizontal, double up, boolean floating) {
-		setNoGravity(floating);
-		setDeltaMovement(away.x * horizontal, up, away.z * horizontal);
 	}
 
 	/**
@@ -222,7 +175,7 @@ public class GraafFout extends Evoker {
 	 */
 	public void finalYeet() {
 		finale = true;
-		airborne = false;
+		yeet = null;
 		setYeetPose(YeetPose.NONE);
 		setNoGravity(true);
 		armsUp(true);
@@ -236,9 +189,9 @@ public class GraafFout extends Evoker {
 	 * @return how far he flew in this yeet, or -1 when he wasn't being yeeted
 	 */
 	public int comeBack(ServerLevel level, Vec3 nearKid, ArenaBox arena) {
-		boolean wasYeeted = airborne;
-		int blocks = wasYeeted ? (int) Math.round(style == YeetStyle.HELICOPTER ? highest : furthest) : -1;
-		airborne = false;
+		boolean wasYeeted = yeet != null;
+		int blocks = wasYeeted ? yeet.blocks() : -1;
+		yeet = null;
 		setYeetPose(YeetPose.NONE);
 		setDeltaMovement(Vec3.ZERO);
 		armsUp(false);
@@ -292,97 +245,8 @@ public class GraafFout extends Evoker {
 		setDeltaMovement(0, dy, 0);
 	}
 
-	private void tumble(ServerLevel level) {
-		airborneTicks++;
-		stageTicks++;
-		furthest = Math.max(furthest, position().subtract(launchPos).horizontalDistance());
-		highest = Math.max(highest, getY() - launchGround);
-		level.sendParticles(ParticleTypes.CLOUD, getX(), getY() + 1, getZ(), 1, 0.1, 0.1, 0.1, 0.0);
-
-		boolean landed = switch (style) {
-			case CLASSIC -> {
-				spin(45F);
-				yield onGround() && airborneTicks > 5;
-			}
-			case BOUNCE -> {
-				spin(30F);
-				yield bounce(level);
-			}
-			case HELICOPTER -> {
-				spin(90F);
-				yield helicopter(level);
-			}
-			case BOOMERANG -> {
-				if (yeetPose() != YeetPose.FACEPLANT) {
-					spin(60F);
-				}
-				yield boomerang();
-			}
-			case TUMBLE -> {
-				// Slower spin than the classic, so the roll and the flips (drawn by the client) show.
-				spin(20F);
-				yield onGround() && airborneTicks > 5;
-			}
-		};
-		if (landed || airborneTicks > MAX_AIRBORNE_TICKS) {
-			land(level);
-		}
-	}
-
-	/** Boing, boing, boing: each bounce a bit lower, then he stays down. */
-	private boolean bounce(ServerLevel level) {
-		if (!onGround() || stageTicks <= 3) {
-			return false;
-		}
-		if (bounces >= MAX_BOUNCES) {
-			return true;
-		}
-		bounces++;
-		stageTicks = 0;
-		double horizontal = power * BOUNCE_REBOUND * Math.pow(BOUNCE_DAMPING, bounces);
-		setDeltaMovement(away.x * horizontal, 0.55 - 0.1 * bounces, away.z * horizontal);
-		level.playSound(null, getX(), getY(), getZ(), SoundEvents.SLIME_JUMP, SoundSource.HOSTILE, 1.5F, 0.9F + 0.15F * bounces);
-		level.sendParticles(ParticleTypes.CLOUD, getX(), getY() + 0.1, getZ(), 8, 0.4, 0.05, 0.4, 0.02);
-		return false;
-	}
-
-	/** Spins up slowly on his cape like a propeller, then gravity remembers him. */
-	private boolean helicopter(ServerLevel level) {
-		if (stageTicks <= helicopterRiseTicks) {
-			setDeltaMovement(away.x * 0.12, 0.22, away.z * 0.12);
-			level.sendParticles(ParticleTypes.SWEEP_ATTACK, getX(), getY() + 2.1, getZ(), 1, 0, 0, 0, 0);
-			if (stageTicks == helicopterRiseTicks) {
-				setNoGravity(false);
-				playSound(SoundEvents.EVOKER_HURT, 1.5F, 1.4F);
-			}
-			return false;
-		}
-		return onGround();
-	}
-
-	/** Flies off, slows down, turns around and comes back to the kid, face first. */
-	private boolean boomerang() {
-		if (stageTicks <= BOOMERANG_OUT_TICKS) {
-			double slowdown = 1.0 - (double) stageTicks / BOOMERANG_OUT_TICKS;
-			setDeltaMovement(away.x * power * 0.9 * slowdown, 0.35 * slowdown, away.z * power * 0.9 * slowdown);
-			return false;
-		}
-		if (isNoGravity()) {
-			Vec3 back = returnTo.add(0, 1.5, 0).subtract(position());
-			if (back.horizontalDistance() < 1.5 || stageTicks > BOOMERANG_MAX_TICKS) {
-				setNoGravity(false);
-				setDeltaMovement(back.multiply(0.1, 0, 0.1).add(0, -0.4, 0));
-				faceplantTowards(away.reverse());
-			} else {
-				setDeltaMovement(back.normalize().scale(0.6));
-			}
-			return false;
-		}
-		return onGround();
-	}
-
 	/** Stops spinning, turns to face where he was flying and falls flat on his face. */
-	private void faceplantTowards(Vec3 direction) {
+	public void faceplantTowards(Vec3 direction) {
 		float yaw = (float) (Mth.atan2(direction.z, direction.x) * Mth.RAD_TO_DEG) - 90F;
 		setYRot(yaw);
 		setYBodyRot(yaw);
@@ -391,7 +255,8 @@ public class GraafFout extends Evoker {
 	}
 
 	private void land(ServerLevel level) {
-		airborne = false;
+		Yeet landed = yeet;
+		yeet = null;
 		if (yeetPose() == YeetPose.TUMBLE) {
 			setYeetPose(YeetPose.NONE);
 		}
@@ -406,9 +271,7 @@ public class GraafFout extends Evoker {
 		}
 		level.playSound(null, getX(), getY(), getZ(), SoundEvents.GENERIC_BIG_FALL, SoundSource.HOSTILE, 1.5F, 0.8F);
 		if (fight != null) {
-			// The helicopter goes up more than away, so the yeet-o-meter says how high he got.
-			double blocks = style == YeetStyle.HELICOPTER ? highest : furthest;
-			fight.onYeetLanded(style, (int) Math.round(blocks));
+			fight.onYeetLanded(landed);
 		}
 	}
 
@@ -433,7 +296,8 @@ public class GraafFout extends Evoker {
 		level.sendParticles(ParticleTypes.FIREWORK, getX(), getY(), getZ(), 4, 0.2, 0.2, 0.2, 0.05);
 	}
 
-	private void spin(float degrees) {
+	/** Turns him round on the spot; every yeet spins (playtest 1: the spin was the funniest thing). */
+	public void spin(float degrees) {
 		float yaw = getYRot() + degrees;
 		setYRot(yaw);
 		setYBodyRot(yaw);

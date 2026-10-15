@@ -31,6 +31,7 @@ import net.minecraft.world.phys.Vec3;
 
 import nl.jeeninga.tafelboem.TafelBoem;
 import nl.jeeninga.tafelboem.block.BombBlock;
+import nl.jeeninga.tafelboem.boss.yeet.Yeet;
 import nl.jeeninga.tafelboem.core.ArenaBox;
 import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.Fight;
@@ -38,7 +39,6 @@ import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.core.FightTally;
 import nl.jeeninga.tafelboem.core.Outcome;
 import nl.jeeninga.tafelboem.core.YeetPicker;
-import nl.jeeninga.tafelboem.core.YeetStyle;
 import nl.jeeninga.tafelboem.game.BombEffects;
 import nl.jeeninga.tafelboem.game.PlayerSafeExplosion;
 import nl.jeeninga.tafelboem.game.QuizListener;
@@ -362,15 +362,16 @@ public final class BossFight implements QuizListener {
 	}
 
 	/** The yeet-o-meter: everyone in the fight sees how far (or for the helicopter, how high) he flew. */
-	void onYeetLanded(YeetStyle style, int blocks) {
+	void onYeetLanded(Yeet yeet) {
 		if (phase == Phase.FINALE || phase == Phase.OVER) {
 			return;
 		}
 		followKickerFor(LANDED_CAM_TICKS);
+		int blocks = yeet.blocks();
 		if (blocks < 1) {
 			return;
 		}
-		String key = style == YeetStyle.HELICOPTER ? "tafelboem.message.yeet_height" : "tafelboem.message.yeet_distance";
+		String key = yeet.measuresHeight() ? "tafelboem.message.yeet_height" : "tafelboem.message.yeet_distance";
 		Component message = Component.translatable(key, boss.getDisplayName(), blocks)
 				.withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD);
 		for (ServerPlayer player : participantsNearBoss()) {
