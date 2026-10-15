@@ -38,6 +38,9 @@ public final class TafelBoemConfig {
 	/** A Kippenbom lets chickens loose after a right answer (12, at Graaf Fout) and a wrong one (3, at the kid). */
 	public boolean kippenbomChickens = true;
 
+	/** Each level's arena plays its own music: Otherside, Pigstep, "Boss". Applies from the next arena placed. */
+	public boolean arenaMusic = true;
+
 	public static TafelBoemConfig load(Path file) {
 		if (!Files.exists(file)) {
 			TafelBoemConfig defaults = new TafelBoemConfig();
