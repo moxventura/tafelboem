@@ -51,8 +51,11 @@ import nl.jeeninga.tafelboem.registry.ModBlocks;
 public final class BossFight implements QuizListener {
 	static final int FIRST_THROW_DELAY = 60;
 	static final int COOLDOWN_TICKS = 50;
-	/** Long enough for the penalty and the correction on the HUD before the next bomb flies. */
-	static final int AFTER_MISS_COOLDOWN = 70;
+	/**
+	 * Long enough for the penalty and the correction on the HUD (6 s) before the next bomb flies: the
+	 * next question would clear it. Reading time, not a show, so a miss stays less fun than a kick.
+	 */
+	static final int AFTER_MISS_COOLDOWN = 120;
 	static final int FLIGHT_TIMEOUT = 100;
 	static final int FINALE_TICKS = 60;
 	static final int LOOT_COUNT = 4;
