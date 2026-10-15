@@ -21,7 +21,8 @@ import nl.jeeninga.tafelboem.net.QuizS2C;
  */
 public final class CorrectionHud {
 	static final int DELAY_TICKS = 20;
-	static final int SHOW_TICKS = 70;
+	/** 6 s: at 3.5 s it was gone before it could be read in full (Jesper's playthrough of 1.0.1). */
+	static final int SHOW_TICKS = 120;
 	private static final int FADE_TICKS = 5;
 	private static final int LINE = 11;
 	private static final int WHITE = 0xFFFFFF;
