@@ -44,20 +44,25 @@ when unsure of a signature, check the jar in the Loom cache:
 | Command | What | Time |
 |---|---|---|
 | `./gradlew test` | JUnit | seconds |
-| `./gradlew runGameTest` | all GameTests, headless; look for "All N required tests passed" | ~2 min |
-| `./gradlew build` | both | ~2.5 min |
+| `./gradlew runGameTest` | all GameTests, headless; look for "All N required tests passed" | ~40 s |
+| `./gradlew build` | both | ~1 min |
 | `./gradlew runClientGameTest` | a real client (needs a display; WSLg works); screenshots in `build/run/clientGameTest/screenshots/` | ~2 min |
 
 GameTest pitfalls:
-- `padding` must be at most 128, or the client GameTests fail ("Timeout loading world").
+- Keep `padding` small: before each test the runner clears the test's whole padded box, which grows
+  with the cube of the padding (128 cost a minute per run). It must also be at most 128, or the
+  client GameTests fail ("Timeout loading world").
+- An entity spawned in a chunk that isn't loaded yet can't be found; when a test spawns something
+  outside its own chunks at tick 0, look for it a few ticks later (`TestWorld.whenLoaded`).
 - GameTests run in parallel in one shared level: never change global state (game rules without
   restoring them, `ProtectedAreas.clear()`, static hooks). TafelBoem-world tests use `TestWorld`.
 - Mock players from `makeMockServerPlayerInLevel()` are in creative; use
   `makeMockServerPlayer(GameType.…)` for another game mode.
 - Run a new slow GameTest (a whole fight) three times before trusting it: a 1-in-20 flake hid in
   one for a whole release.
-- GameTests never reload a world. Check anything that happens on a second load (blocks placed again,
-  entities loaded from disk) in the client test or by hand.
+- GameTests can't load a world twice. Check anything that happens on a second load (blocks placed
+  again, entities loaded from disk) in `WorldClientGameTest`, which closes its world and opens it
+  again (`getWorldSave().open()`).
 - The test JVM writes a `logs/` folder at the repo root; it is ignored, don't commit it.
 
 ## Git
