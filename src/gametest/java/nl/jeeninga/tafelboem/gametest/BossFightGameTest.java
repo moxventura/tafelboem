@@ -3,6 +3,7 @@ package nl.jeeninga.tafelboem.gametest;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -16,6 +17,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
@@ -302,6 +304,83 @@ public class BossFightGameTest {
 			helper.assertTrue(tally.wrong() == 1, "one wrong answer counted, not " + tally.wrong());
 			fights.endAll();
 		});
+	}
+
+	/**
+	 * On Moeilijk a typed wrong answer costs 2 hearts, but never the last half heart, and "?" costs
+	 * nothing, so "?" stays better than guessing.
+	 */
+	@GameTest(maxTicks = 1600, padding = 48)
+	@SuppressWarnings("removal") // mock players are still the only way to test without a client
+	public void onTheHardLevelAWrongAnswerCostsTwoHeartsButNeverTheLast(GameTestHelper helper) {
+		Survival kid = answerInSurvival(helper, FightLevel.MOEILIJK, (player, count) -> {
+			if (count == 3) {
+				player.setHealth(1F);
+			}
+			return count == 2 ? QuizC2S.DONT_KNOW : QuizC2S.ANSWER;
+		});
+		List<float[]> health = kid.health();
+		helper.succeedWhen(() -> {
+			helper.assertTrue(health.size() >= 3, "wait for three answers");
+			helper.assertTrue(health.get(0)[0] - health.get(0)[1] == 4F, "a wrong answer costs 2 hearts: " + health.get(0)[0] + " → " + health.get(0)[1]);
+			helper.assertTrue(health.get(1)[0] == health.get(1)[1], "\"?\" costs nothing: " + health.get(1)[0] + " → " + health.get(1)[1]);
+			helper.assertTrue(health.get(2)[1] == 1F, "never the last half heart, but " + health.get(2)[1] + " left");
+			kid.fights().endAll();
+		});
+	}
+
+	@GameTest(maxTicks = 600, padding = 48)
+	@SuppressWarnings("removal") // mock players are still the only way to test without a client
+	public void onTheEasyLevelAWrongAnswerCostsNoHearts(GameTestHelper helper) {
+		Survival kid = answerInSurvival(helper, FightLevel.MAKKELIJK, (player, count) -> QuizC2S.ANSWER);
+		List<float[]> health = kid.health();
+		helper.succeedWhen(() -> {
+			helper.assertTrue(!health.isEmpty(), "wait for a wrong answer");
+			helper.assertTrue(health.get(0)[0] == health.get(0)[1], "no hearts lost on Makkelijk: " + health.get(0)[0] + " → " + health.get(0)[1]);
+			kid.fights().endAll();
+		});
+	}
+
+	/** What a kid does with their next question: {@link QuizC2S#ANSWER} answers it wrong. */
+	private interface NextAnswer {
+		int act(ServerPlayer player, int count);
+	}
+
+	/** The health before and after each answer, and the fight to end. */
+	private record Survival(List<float[]> health, BossFights fights) {
+	}
+
+	/** A survival kid in a fight at this level, answering as told. */
+	private static Survival answerInSurvival(GameTestHelper helper, FightLevel level, NextAnswer next) {
+		OpenField.open(helper);
+		RecordingQuizClient client = new RecordingQuizClient();
+		SessionManager sessions = new SessionManager(helper.getLevel().getServer(), new Learners(new AnswerLog(tempDir())), client);
+		BossFights fights = new BossFights(sessions);
+
+		// makeMockServerPlayer(SURVIVAL) has no connection, and rooting a kid moves them through it.
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		player.setGameMode(GameType.SURVIVAL);
+		Vec3 stand = Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(1, 1, 1)));
+		player.teleportTo(stand.x, stand.y, stand.z);
+		helper.assertTrue(fights.summon(helper.getLevel(), stand.add(6, 1.5, 0), level, null) != null, "Graaf Fout should appear");
+
+		List<float[]> health = new ArrayList<>();
+		Set<Integer> answered = new HashSet<>();
+		helper.onEachTick(() -> {
+			sessions.tick();
+			fights.tick();
+			for (RecordingQuizClient.Sent sent : List.copyOf(client.sentTo)) {
+				QuizS2C question = sent.payload();
+				if (question.mode() == QuizS2C.ASK && answered.add(question.sessionId())) {
+					int action = next.act(player, answered.size());
+					float before = player.getHealth();
+					int value = action == QuizC2S.ANSWER ? question.a() * question.b() + 1 : 0;
+					sessions.onClientAction(sent.player(), new QuizC2S(question.sessionId(), action, value, QuizC2S.VIA_KEY));
+					health.add(new float[] {before, player.getHealth()});
+				}
+			}
+		});
+		return new Survival(health, fights);
 	}
 
 	private static boolean isYeetOMeter(Component message) {

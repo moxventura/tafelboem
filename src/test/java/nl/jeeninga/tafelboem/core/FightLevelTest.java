@@ -92,6 +92,14 @@ class FightLevelTest {
 	}
 
 	@Test
+	void aWrongAnswerCostsHeartsOnlyOnTheHarderLevels() {
+		assertEquals(0, FightLevel.CLASSIC.wrongAnswerDamage());
+		assertEquals(0, FightLevel.MAKKELIJK.wrongAnswerDamage());
+		assertEquals(2, FightLevel.GEMIDDELD.wrongAnswerDamage(), "1 heart");
+		assertEquals(4, FightLevel.MOEILIJK.wrongAnswerDamage(), "2 hearts");
+	}
+
+	@Test
 	void levelsByNumber() {
 		assertEquals(FightLevel.GEMIDDELD, FightLevel.byNumber(2));
 		assertEquals(FightLevel.CLASSIC, FightLevel.byNumber(0));
