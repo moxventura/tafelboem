@@ -25,7 +25,6 @@ import nl.jeeninga.tafelboem.block.LevelDoorBlock;
 import nl.jeeninga.tafelboem.boss.BossFights;
 import nl.jeeninga.tafelboem.command.TafelBoemCommand;
 import nl.jeeninga.tafelboem.config.TafelBoemConfig;
-import nl.jeeninga.tafelboem.game.BombEffects;
 import nl.jeeninga.tafelboem.game.ProtectedAreas;
 import nl.jeeninga.tafelboem.game.QuizClient;
 import nl.jeeninga.tafelboem.game.SessionManager;
@@ -39,7 +38,6 @@ import nl.jeeninga.tafelboem.registry.ModCreativeTab;
 import nl.jeeninga.tafelboem.registry.ModEntities;
 import nl.jeeninga.tafelboem.registry.ModItems;
 import nl.jeeninga.tafelboem.world.ArenaCatalog;
-import nl.jeeninga.tafelboem.world.Hub;
 import nl.jeeninga.tafelboem.world.TafelBoemWorld;
 import nl.jeeninga.tafelboem.world.TafelBoemWorlds;
 import nl.jeeninga.tafelboem.world.WorldLayout;
@@ -134,11 +132,10 @@ public class TafelBoem implements ModInitializer {
 						.ifPresent(line -> LOGGER.info("TafelBoem session: {}", line));
 			}
 		});
-		// Spectacle animals saved by a previous session (e.g. after a crash) poof instead of piling up,
-		// and so do hub frames of an earlier world load: every load places them again.
+		// Spectacle animals, hub frames of an earlier load and an arena's last fight come back from disk with
+		// their chunk, where no clearing could reach them: they go as they load.
 		ServerEntityEvents.ENTITY_LOAD.register((entity, level) -> {
-			if (entity.isLoadedFromDisk()
-					&& (entity.entityTags().contains(BombEffects.SPECTACLE_TAG) || Hub.isLeftOverFrame(entity, world == null ? null : world.hub()))) {
+			if (TafelBoemWorld.isLeftOver(entity, world)) {
 				entity.discard();
 			}
 		});

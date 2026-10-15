@@ -2,6 +2,7 @@ package nl.jeeninga.tafelboem.gametest;
 
 import java.util.List;
 import java.util.function.BooleanSupplier;
+import java.util.function.Predicate;
 
 import org.lwjgl.glfw.GLFW;
 
@@ -10,8 +11,17 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.animal.chicken.Chicken;
 import net.minecraft.world.entity.decoration.ItemFrame;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.presets.WorldPreset;
 import net.minecraft.world.phys.AABB;
@@ -26,12 +36,14 @@ import nl.jeeninga.tafelboem.block.LevelDoorBlock;
 import nl.jeeninga.tafelboem.client.QuestionScreen;
 import nl.jeeninga.tafelboem.core.ArenaBox;
 import nl.jeeninga.tafelboem.core.FightLevel;
+import nl.jeeninga.tafelboem.game.BombEffects;
 import nl.jeeninga.tafelboem.world.TafelBoemWorld;
 import nl.jeeninga.tafelboem.world.TafelBoemWorlds;
 
 /**
  * R1 in a real client: a TafelBoem world from the World Type button, the hub, a walk through each
  * door into its arena, a fight on level 2, the exit door home, and the same world loaded again.
+ * It checks the rows of the load contract in AGENTS.md that only a real reload can show.
  * Screenshots land in {@code build/run/clientGameTest/screenshots}.
  */
 @SuppressWarnings("UnstableApiUsage")
@@ -43,6 +55,7 @@ public class WorldClientGameTest implements FabricClientGameTest {
 		TestWorldSave save;
 		BlockPos[] beside = new BlockPos[1];
 		BlockPos[] broken = new BlockPos[1];
+		BlockPos[] leftOver = new BlockPos[1];
 		try (TestSingleplayerContext world = context.worldBuilder().adjustSettings(WorldClientGameTest::chooseTafelBoem).create()) {
 			world.getConnection().waitForChunksRender();
 			context.waitTicks(20);
@@ -65,6 +78,9 @@ public class WorldClientGameTest implements FabricClientGameTest {
 				context.waitTicks(10);
 				context.takeScreenshot("r1-0" + (level.number() + 1) + "-arena-" + level.number());
 
+				if (level == FightLevel.MAKKELIJK) {
+					leftOver[0] = leaveItem(world, level);
+				}
 				if (level == FightLevel.GEMIDDELD) {
 					context.waitForScreen(QuestionScreen.class);
 					answerQuestion(context);
@@ -79,14 +95,33 @@ public class WorldClientGameTest implements FabricClientGameTest {
 			check(world.getServer().computeOnServer(server -> hubFrames(server).stream().allMatch(ItemFrame::isLoadedFromDisk)),
 					"the hub's frames were loaded from disk again (or this check proves nothing)");
 
-			// Something for the reload to keep or repair: a kid's block beside the hub, and a hole in its floor.
+			// P19: the arena's chunks were saved meanwhile, and the item comes back from disk when a kid walks in again.
+			waitUntil(context, () -> world.getServer().computeOnServer(server -> !server.overworld().areEntitiesLoaded(ChunkPos.pack(leftOver[0]))),
+					"arena 1 unloaded (or the next check proves nothing)");
+			walkInto(context, world, door(world, 1));
+			waitUntil(context, () -> world.getServer().computeOnServer(server -> tafelBoem().run(FightLevel.MAKKELIJK).isPresent()),
+					"into arena 1 again");
+			context.waitTicks(40);
+			check(itemsIn(world, FightLevel.MAKKELIJK) == 0, "no item of the last visit in arena 1 (P19)");
+			leaveItem(world, FightLevel.MAKKELIJK);
+			walkOut(context, world, FightLevel.MAKKELIJK);
+
+			// Something for the reload to keep, repair or throw away: a kid's block beside the hub, a hole in its
+			// floor, a spectacle chicken, and (above) an item in arena 1.
 			world.getServer().runOnServer(server -> {
 				ArenaBox hub = tafelBoem().hub().bounds();
 				beside[0] = new BlockPos(hub.maxX() + 2, hub.minY(), (int) hub.middleZ());
 				broken[0] = tafelBoem().hub().standAt().below().east(3);
 				server.overworld().setBlockAndUpdate(beside[0], Blocks.OAK_PLANKS.defaultBlockState());
 				server.overworld().setBlockAndUpdate(broken[0], Blocks.AIR.defaultBlockState());
+				Chicken chicken = EntityTypes.CHICKEN.create(server.overworld(), EntitySpawnReason.TRIGGERED);
+				BlockPos spot = tafelBoem().hub().standAt().east(2);
+				chicken.setPos(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5);
+				chicken.setNoAi(true);
+				chicken.addTag(BombEffects.SPECTACLE_TAG);
+				server.overworld().addFreshEntity(chicken);
 			});
+			context.waitTicks(5);
 			save = world.getWorldSave();
 		}
 
@@ -101,6 +136,8 @@ public class WorldClientGameTest implements FabricClientGameTest {
 					"the kid's block beside the hub survives the reload");
 			check(world.getServer().computeOnServer(server -> server.overworld().getBlockState(broken[0]).is(Blocks.STONE)),
 					"the reload repairs the hub");
+			check(world.getServer().computeOnServer(server -> hubEntities(server, entity -> entity.entityTags().contains(BombEffects.SPECTACLE_TAG)).isEmpty()),
+					"the spectacle chicken of the last session is gone");
 			context.getInput().lookAt(door(world, 2).above(2));
 			context.waitTicks(5);
 			context.takeScreenshot("r1-06-hub-after-reload");
@@ -108,14 +145,42 @@ public class WorldClientGameTest implements FabricClientGameTest {
 			walkInto(context, world, door(world, 1));
 			waitUntil(context, () -> world.getServer().computeOnServer(server -> tafelBoem().run(FightLevel.MAKKELIJK).isPresent()),
 					"into arena 1 after the reload");
+			context.waitTicks(40);
+			check(itemsIn(world, FightLevel.MAKKELIJK) == 0, "no item of the last session in arena 1 (P19)");
 			walkOut(context, world, FightLevel.MAKKELIJK);
 		}
 	}
 
 	private static List<ItemFrame> hubFrames(MinecraftServer server) {
-		ArenaBox box = tafelBoem().hub().bounds();
-		return server.overworld().getEntitiesOfClass(ItemFrame.class,
-				new AABB(box.minX(), box.minY(), box.minZ(), box.maxX() + 1, box.maxY() + 1, box.maxZ() + 1));
+		return server.overworld().getEntitiesOfClass(ItemFrame.class, aabb(tafelBoem().hub().bounds()));
+	}
+
+	private static List<Entity> hubEntities(MinecraftServer server, Predicate<Entity> which) {
+		return server.overworld().getEntities((Entity) null, aabb(tafelBoem().hub().bounds()), which);
+	}
+
+	/** Drops an item in a corner of the arena, away from the kid's path and from where Graaf Fout's booms go. */
+	private static BlockPos leaveItem(TestSingleplayerContext world, FightLevel level) {
+		return world.getServer().computeOnServer(server -> {
+			ServerLevel overworld = server.overworld();
+			ArenaBox arena = tafelBoem().run(level).orElseThrow().arena().bounds();
+			BlockPos spot = BlockPos.containing(arena.middleX() - 11, arena.minY() + 4, arena.middleZ() - 11);
+			ItemEntity item = new ItemEntity(overworld, spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, new ItemStack(Items.FEATHER));
+			item.setNeverPickUp();
+			overworld.addFreshEntity(item);
+			return spot;
+		});
+	}
+
+	private static int itemsIn(TestSingleplayerContext world, FightLevel level) {
+		return world.getServer().computeOnServer(server -> {
+			ArenaBox arena = tafelBoem().run(level).orElseThrow().arena().bounds();
+			return server.overworld().getEntitiesOfClass(ItemEntity.class, aabb(arena)).size();
+		});
+	}
+
+	private static AABB aabb(ArenaBox box) {
+		return new AABB(box.minX(), box.minY(), box.minZ(), box.maxX() + 1, box.maxY() + 1, box.maxZ() + 1);
 	}
 
 	/** Walks through the arena's exit door. His bomb may have rooted the kid by now: answer, then walk on. */
