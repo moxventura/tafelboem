@@ -28,6 +28,7 @@ class TafelBoemConfigTest {
 		assertTrue(config.wrongAnswerDamage);
 		assertTrue(config.foodReward);
 		assertTrue(config.kippenbomChickens);
+		assertTrue(config.arenaMusic);
 		assertTrue(Files.readString(file).contains("correctionRetype"), "the parent can find the toggles in the file");
 	}
 

@@ -1,6 +1,8 @@
 package nl.jeeninga.tafelboem.gametest;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.function.Predicate;
 
@@ -49,6 +51,9 @@ import nl.jeeninga.tafelboem.world.TafelBoemWorlds;
 @SuppressWarnings("UnstableApiUsage")
 public class WorldClientGameTest implements FabricClientGameTest {
 	private static final ResourceKey<WorldPreset> PRESET = ResourceKey.create(Registries.WORLD_PRESET, TafelBoem.id("tafelboem"));
+	private static final Map<FightLevel, String> TRACKS = Map.of(FightLevel.MAKKELIJK, "minecraft:music_disc.otherside",
+			FightLevel.GEMIDDELD, "minecraft:music_disc.pigstep", FightLevel.MOEILIJK, "minecraft:music.dragon");
+	private static final Set<String> HUB_MUSIC = Set.of("minecraft:music.game", "minecraft:music.creative");
 
 	@Override
 	public void runTest(ClientGameTestContext context) {
@@ -77,6 +82,7 @@ public class WorldClientGameTest implements FabricClientGameTest {
 						"Graaf Fout in arena " + level);
 				context.waitTicks(10);
 				context.takeScreenshot("r1-0" + (level.number() + 1) + "-arena-" + level.number());
+				check(music(context).equals(TRACKS.get(level)), "arena " + level + " plays " + TRACKS.get(level) + ", not " + music(context));
 
 				if (level == FightLevel.MAKKELIJK) {
 					leftOver[0] = leaveItem(world, level);
@@ -94,6 +100,8 @@ public class WorldClientGameTest implements FabricClientGameTest {
 			waitUntil(context, () -> world.getServer().computeOnServer(server -> hubFrames(server).size() == 5), "the hub's 5 bomb frames back");
 			check(world.getServer().computeOnServer(server -> hubFrames(server).stream().allMatch(ItemFrame::isLoadedFromDisk)),
 					"the hub's frames were loaded from disk again (or this check proves nothing)");
+
+			check(HUB_MUSIC.contains(music(context)), "back in the hub the normal music returns, not " + music(context));
 
 			// P19: the arena's chunks were saved meanwhile, and the item comes back from disk when a kid walks in again.
 			waitUntil(context, () -> world.getServer().computeOnServer(server -> !server.overworld().areEntitiesLoaded(ChunkPos.pack(leftOver[0]))),
@@ -147,8 +155,14 @@ public class WorldClientGameTest implements FabricClientGameTest {
 					"into arena 1 after the reload");
 			context.waitTicks(40);
 			check(itemsIn(world, FightLevel.MAKKELIJK) == 0, "no item of the last session in arena 1 (P19)");
+			check(music(context).equals(TRACKS.get(FightLevel.MAKKELIJK)), "arena 1 still has its music after the reload, not " + music(context));
 			walkOut(context, world, FightLevel.MAKKELIJK);
 		}
+	}
+
+	/** The background music the game picks where the kid is now (the biome's). */
+	private static String music(ClientGameTestContext context) {
+		return context.computeOnClient(client -> client.getSituationalMusic().sound().value().location().toString());
 	}
 
 	private static List<ItemFrame> hubFrames(MinecraftServer server) {

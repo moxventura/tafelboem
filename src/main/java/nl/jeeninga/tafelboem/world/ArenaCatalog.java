@@ -93,6 +93,10 @@ public final class ArenaCatalog {
 			arena = ShapePlacer.placeShape(level, WorldLayout.cornerFor(slot, shape.sizeX(), shape.sizeZ()), shape);
 		}
 		lastPlaced.put(fightLevel, Optional.of(arena.bounds()));
+		// Over the arena, from the bottom to the top of its slot: wherever a kid is in it, the music plays.
+		ArenaBox over = arena.bounds();
+		ArenaBiomes.set(level, new ArenaBox(over.minX(), slot.minY(), over.minZ(), over.maxX(), slot.maxY(), over.maxZ()), fightLevel,
+				TafelBoem.config().arenaMusic);
 		return arena;
 	}
 
