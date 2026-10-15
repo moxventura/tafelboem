@@ -29,6 +29,9 @@ public final class TafelBoemConfig {
 	/** In an arena the kicked bomb breaks blocks (never bedrock, obsidian or the floor near a kid). */
 	public boolean arenaCraters = true;
 
+	/** A typed wrong answer costs 1 heart on Gemiddeld and 2 on Moeilijk, never the last half heart. */
+	public boolean wrongAnswerDamage = true;
+
 	public static TafelBoemConfig load(Path file) {
 		if (!Files.exists(file)) {
 			TafelBoemConfig defaults = new TafelBoemConfig();

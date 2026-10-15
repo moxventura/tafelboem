@@ -40,6 +40,18 @@ public enum FightLevel {
 		return 10 + Math.max(1, number);
 	}
 
+	/**
+	 * Half hearts a typed wrong answer costs: 1 heart on Gemiddeld, 2 on Moeilijk, nothing on
+	 * Makkelijk or in the R0.1 fight.
+	 */
+	public int wrongAnswerDamage() {
+		return switch (this) {
+			case GEMIDDELD -> 2;
+			case MOEILIJK -> 4;
+			default -> 0;
+		};
+	}
+
 	/** A sum belongs to a table when either factor is that table, as at school: 7 × 2 is in the table of 2. */
 	public boolean includes(Fact fact) {
 		return tables.contains(fact.a()) || tables.contains(fact.b());

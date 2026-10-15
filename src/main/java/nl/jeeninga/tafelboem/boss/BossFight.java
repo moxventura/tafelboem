@@ -296,6 +296,10 @@ public final class BossFight implements QuizListener {
 	@Override
 	public void onMiss(ServerPlayer player, QuizSession session, Outcome outcome) {
 		tally(player.getUUID()).record(outcome);
+		// Only a typed wrong answer: "?" must stay better than guessing.
+		if (outcome == Outcome.WRONG && TafelBoem.config().wrongAnswerDamage) {
+			BombEffects.hurt(player, fightLevel.wrongAnswerDamage());
+		}
 		int a = session.fact().a();
 		int b = session.fact().b();
 		Component taunt = switch (outcome) {

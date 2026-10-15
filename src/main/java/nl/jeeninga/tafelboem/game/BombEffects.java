@@ -108,6 +108,18 @@ public final class BombEffects {
 	}
 
 	/**
+	 * A typed wrong answer on a harder level costs hearts, but never the last half heart: a
+	 * consequence, never a way out of the fight. Magic damage, so armour and difficulty don't change
+	 * it; creative players can't be hurt at all.
+	 */
+	public static void hurt(ServerPlayer player, float amount) {
+		float allowed = Math.min(amount, player.getHealth() - 1F);
+		if (allowed > 0F) {
+			player.hurtServer(player.level(), player.level().damageSources().magic(), allowed);
+		}
+	}
+
+	/**
 	 * The bomb goes out without a bang ("?" or chickening out).
 	 */
 	public static void fizzle(ServerLevel level, BlockPos pos) {
