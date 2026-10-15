@@ -26,9 +26,23 @@ class ArenaShapeTest {
 	@ValueSource(ints = {1, 2, 3})
 	void bedrockAndDirtUnderEveryFloorBlock(int level) {
 		Shape shape = ArenaShape.forLevel(level);
-		for (Shape.Cell top : shape.cells().stream().filter(cell -> cell.y() == 2).toList()) {
+		for (Shape.Cell top : shape.cells().stream().filter(cell -> cell.y() == 2 && shape.cellAt(cell.x(), 3, cell.z()).isEmpty()).toList()) {
 			assertEquals(Shape.Material.BEDROCK, shape.cellAt(top.x(), 0, top.z()).orElseThrow().material());
 			assertEquals(Shape.Material.DIRT, shape.cellAt(top.x(), 1, top.z()).orElseThrow().material());
+		}
+	}
+
+	/** P18: a wall on dirt and grass let a crater beside it open a way out under it, into the void. */
+	@ParameterizedTest
+	@ValueSource(ints = {1, 2, 3})
+	void wallsStandOnObsidianDownToTheBedrock(int level) {
+		Shape shape = ArenaShape.forLevel(level);
+		for (Shape.Cell wall : shape.cells().stream().filter(cell -> cell.y() == 3).toList()) {
+			assertEquals(Shape.Material.BEDROCK, shape.cellAt(wall.x(), 0, wall.z()).orElseThrow().material());
+			for (int y = 1; y <= 2; y++) {
+				assertEquals(Shape.Material.OBSIDIAN, shape.cellAt(wall.x(), y, wall.z()).orElseThrow().material(),
+						"under the wall at " + wall.x() + "," + y + "," + wall.z());
+			}
 		}
 	}
 
