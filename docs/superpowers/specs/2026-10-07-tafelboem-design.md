@@ -403,8 +403,8 @@ the kids keep asking to play, and over time they pick harder levels and collect 
   stays: missed and slow sums come more often.
 - **Re-asks still come first.** A re-ask for a sum outside the current level waits until a level
   that has it.
-- **Reward:** 4 Kippenbommen for a win on every level. Paying out the next bomb tier waits until
-  bomb 4 exists.
+- **Reward:** 4 Kippenbommen for a win on every level (4 cooked chicken from 1.0.2). Paying out the
+  next bomb tier waits until bomb 4 exists.
 
 ### Stars
 - **Per kid, per level; the best result counts.**
@@ -443,6 +443,28 @@ what must never break. The floor may be uneven: the kick always counts, even whe
 he follows the ground. An arena template without an exit door is skipped, with a chat message to the
 players that names it; another template or the plain arena is used instead. **Rules for a hub:**
 the three level doors. The kids spawn in its middle.
+
+### R1 patch 1.0.2 (before playtest 3)
+Jesper played 1.0.1 through once himself; findings P18–P21 are in `docs/evaluations/R1.md`.
+- **Walls on obsidian (P18).** The plain arenas have obsidian under their walls, down to the
+  bedrock, so a crater beside a wall never opens a way out. Kid-built arenas follow the same rule.
+- **No leftovers (P19).** Anything but a player that loads from disk in an arena slot is a leftover
+  from an earlier fight and goes. The load contract in `AGENTS.md` lists every rule of this kind.
+- **Hearts.** A typed wrong answer costs 1 heart on Gemiddeld and 2 on Moeilijk, nothing on
+  Makkelijk or in the R0.1 fight, never the last half heart, and only in survival. "?" and ESC never
+  cost hearts, so "?" stays better than guessing. Config toggle `wrongAnswerDamage`.
+- **Food as the reward.** A win on a door level gives 4 cooked chicken instead of 4 Kippenbommen,
+  so lost hearts heal (vanilla: a full hunger bar brings hearts back). The R0.1 fight keeps its
+  Kippenbommen. Config toggle `foodReward`.
+- **Kippenbom chickens.** A Kippenbom kicked into Graaf Fout lets 12 chickens fly; a wrong answer on
+  a Kippenbom pops 3 chickens out at the kid, hopping only a little, so a wrong answer stays less fun.
+  They poof after a minute like every spectacle animal. Config toggle `kippenbomChickens`.
+- **Correction.** The fact stays on the HUD 6 s instead of 3.5 s, and after a miss Graaf Fout waits
+  as long before his next bomb, so the next question doesn't cut it short.
+- **Music (P21).** Each arena slot gets its level's biome when an arena is placed, and the biome
+  sets the background music: Otherside on Makkelijk, Pigstep on Gemiddeld, "Boss" (`music.dragon`)
+  on Moeilijk, back to back. The hub's biome brings the normal music back. Config toggle
+  `arenaMusic`.
 
 ### Out of R1
 - the kids' own arena: a later 1.0.Z build, once they have built one
