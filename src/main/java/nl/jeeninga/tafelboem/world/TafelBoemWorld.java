@@ -9,12 +9,16 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import org.jspecify.annotations.Nullable;
+
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.storage.LevelData;
 import net.minecraft.world.phys.Vec3;
@@ -27,6 +31,7 @@ import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.core.FightRecord;
 import nl.jeeninga.tafelboem.core.FightTally;
 import nl.jeeninga.tafelboem.core.Stars;
+import nl.jeeninga.tafelboem.game.BombEffects;
 import nl.jeeninga.tafelboem.game.ProtectedAreas;
 import nl.jeeninga.tafelboem.game.QuizClient;
 import nl.jeeninga.tafelboem.log.FightLog;
@@ -100,6 +105,22 @@ public final class TafelBoemWorld {
 
 	public ServerLevel level() {
 		return level;
+	}
+
+	/**
+	 * Whether an entity that just loaded from disk is left over from an earlier session or fight (the
+	 * load contract in AGENTS.md). Spectacle animals and old hub frames are, in any world. In a
+	 * TafelBoem world so is anything but a player over an arena slot: every arena puts its own
+	 * entities in fresh, and the door can't clear what was saved with an unloaded chunk (P19).
+	 */
+	public static boolean isLeftOver(Entity entity, @Nullable TafelBoemWorld world) {
+		if (!entity.isLoadedFromDisk() || entity instanceof Player) {
+			return false;
+		}
+		if (entity.entityTags().contains(BombEffects.SPECTACLE_TAG) || Hub.isLeftOverFrame(entity, world == null ? null : world.hub())) {
+			return true;
+		}
+		return world != null && entity.level() == world.level && world.layout.arenaAt(entity.getX(), entity.getZ()).isPresent();
 	}
 
 	public Optional<ArenaRun> run(FightLevel fightLevel) {
