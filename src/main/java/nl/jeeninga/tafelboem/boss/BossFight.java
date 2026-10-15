@@ -17,7 +17,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ExplosionDamageCalculator;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -401,13 +403,15 @@ public final class BossFight implements QuizListener {
 	}
 
 	private void reward() {
+		// On the door levels a wrong answer costs hearts, so the reward is food that heals them. The R0.1 fight keeps its bombs.
+		Item item = fightLevel != FightLevel.CLASSIC && TafelBoem.config().foodReward ? Items.COOKED_CHICKEN : ModBlocks.bombItem(BombTier.KIPPENBOM);
+		Component name = new ItemStack(item).getHoverName();
 		for (ServerPlayer player : participants.players()) {
-			ItemStack loot = new ItemStack(ModBlocks.bombItem(BombTier.KIPPENBOM), LOOT_COUNT);
+			ItemStack loot = new ItemStack(item, LOOT_COUNT);
 			if (!player.getInventory().add(loot)) {
 				player.drop(loot, false, false);
 			}
-			player.sendSystemMessage(Component.translatable("tafelboem.message.loot", LOOT_COUNT,
-					Component.translatable("block.tafelboem.kippenbom")).withStyle(ChatFormatting.GOLD));
+			player.sendSystemMessage(Component.translatable("tafelboem.message.loot", LOOT_COUNT, name).withStyle(ChatFormatting.GOLD));
 			level.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, player.getX(), player.getY() + 1, player.getZ(), 60, 0.5, 1, 0.5, 0.3);
 			level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 1.0F);
 		}
