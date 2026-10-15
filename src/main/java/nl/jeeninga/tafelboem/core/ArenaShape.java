@@ -5,8 +5,8 @@ import java.util.List;
 
 /**
  * The plain arenas, used while a level has no template: level 1 round on grass, level 2 square on
- * grass, level 3 round on a darker floor. Bedrock below and obsidian walls: the outside never
- * breaks, the inside may.
+ * grass, level 3 round on a darker floor. Bedrock below and obsidian walls down to the bedrock: the
+ * outside never breaks, the inside may.
  */
 public final class ArenaShape {
 	public static final int SIZE = 47;
@@ -47,11 +47,14 @@ public final class ArenaShape {
 					continue;
 				}
 				cells.add(Shape.Cell.of(x, 0, z, Shape.Material.BEDROCK));
-				cells.add(Shape.Cell.of(x, 1, z, Shape.Material.DIRT));
-				cells.add(Shape.Cell.of(x, 2, z, top));
 				if (!wall.test(x, z)) {
+					cells.add(Shape.Cell.of(x, 1, z, Shape.Material.DIRT));
+					cells.add(Shape.Cell.of(x, 2, z, top));
 					continue;
 				}
+				// The wall stands on obsidian down to the bedrock: on dirt, a crater beside it opened a way out (P18).
+				cells.add(Shape.Cell.of(x, 1, z, Shape.Material.OBSIDIAN));
+				cells.add(Shape.Cell.of(x, 2, z, Shape.Material.OBSIDIAN));
 				for (int y = WALL_BOTTOM; y < WALL_BOTTOM + WALL_HEIGHT; y++) {
 					boolean door = x == CENTRE && z == SIZE - 1 && y < WALL_BOTTOM + 2;
 					if (door) {
