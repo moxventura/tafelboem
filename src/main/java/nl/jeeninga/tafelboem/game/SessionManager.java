@@ -163,6 +163,10 @@ public final class SessionManager {
 			case WRONG -> {
 				BombEffects.fizzle(level, session.bombPos());
 				BombEffects.penalty(level, player, session.tier());
+				if (session.tier() == BombTier.KIPPENBOM && config.kippenbomChickens) {
+					BombEffects.hoppingChickens(level, player.position());
+					collectSpectacles(level, player.blockPosition());
+				}
 			}
 			case CHICKEN_OUT -> {
 				BombEffects.chickenOut(level, session.bombPos());
@@ -266,7 +270,8 @@ public final class SessionManager {
 		}
 	}
 
-	private void collectSpectacles(ServerLevel level, BlockPos pos) {
+	/** The spectacle animals around this spot poof after a minute, like every bomb's. */
+	public void collectSpectacles(ServerLevel level, BlockPos pos) {
 		for (Entity entity : level.getEntities((Entity) null, new AABB(pos).inflate(3),
 				entity -> entity.entityTags().contains(BombEffects.SPECTACLE_TAG))) {
 			if (spectacles.stream().noneMatch(spectacle -> spectacle.entity == entity)) {

@@ -335,6 +335,10 @@ public final class BossFight implements QuizListener {
 				: PlayerSafeExplosion.SHOW;
 		level.explode(null, null, boom, boss.getX(), boss.getY() + 1, boss.getZ(), tier.blastRadius(), false,
 				craters ? Level.ExplosionInteraction.TNT : Level.ExplosionInteraction.NONE);
+		if (tier == BombTier.KIPPENBOM && TafelBoem.config().kippenbomChickens) {
+			BombEffects.flyingChickens(level, boss.position());
+			sessions.collectSpectacles(level, boss.blockPosition());
+		}
 		fight.registerHit();
 		participants.showHealth(fight.healthFraction());
 

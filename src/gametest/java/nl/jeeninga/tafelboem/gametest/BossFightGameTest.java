@@ -16,10 +16,12 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.animal.chicken.Chicken;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
@@ -29,6 +31,7 @@ import nl.jeeninga.tafelboem.boss.BossFights;
 import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.core.FightTally;
+import nl.jeeninga.tafelboem.game.BombEffects;
 import nl.jeeninga.tafelboem.game.SessionManager;
 import nl.jeeninga.tafelboem.log.AnswerLog;
 import nl.jeeninga.tafelboem.log.Learners;
@@ -284,6 +287,8 @@ public class BossFightGameTest {
 		helper.assertTrue(fight.hitsRemaining() == 13, "level 3 needs 13 hits, not " + fight.hitsRemaining());
 
 		Set<Integer> answered = new HashSet<>();
+		int[] chickensAfterWrong = {-1};
+		int[] mostChickens = {0};
 		helper.onEachTick(() -> {
 			sessions.tick();
 			fights.tick();
@@ -294,14 +299,20 @@ public class BossFightGameTest {
 					// The first answer is wrong, the rest right.
 					int answer = answered.size() == 1 ? question.a() * question.b() + 1 : question.a() * question.b();
 					sessions.onClientAction(sent.player(), new QuizC2S(question.sessionId(), QuizC2S.ANSWER, answer, QuizC2S.VIA_KEY));
+					if (answered.size() == 1) {
+						chickensAfterWrong[0] = spectacleChickens(helper, player.position(), 3);
+					}
 				}
 			}
+			mostChickens[0] = Math.max(mostChickens[0], spectacleChickens(helper, stand, 40));
 		});
 
 		helper.succeedWhen(() -> {
 			FightTally tally = fight.tally(player.getUUID());
 			helper.assertTrue(tally.answers() >= 3, "wait for three answers");
 			helper.assertTrue(tally.wrong() == 1, "one wrong answer counted, not " + tally.wrong());
+			helper.assertTrue(chickensAfterWrong[0] == 3, "a wrong answer on a Kippenbom lets 3 chickens hop out, not " + chickensAfterWrong[0]);
+			helper.assertTrue(mostChickens[0] >= 12, "a Kippenbom kicked into him lets 12 chickens fly; at most " + mostChickens[0] + " seen");
 			fights.endAll();
 		});
 	}
@@ -351,6 +362,7 @@ public class BossFightGameTest {
 	}
 
 	/** A survival kid in a fight at this level, answering as told. */
+	@SuppressWarnings("removal") // mock players are still the only way to test without a client
 	private static Survival answerInSurvival(GameTestHelper helper, FightLevel level, NextAnswer next) {
 		OpenField.open(helper);
 		RecordingQuizClient client = new RecordingQuizClient();
@@ -381,6 +393,11 @@ public class BossFightGameTest {
 			}
 		});
 		return new Survival(health, fights);
+	}
+
+	private static int spectacleChickens(GameTestHelper helper, Vec3 around, double radius) {
+		return helper.getLevel().getEntitiesOfClass(Chicken.class, new AABB(around, around).inflate(radius),
+				chicken -> chicken.entityTags().contains(BombEffects.SPECTACLE_TAG)).size();
 	}
 
 	private static boolean isYeetOMeter(Component message) {
