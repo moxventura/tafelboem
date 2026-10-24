@@ -125,10 +125,10 @@ public class BossFightGameTest {
 	}
 
 	/** The landings this test forces, one per kick; every one of them must end and let the fight go on. */
-	private static final List<LandingStyle> LANDINGS = List.of(LandingStyle.DIZZY, LandingStyle.HEAD_FIRST, LandingStyle.PANCAKE, LandingStyle.FRANTIC_RUN);
+	private static final List<LandingStyle> LANDINGS = List.of(LandingStyle.values());
 
 	/** A landing that never ends would stall the fight: after each one he gets up and throws again. */
-	@GameTest(maxTicks = 2400, padding = 48)
+	@GameTest(maxTicks = 3600, padding = 48)
 	@SuppressWarnings("removal") // mock players are still the only way to test without a client
 	public void afterEveryLandingHeGetsUpAndThrowsAgain(GameTestHelper helper) {
 		OpenField.open(helper);
@@ -155,7 +155,7 @@ public class BossFightGameTest {
 				if (landing != previous[0]) {
 					started.add(landing);
 				}
-				if (landing == LandingStyle.FRANTIC_RUN) {
+				if (landing == LandingStyle.FRANTIC_RUN || landing == LandingStyle.CHASED) {
 					helper.assertTrue(fight.boss().distanceTo(player) >= 1.5,
 							"running round he keeps away from the kid: " + fight.boss().distanceTo(player) + " blocks");
 				}

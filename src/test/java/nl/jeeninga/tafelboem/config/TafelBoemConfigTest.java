@@ -32,6 +32,7 @@ class TafelBoemConfigTest {
 		assertTrue(config.yeetBoost);
 		assertTrue(config.yeetRecords);
 		assertTrue(config.yeetCatalogue);
+		assertTrue(config.bombSignatures);
 		assertTrue(config.arenaMusic);
 		assertTrue(Files.readString(file).contains("correctionRetype"), "the parent can find the toggles in the file");
 	}

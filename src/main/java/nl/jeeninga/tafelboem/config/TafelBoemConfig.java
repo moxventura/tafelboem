@@ -50,6 +50,9 @@ public final class TafelBoemConfig {
 	/** After a yeet he may land head-first, as a pancake or running round and fly into a wall; off, the R1 yeets and dizzy spell. */
 	public boolean yeetCatalogue = true;
 
+	/** Each bomb has a landing of its own: a sore toe (Knalletje), a soot face (Gewone TNT), chasing chickens (Kippenbom). */
+	public boolean bombSignatures = true;
+
 	/** Each level's arena plays its own music: Otherside, Pigstep, "Boss". Applies from the next arena placed. */
 	public boolean arenaMusic = true;
 

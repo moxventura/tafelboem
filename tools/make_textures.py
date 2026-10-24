@@ -197,3 +197,36 @@ if __name__ == "__main__":
 
     if len(sys.argv) == 2 and sys.argv[1] == "--level-door":
         level_door()
+
+
+# --- Graaf Fout's soot face -------------------------------------------------------------------
+# Usage: python3 tools/make_textures.py --soot
+# The Gewone TNT's signature: his whole head black with soot, only the whites of his eyes showing.
+# Made from graaf_fout.png, so run --graaf-fout first if that changed.
+
+SOOT = (38, 36, 34)
+HEAD = (0, 0, 32, 18)  # the head box and its nose on the illager texture
+EYE_WHITES = [(9, 14), (10, 14), (13, 14), (14, 14)]  # the eyes on the face front
+
+
+def soot():
+    src = Image.open(ENTITY_OUT / "graaf_fout.png").convert("RGBA")
+    out = src.copy()
+    x0, y0, x1, y1 = HEAD
+    for x in range(x0, x1):
+        for y in range(y0, y1):
+            a = src.getpixel((x, y))[3]
+            if a == 0:
+                continue
+            speck = (x * 7 + y * 13) % 5 * 4  # a little unevenness, like real soot
+            out.putpixel((x, y), tuple(c + speck for c in SOOT) + (a,))
+    put(out, EYE_WHITES, WHITE)
+    out.save(ENTITY_OUT / "graaf_fout_soot.png")
+    print("wrote graaf_fout_soot")
+
+
+if __name__ == "__main__":
+    import sys
+
+    if len(sys.argv) == 2 and sys.argv[1] == "--soot":
+        soot()
