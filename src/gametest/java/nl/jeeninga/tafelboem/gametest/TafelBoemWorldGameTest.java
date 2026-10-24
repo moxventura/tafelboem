@@ -1,5 +1,6 @@
 package nl.jeeninga.tafelboem.gametest;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.core.BlockPos;
@@ -16,9 +17,13 @@ import net.minecraft.world.phys.Vec3;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 
 import nl.jeeninga.tafelboem.boss.BossFight;
+import nl.jeeninga.tafelboem.config.TafelBoemConfig;
 import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.core.FightRecord;
+import nl.jeeninga.tafelboem.core.LandingStyle;
+import nl.jeeninga.tafelboem.core.YeetPose;
+import nl.jeeninga.tafelboem.gametest.RecordingQuizClient.Bar;
 import nl.jeeninga.tafelboem.registry.ModBlocks;
 import nl.jeeninga.tafelboem.world.ArenaRun;
 
@@ -282,6 +287,52 @@ public class TafelBoemWorldGameTest {
 			helper.assertFalse(test.client.actionBars.stream().anyMatch(TafelBoemWorldGameTest::isRecord), "the first yeet on file only sets the best");
 			List<FightRecord> fights = test.log.read(kid.getPlainTextName());
 			helper.assertTrue(!fights.isEmpty() && fights.getLast().farthestYeet() > 0, "the fights log has the farthest yeet: " + fights);
+			test.close();
+		});
+	}
+
+	/**
+	 * With all five R1.1 switches off the fight plays as 1.0.2: only the dizzy spell, never a wall
+	 * splat, no reason on the meter and no record, even for a kid whose best is beaten.
+	 */
+	@GameTest(maxTicks = 2400, padding = TestWorld.PADDING)
+	public void withEveryR11SwitchOffAFightPlaysAs102(GameTestHelper helper) {
+		TafelBoemConfig off = new TafelBoemConfig();
+		off.countingKippenbom = false;
+		off.yeetBoost = false;
+		off.yeetRecords = false;
+		off.yeetCatalogue = false;
+		off.bombSignatures = false;
+		TestWorld test = new TestWorld(helper).withConfig(off).running();
+		ServerPlayer kid = test.kidInTheHub();
+		// A best of 1 block is on file, so any yeet beats it and a record would show if the switch failed.
+		test.log.append(new FightRecord(0L, kid.getPlainTextName(), 1, "default", FightRecord.WON, 11, 0, 0, 0, 3, 120, 1, "1.1.0", 1));
+		test.whenLoaded(() -> test.world.enterDoor(kid, 1));
+
+		List<LandingStyle> landings = new ArrayList<>();
+		LandingStyle[] last = {null};
+		boolean[] splat = {false};
+		helper.onEachTick(() -> {
+			BossFight fight = test.world.run(FightLevel.MAKKELIJK).map(ArenaRun::fight).orElse(null);
+			if (fight != null) {
+				LandingStyle now = fight.boss().landingStyle();
+				if (now != null && last[0] == null) {
+					landings.add(now);
+				}
+				last[0] = now;
+				splat[0] |= fight.boss().yeetPose() == YeetPose.SPLAT;
+			}
+		});
+
+		helper.succeedWhen(() -> {
+			helper.assertTrue(landings.size() >= 4, "wait for four yeets to land, saw " + landings.size());
+			helper.assertTrue(landings.stream().allMatch(landing -> landing == LandingStyle.DIZZY), "only the dizzy spell: " + landings);
+			helper.assertFalse(splat[0], "no wall splat");
+			List<Bar> meters = test.client.actionBarsTo.stream().filter(bar -> bar.player() == kid && isDistanceMeter(bar.message())).toList();
+			helper.assertTrue(!meters.isEmpty(), "the kid saw the yeet-o-meter");
+			helper.assertTrue(meters.stream().allMatch(bar -> bar.message().getSiblings().isEmpty()), "no reason after the distance: " + meters);
+			helper.assertFalse(test.client.actionBars.stream().anyMatch(TafelBoemWorldGameTest::isRecord), "no record");
+			helper.assertFalse(test.client.sounds.stream().anyMatch(sound -> sound.sound() == SoundEvents.UI_TOAST_CHALLENGE_COMPLETE), "no record toast");
 			test.close();
 		});
 	}
