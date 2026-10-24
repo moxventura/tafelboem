@@ -29,6 +29,7 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 
 import nl.jeeninga.tafelboem.boss.BossFight;
 import nl.jeeninga.tafelboem.boss.BossFights;
+import nl.jeeninga.tafelboem.config.TafelBoemConfig;
 import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.ChickenCount;
 import nl.jeeninga.tafelboem.core.FightLevel;
@@ -428,6 +429,73 @@ public class BossFightGameTest {
 					"a Kippenbom kicked into him counts out " + firstRightProduct[0] + " chickens; at most " + mostChickens[0] + " seen");
 			fights.endAll();
 		});
+	}
+
+	/** The spec: with Kippenbom chickens off there are no chickens in a fight, so the chase doesn't play either. */
+	@GameTest(maxTicks = 1500, padding = 48)
+	public void withKippenbomChickensOffNoChaseBeginsAndNoChickenAppears(GameTestHelper helper) {
+		TafelBoemConfig off = new TafelBoemConfig();
+		off.kippenbomChickens = false;
+		LandingWatch watch = watchKippenbommenLand(helper, off);
+		helper.succeedWhen(() -> {
+			helper.assertTrue(watch.landings().size() >= 2, "wait for two landings, saw " + watch.landings());
+			helper.assertTrue(!watch.landings().contains(LandingStyle.CHASED), "no chase without chickens: " + watch.landings());
+			helper.assertTrue(watch.mostChickens()[0] == 0, "no chicken near the fight, saw " + watch.mostChickens()[0]);
+			watch.fights().endAll();
+		});
+	}
+
+	/** The control: with the switch on, the chase plays as soon as the last landing wasn't it (the boomerang's own ending can come first). */
+	@GameTest(maxTicks = 1500, padding = 48)
+	public void withKippenbomChickensOnTheChasePlaysWithinTwoLandings(GameTestHelper helper) {
+		LandingWatch watch = watchKippenbommenLand(helper, new TafelBoemConfig());
+		helper.succeedWhen(() -> {
+			helper.assertTrue(watch.landings().size() >= 2, "wait for two landings, saw " + watch.landings());
+			helper.assertTrue(watch.landings().contains(LandingStyle.CHASED), "a chase within two landings: " + watch.landings());
+			watch.fights().endAll();
+		});
+	}
+
+	/** The landings seen so far, in order, and the most spectacle chickens near the fight at once. */
+	private record LandingWatch(List<LandingStyle> landings, int[] mostChickens, BossFights fights) {
+	}
+
+	/** A level 3 fight (only Kippenbommen) where the kid answers everything right. */
+	@SuppressWarnings("removal") // mock players are still the only way to test without a client
+	private static LandingWatch watchKippenbommenLand(GameTestHelper helper, TafelBoemConfig config) {
+		OpenField.open(helper);
+		RecordingQuizClient client = new RecordingQuizClient();
+		SessionManager sessions = new SessionManager(helper.getLevel().getServer(), new Learners(new AnswerLog(tempDir())), client, config);
+		BossFights fights = new BossFights(sessions);
+
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		Vec3 stand = Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(1, 1, 1)));
+		player.teleportTo(stand.x, stand.y, stand.z);
+		helper.assertTrue(fights.summon(helper.getLevel(), stand.add(6, 1.5, 0), FightLevel.MOEILIJK, null) != null, "Graaf Fout should appear");
+
+		List<LandingStyle> landings = new ArrayList<>();
+		int[] mostChickens = {0};
+		Set<Integer> answered = new HashSet<>();
+		LandingStyle[] last = {null};
+		helper.onEachTick(() -> {
+			sessions.tick();
+			fights.tick();
+			for (RecordingQuizClient.Sent sent : List.copyOf(client.sentTo)) {
+				QuizS2C question = sent.payload();
+				if (question.mode() == QuizS2C.ASK && answered.add(question.sessionId())) {
+					sessions.onClientAction(sent.player(), new QuizC2S(question.sessionId(), QuizC2S.ANSWER, question.a() * question.b(), QuizC2S.VIA_KEY));
+				}
+			}
+			if (!fights.active().isEmpty()) {
+				LandingStyle now = fights.active().getFirst().boss().landingStyle();
+				if (now != null && last[0] == null) {
+					landings.add(now);
+				}
+				last[0] = now;
+			}
+			mostChickens[0] = Math.max(mostChickens[0], spectacleChickens(helper, stand, 40));
+		});
+		return new LandingWatch(landings, mostChickens, fights);
 	}
 
 	/**

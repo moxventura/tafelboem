@@ -37,8 +37,8 @@ public final class TafelBoemConfig {
 
 	/**
 	 * A Kippenbom kicked into Graaf Fout lets its chickens loose, and a wrong answer on one lets some hop out at
-	 * the kid. Off, neither happens, whatever {@link #countingKippenbom} says. A placed Kippenbom's boom in free
-	 * play and the chase landing ({@link #bombSignatures}) don't depend on it.
+	 * the kid. Off, neither happens, whatever {@link #countingKippenbom} says, and the Kippenbom has no signature
+	 * landing: no chase, so no chickens in a fight. A placed Kippenbom's boom in free play doesn't depend on it.
 	 */
 	public boolean kippenbomChickens = true;
 

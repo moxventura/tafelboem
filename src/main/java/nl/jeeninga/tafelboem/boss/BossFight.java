@@ -410,7 +410,7 @@ public final class BossFight implements QuizListener {
 		LandingStyle landing = queuedLandings.poll();
 		if (landing == null) {
 			landing = reactions.nextLanding(kick == null ? BombTier.KNALLETJE : kick.tier(), yeet.style(), config.yeetCatalogue,
-					kick != null && config.bombSignatures);
+					kick != null && config.bombSignatures && (kick.tier() != BombTier.KIPPENBOM || config.kippenbomChickens));
 		} else {
 			reactions.played(landing);
 		}
