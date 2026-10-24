@@ -103,7 +103,7 @@ final class TestWorld {
 		// world the kicker's simulation distance always reaches him, so keep the chunks around him ticking.
 		if (fights != null) {
 			for (BossFight fight : fights.active()) {
-				level.getChunkSource().addTicketWithRadius(TicketType.PORTAL, ChunkPos.containing(fight.boss().blockPosition()), 4);
+				OpenField.keepTicking(level, fight.boss());
 			}
 		}
 	}

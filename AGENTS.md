@@ -91,7 +91,7 @@ GameTest pitfalls:
 - Mock players from `makeMockServerPlayerInLevel()` are in creative; use
   `makeMockServerPlayer(GameType.…)` for another game mode.
 - Mock players keep no chunks simulated: an entity that leaves the chunks the test has tickets for
-  freezes mid-air. `TestWorld` keeps the chunks around Graaf Fout ticking.
+  freezes mid-air. `TestWorld` and `OpenField` keep the chunks around Graaf Fout ticking.
 - Run a new slow GameTest (a whole fight) three times before trusting it: a 1-in-20 flake hid in
   one for a whole release.
 - GameTests can't load a world twice. Check anything that happens on a second load (blocks placed
