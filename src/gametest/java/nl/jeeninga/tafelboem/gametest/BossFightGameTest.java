@@ -50,6 +50,8 @@ import nl.jeeninga.tafelboem.registry.ModBlocks;
 public class BossFightGameTest {
 	/** Out of the boss bar's reach (48), but within the 96 he may come back from. */
 	private static final int FAR_AWAY = 60;
+	/** The chase chickens spawn 2 blocks behind him and run to him; anything further off is not theirs. */
+	private static final int CHASE_RADIUS = 10;
 
 	@GameTest(maxTicks = 600)
 	@SuppressWarnings("removal") // mock players are still the only way to test without a client
@@ -529,8 +531,8 @@ public class BossFightGameTest {
 
 	/**
 	 * The chase's 4 chickens go when the chase ends: left standing they would look like one more group
-	 * next to the counting Kippenbom's. A level 1 fight has no counting chickens, so every spectacle
-	 * chicken near him is the chase's.
+	 * next to the counting Kippenbom's. A level 1 fight has no counting chickens, and the count is
+	 * taken only around him (they run to him), so a neighbouring test's chickens never count.
 	 */
 	@GameTest(maxTicks = 600, padding = 48)
 	@SuppressWarnings("removal") // mock players are still the only way to test without a client
@@ -557,10 +559,10 @@ public class BossFightGameTest {
 			fights.tick();
 			if (fight.boss().landingStyle() == LandingStyle.CHASED) {
 				chased[0] = true;
-				mostDuringTheChase[0] = Math.max(mostDuringTheChase[0], spectacleChickens(helper, stand, 60));
+				mostDuringTheChase[0] = Math.max(mostDuringTheChase[0], spectacleChickens(helper, fight.boss().position(), CHASE_RADIUS));
 			} else if (chased[0] && !chaseOver[0]) {
 				chaseOver[0] = true;
-				leftWhenItEnded[0] = spectacleChickens(helper, stand, 60);
+				leftWhenItEnded[0] = spectacleChickens(helper, fight.boss().position(), CHASE_RADIUS);
 			}
 			for (RecordingQuizClient.Sent sent : List.copyOf(client.sentTo)) {
 				QuizS2C question = sent.payload();
