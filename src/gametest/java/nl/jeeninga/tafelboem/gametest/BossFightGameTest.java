@@ -126,7 +126,7 @@ public class BossFightGameTest {
 	}
 
 	/** The landings this test forces, one per kick; every one of them must end and let the fight go on. */
-	private static final List<LandingStyle> LANDINGS = List.of(LandingStyle.DIZZY);
+	private static final List<LandingStyle> LANDINGS = List.of(LandingStyle.DIZZY, LandingStyle.HEAD_FIRST, LandingStyle.PANCAKE, LandingStyle.FRANTIC_RUN);
 
 	/** A landing that never ends would stall the fight: after each one he gets up and throws again. */
 	@GameTest(maxTicks = 2400, padding = 48)
@@ -145,6 +145,9 @@ public class BossFightGameTest {
 		LANDINGS.forEach(fight::queueLanding);
 
 		Set<LandingStyle> seen = EnumSet.noneOf(LandingStyle.class);
+		// In the order they begin: with the catalogue on, the picker's own landings follow the queued ones.
+		List<LandingStyle> started = new ArrayList<>();
+		LandingStyle[] previous = {null};
 		Set<Integer> answered = new HashSet<>();
 		helper.onEachTick(() -> {
 			sessions.tick();
@@ -152,7 +155,15 @@ public class BossFightGameTest {
 			LandingStyle landing = fight.boss().landingStyle();
 			if (landing != null) {
 				seen.add(landing);
+				if (landing != previous[0]) {
+					started.add(landing);
+				}
+				if (landing == LandingStyle.FRANTIC_RUN) {
+					helper.assertTrue(fight.boss().distanceTo(player) >= 1.5,
+							"running round he keeps away from the kid: " + fight.boss().distanceTo(player) + " blocks");
+				}
 			}
+			previous[0] = landing;
 			for (RecordingQuizClient.Sent sent : List.copyOf(client.sentTo)) {
 				QuizS2C question = sent.payload();
 				if (question.mode() == QuizS2C.ASK && answered.add(question.sessionId())) {
@@ -162,7 +173,8 @@ public class BossFightGameTest {
 		});
 
 		helper.succeedWhen(() -> {
-			helper.assertTrue(seen.containsAll(LANDINGS), "wait until every landing has played: " + seen);
+			helper.assertTrue(started.size() >= LANDINGS.size() && started.subList(0, LANDINGS.size()).equals(LANDINGS),
+					"wait until every queued landing has played, in order: " + started);
 			helper.assertTrue(answered.size() > LANDINGS.size(), "and he threw again after the last one");
 			fights.endAll();
 		});

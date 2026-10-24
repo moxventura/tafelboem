@@ -45,6 +45,9 @@ public abstract class Landing {
 	public static Landing start(LandingStyle style, GraafFout boss, Scene scene, ServerLevel level) {
 		Landing landing = switch (style) {
 			case DIZZY -> new DizzyLanding(boss, scene);
+			case HEAD_FIRST -> new HeadFirstLanding(boss, scene);
+			case PANCAKE -> new PancakeLanding(boss, scene);
+			case FRANTIC_RUN -> new FranticRunLanding(boss, scene);
 			default -> throw new IllegalArgumentException("No landing built for " + style + " yet");
 		};
 		landing.begin(level);

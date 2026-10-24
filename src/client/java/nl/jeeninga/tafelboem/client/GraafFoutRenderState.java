@@ -5,9 +5,9 @@ import net.minecraft.client.renderer.entity.state.EvokerRenderState;
 import nl.jeeninga.tafelboem.core.YeetPose;
 
 /**
- * The evoker's render state plus how far Graaf Fout is rolled, flipped or face down right now.
+ * The evoker's render state plus how far Graaf Fout is rolled, flipped, squashed or sunk right now.
  */
 public class GraafFoutRenderState extends EvokerRenderState {
 	public YeetPose pose = YeetPose.NONE;
-	public YeetPose.Angles angles = YeetPose.Angles.UPRIGHT;
+	public YeetPose.Transform transform = YeetPose.Transform.UPRIGHT;
 }
