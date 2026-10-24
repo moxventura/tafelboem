@@ -44,8 +44,10 @@ public final class SessionManager {
 	static final int SPECTACLE_LIFETIME_TICKS = 20 * 60;
 	/** Counting chickens go sooner than other spectacle animals, so 10 × 10 on Moeilijk never piles up. */
 	static final int COUNTING_LIFETIME_TICKS = 20 * 10;
-	/** The first generation flies for a second before it pops into the groups. */
-	static final int COUNTING_POP_TICKS = 20;
+	/** The first generation pops into its group on landing, but not before it has flown for half a second... */
+	static final int COUNTING_POP_MIN_TICKS = 10;
+	/** ...and at the latest after two seconds, for a chicken over the void or stuck on a ledge. */
+	static final int COUNTING_POP_MAX_TICKS = 40;
 	/** Above this many spectacle animals the oldest poof first, so nothing lags the PC. */
 	public static final int MAX_SPECTACLES = 150;
 
@@ -321,8 +323,8 @@ public final class SessionManager {
 	}
 
 	/**
-	 * The counting Kippenbom: one chicken per group flies out, and a second later each pops into its
-	 * group, so the kids see a × b as a groups of b.
+	 * The counting Kippenbom: one chicken per group flies out, and each pops into its group where it
+	 * lands, so the kids see a × b as a groups of b standing together.
 	 *
 	 * @param where "fight" or "free play", for the game log
 	 */
@@ -330,19 +332,25 @@ public final class SessionManager {
 		ChickenCount count = ChickenCount.of(fact);
 		List<Chicken> firsts = BombEffects.countingChickens(level, at, count.groups(), count.ringSpeed());
 		firsts.forEach(chicken -> track(chicken, COUNTING_LIFETIME_TICKS));
-		bursts.add(new ChickenBurst(level, firsts, count.perGroup()));
+		bursts.add(new ChickenBurst(level, new ArrayList<>(firsts), count.perGroup()));
 		TafelBoem.LOGGER.info("TafelBoem chickens: {}", count.describe(where));
 	}
 
 	private void tickBursts() {
 		for (Iterator<ChickenBurst> it = bursts.iterator(); it.hasNext(); ) {
 			ChickenBurst burst = it.next();
-			if (--burst.ticksLeft > 0) {
-				continue;
-			}
-			it.remove();
-			for (Chicken first : burst.firsts) {
-				BombEffects.popChicken(burst.level, first, burst.perGroup).forEach(chicken -> track(chicken, COUNTING_LIFETIME_TICKS));
+			burst.age++;
+			burst.firsts.removeIf(first -> {
+				// A chicken a boom took pops where it was last, so the groups always add up to the sum.
+				boolean ready = !first.isAlive() || burst.age >= COUNTING_POP_MAX_TICKS
+						|| burst.age >= COUNTING_POP_MIN_TICKS && first.onGround();
+				if (ready) {
+					BombEffects.popChicken(burst.level, first, burst.perGroup).forEach(chicken -> track(chicken, COUNTING_LIFETIME_TICKS));
+				}
+				return ready;
+			});
+			if (burst.firsts.isEmpty()) {
+				it.remove();
 			}
 		}
 	}
@@ -398,7 +406,7 @@ public final class SessionManager {
 		final ServerLevel level;
 		final List<Chicken> firsts;
 		final int perGroup;
-		int ticksLeft = COUNTING_POP_TICKS;
+		int age;
 
 		ChickenBurst(ServerLevel level, List<Chicken> firsts, int perGroup) {
 			this.level = level;

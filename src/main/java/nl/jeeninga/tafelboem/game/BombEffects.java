@@ -91,15 +91,16 @@ public final class BombEffects {
 	}
 
 	/**
-	 * A first-generation chicken pops into its group, close together so the group shows. It pops where
-	 * it was last, even when a boom took it meanwhile, so the groups always add up to the sum.
+	 * A first-generation chicken pops into its group where it landed: a tight cluster with no lift, so
+	 * the group lands and stands together. It pops where it was last, even when a boom took it
+	 * meanwhile, so the groups always add up to the sum.
 	 */
 	public static List<Chicken> popChicken(ServerLevel level, Chicken first, int count) {
 		Vec3 at = first.position();
 		first.discard();
 		poof(level, at);
 		level.playSound(null, at.x, at.y, at.z, SoundEvents.CHICKEN_EGG, SoundSource.NEUTRAL, 1.0f, 1.6f);
-		return releaseChickens(level, at, count, 0.08, 0.25);
+		return releaseChickens(level, at, count, 0.03, 0);
 	}
 
 	/** Chickens that hop out low, for the Kippenbom's signature chase. */
