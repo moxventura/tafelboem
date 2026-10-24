@@ -3,6 +3,7 @@ package nl.jeeninga.tafelboem.gametest;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
+import java.util.List;
 import java.util.function.ToIntFunction;
 
 import net.minecraft.core.BlockPos;
@@ -64,11 +65,45 @@ public class ChickenGameTest {
 		helper.onEachTick(() -> helper.assertTrue(chickens(helper, at) <= SessionManager.MAX_SPECTACLES,
 				"the oldest poof first: " + chickens(helper, at) + " chickens"));
 
-		// Every first chicken has popped by 40 ticks.
+		// Every first chicken has popped by 40 ticks; the cap then keeps a crowd, not a handful.
 		helper.runAfterDelay(50, () -> {
 			int alive = chickens(helper, at);
-			helper.assertTrue(alive >= 100, "the newest burst is whole: " + alive + " chickens");
+			helper.assertTrue(alive >= 100, "after the cap 100 or more chickens are left: " + alive + " chickens");
 			helper.succeed();
+		});
+	}
+
+	/**
+	 * A first chicken that a boom took pops where it was last, and one held in the air pops at the
+	 * limit, so the groups still add up to the sum.
+	 */
+	@GameTest(maxTicks = 120, padding = 48)
+	public void aChickenThatIsGoneOrStuckInTheAirStillPopsIntoItsGroup(GameTestHelper helper) {
+		OpenField.open(helper);
+		SessionManager sessions = sessions(helper);
+		Vec3 at = Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(1, 1, 1)));
+		sessions.countChickens(helper.getLevel(), at, new Fact(3, 4), "test");
+		List<Chicken> firsts = helper.getLevel().getEntitiesOfClass(Chicken.class, new AABB(at, at).inflate(24),
+				chicken -> chicken.entityTags().contains(BombEffects.SPECTACLE_TAG));
+		helper.assertTrue(firsts.size() == 3, "first one chicken per group");
+		firsts.get(0).discard();
+		firsts.get(1).setNoGravity(true);
+		helper.onEachTick(sessions::tick);
+
+		int[] tick = {0};
+		int[] fullAt = {-1};
+		helper.onEachTick(() -> {
+			tick[0]++;
+			int now = chickens(helper, at);
+			helper.assertTrue(now <= 12, "never more than the sum: " + now);
+			if (now == 12 && fullAt[0] < 0) {
+				fullAt[0] = tick[0];
+			}
+		});
+		helper.succeedWhen(() -> {
+			helper.assertTrue(fullAt[0] >= 0, "3 groups of 4 in the end, seen " + chickens(helper, at));
+			helper.assertTrue(fullAt[0] >= 38, // the limit is 40 ticks after the burst
+					"the chicken in the air pops at the limit, not before: tick " + fullAt[0]);
 		});
 	}
 

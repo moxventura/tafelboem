@@ -1,6 +1,7 @@
 package nl.jeeninga.tafelboem.gametest;
 
 import java.util.List;
+import java.util.Set;
 
 import org.lwjgl.glfw.GLFW;
 
@@ -86,9 +87,6 @@ public class PlaythroughClientGameTest implements FabricClientGameTest {
 			// pops into its group where it lands; the groups are shot 20 ticks after the last pop.
 			countOnCue(context, world, 3, 4, 8, 6, "tafelboem-r1.1-counting");
 
-			// A 10 x 10 (Moeilijk) for a look at whether the groups touch; not for the README.
-			countOnCue(context, world, 10, 10, 16, 14, "tafelboem-r1.1-counting-10x10");
-
 			// 3. Graaf Fout: summon, wait for his bomb, kick it back, watch him fly.
 			Vec3 bossSpot = world.getServer().computeOnServer(server -> {
 				ServerPlayer player = server.getPlayerList().getPlayers().getFirst();
@@ -147,6 +145,7 @@ public class PlaythroughClientGameTest implements FabricClientGameTest {
 
 			// 5. The R1.1 landings and the wall splat, on cue, since a fight picks them at random. Chat
 			// is hidden: Graaf Fout's lines would cover the low poses.
+			ChatVisiblity chatBefore = context.computeOnClient(client -> client.options.chatVisibility().get());
 			context.runOnClient(client -> client.options.chatVisibility().set(ChatVisiblity.HIDDEN));
 			for (LandingStyle landing : List.of(LandingStyle.HEAD_FIRST, LandingStyle.PANCAKE, LandingStyle.TOE_HOP, LandingStyle.SOOT,
 					LandingStyle.CHASED)) {
@@ -188,7 +187,7 @@ public class PlaythroughClientGameTest implements FabricClientGameTest {
 			context.getInput().lookAt(splatted);
 			context.waitTicks(2);
 			context.takeScreenshot("tafelboem-r1.1-wall-splat");
-			context.runOnClient(client -> client.options.chatVisibility().set(ChatVisiblity.FULL));
+			context.runOnClient(client -> client.options.chatVisibility().set(chatBefore));
 			world.getServer().runOnServer(server -> TafelBoem.fights().endAll());
 		}
 	}
@@ -274,16 +273,27 @@ public class PlaythroughClientGameTest implements FabricClientGameTest {
 			context.waitTicks(1);
 		}
 		context.waitTicks(20);
-		GameType before = world.getServer().computeOnServer(server -> {
+		// Spectator can float over them; afterwards the player is exactly where, how and in which mode he was.
+		Stand before = world.getServer().computeOnServer(server -> {
 			ServerPlayer player = server.getPlayerList().getPlayers().getFirst();
-			GameType mode = player.gameMode.getGameModeForPlayer();
+			Stand stand = new Stand(player.position(), player.getYRot(), player.getXRot(), player.getAbilities().flying,
+					player.gameMode.getGameModeForPlayer());
 			player.setGameMode(GameType.SPECTATOR);
-			return mode;
+			return stand;
 		});
 		lookAtChickens(context, world, at, distance, height);
 		context.takeScreenshot(shot);
-		world.getServer().runOnServer(server -> server.getPlayerList().getPlayers().getFirst().setGameMode(before));
-		context.waitTicks(2);
+		world.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().getFirst();
+			player.setGameMode(before.mode());
+			player.getAbilities().flying = before.flying();
+			player.onUpdateAbilities();
+			player.teleportTo(player.level(), before.pos().x, before.pos().y, before.pos().z, Set.of(), before.yaw(), before.pitch(), true);
+		});
+		context.waitTicks(4);
+	}
+
+	private record Stand(Vec3 pos, float yaw, float pitch, boolean flying, GameType mode) {
 	}
 
 	/** The groups fill the view: float this far from the middle of them and this high (spectator, so no falling), and look at it. */

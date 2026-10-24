@@ -77,9 +77,9 @@ so the kids can also build there in creative.
   you see "New record!". Nobody else sees your reasons or records. Set `yeetBoost` or `yeetRecords`
   to `false` to switch them off.
 - **The counting Kippenbom.** A right answer on a Kippenbom counts its chickens out as the sum: for
-  3 × 4, 3 chickens fly out and each pops into 4, so you see 3 groups of 4. They poof after 10
-  seconds. A wrong answer lets 1 chicken hop out at you. Set `countingKippenbom` to `false` for 12
-  flying chickens as in 1.0.
+  3 × 4, 3 chickens fly out and each pops into 4 where it lands, so you see 3 groups of 4 standing
+  together. They poof after 10 seconds. A wrong answer lets 1 chicken hop out at you. Set
+  `countingKippenbom` to `false` for 12 flying chickens as in 1.0.
 - **A win.** Everyone still in the arena gets 4 cooked chicken and their stars, and is back in the
   hub 5 seconds later. Eat to keep the hunger bar full: with a full bar, lost hearts come back by
   themselves (on Peaceful there is no hunger at all). Set `foodReward` to `false` to give 4
@@ -229,7 +229,7 @@ version, and the mod warns when they don't match, even when two builds are only 
 | `arenaCraters` | `true` | In an arena, the kicked bomb that hits Graaf Fout breaks blocks (never bedrock, obsidian or the floor near a kid). `false` makes it a show only. Bombs the kids place themselves blow craters either way |
 | `wrongAnswerDamage` | `true` | In survival, a typed wrong answer costs 1 heart on level 2 and 2 on level 3, never the last half heart |
 | `foodReward` | `true` | A win on a level gives 4 cooked chicken, to heal the hearts. `false` gives 4 Kippenbommen |
-| `kippenbomChickens` | `true` | A Kippenbom kicked into Graaf Fout lets chickens loose, and a wrong answer lets some hop out at the kid. `false`: no chickens in a fight |
+| `kippenbomChickens` | `true` | A Kippenbom kicked into Graaf Fout lets chickens loose, and a wrong answer lets some hop out at the kid. `false`: no chickens in a fight, and no chase; a placed Kippenbom in free play still counts |
 | `countingKippenbom` | `true` | A Kippenbom's chickens show the sum: 3 × 4 is 3 groups of 4, and a wrong answer lets 1 hop out. `false`: 12 chickens fly (3 after a wrong answer), as in 1.0 |
 | `yeetBoost` | `true` | A fast answer or right answers in a row yeet Graaf Fout further (×1.3 at most), and the kicker's meter says why |
 | `yeetRecords` | `true` | In a TafelBoem world, a yeet further than the kid's own best shows "New record!" to that kid |
