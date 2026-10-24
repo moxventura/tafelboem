@@ -100,8 +100,9 @@ public final class QuizSession {
 		return usualMillis;
 	}
 
+	/** Clearly faster than the kid's usual time; false until the right answer is in. */
 	public boolean wasFast() {
-		return AnswerTimes.isFast(usualMillis, answerMillis);
+		return answerMillis >= 0 && AnswerTimes.isFast(usualMillis, answerMillis);
 	}
 
 	public State state() {
