@@ -630,8 +630,8 @@ The action bar never reaches `latest.log`, so the host's log gets:
   answer times (last 5, at least 3, the current answer not counted), the chicken count for all 100
   sums (never fewer than a wrong answer's 1), the streak rules, an old fights-log line, the pose
   transforms, the running circle (inside the arena, away from kids), the pacing.
-- **Game tests:** a fight forced through every landing never stalls; every flight at full boosted
-  power lands within the limit; a 3 × 4 burst gives 12 chickens and none are left after 12 s; the
+- **Game tests:** a fight forced through every landing never stalls; a full-power helicopter (the
+  one flight whose time in the air grows with the power) lands within the limit; a 3 × 4 burst gives 12 chickens and none are left after 12 s; the
   boost text and the record reach only the kicker; a fly-out during a landing cancels it. Slow
   fight tests run three times.
 - **Client game test:** screenshots of head-first, pancake, splat, soot face and toe hop.
