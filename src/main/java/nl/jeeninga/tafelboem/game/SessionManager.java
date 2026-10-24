@@ -151,6 +151,8 @@ public final class SessionManager {
 
 	private void correct(ServerPlayer player, QuizSession session, String via) {
 		long millis = session.elapsedMillis();
+		// Before recording, so the answer never counts towards its own usual time.
+		session.answered(millis, learners.usualMillis(player, session.fact()));
 		learners.record(player, session.fact(), Outcome.CORRECT, session.fact().product(), millis, session.tier(), session.context(),
 				via, 0, levelOf(session.listener()));
 
