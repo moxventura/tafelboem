@@ -1,8 +1,12 @@
 package nl.jeeninga.tafelboem.game;
 
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket;
+import net.minecraft.network.protocol.game.ClientboundSoundPacket;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -37,6 +41,12 @@ public interface QuizClient {
 				ServerPlayNetworking.send(player, new CameraS2C(target.getId(), ticksAfterScreen, kick));
 			}
 		}
+
+		@Override
+		public void sound(ServerPlayer player, SoundEvent sound) {
+			player.connection.send(new ClientboundSoundPacket(BuiltInRegistries.SOUND_EVENT.wrapAsHolder(sound), SoundSource.PLAYERS,
+					player.getX(), player.getY(), player.getZ(), 1.0F, 1.0F, player.getRandom().nextLong()));
+		}
 	};
 
 	/** False when the player's client doesn't have TafelBoem installed. */
@@ -48,4 +58,7 @@ public interface QuizClient {
 
 	/** Turn the player's view towards {@code target}; see {@link CameraS2C}. */
 	void track(ServerPlayer player, Entity target, int ticksAfterScreen, boolean kick);
+
+	/** A sound only this player hears, such as the toast of a new record. */
+	void sound(ServerPlayer player, SoundEvent sound);
 }

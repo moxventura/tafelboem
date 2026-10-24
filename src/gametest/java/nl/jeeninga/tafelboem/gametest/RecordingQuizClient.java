@@ -5,6 +5,7 @@ import java.util.List;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.Entity;
 
 import nl.jeeninga.tafelboem.game.QuizClient;
@@ -20,10 +21,18 @@ final class RecordingQuizClient implements QuizClient {
 	record Track(ServerPlayer player, int entityId, int ticksAfterScreen, boolean kick) {
 	}
 
+	record Bar(ServerPlayer player, Component message) {
+	}
+
+	record Sound(ServerPlayer player, SoundEvent sound) {
+	}
+
 	final List<QuizS2C> sent = new ArrayList<>();
 	final List<Sent> sentTo = new ArrayList<>();
 	final List<Component> actionBars = new ArrayList<>();
 	final List<Track> tracks = new ArrayList<>();
+	final List<Bar> actionBarsTo = new ArrayList<>();
+	final List<Sound> sounds = new ArrayList<>();
 
 	@Override
 	public boolean canReceive(ServerPlayer player) {
@@ -39,6 +48,12 @@ final class RecordingQuizClient implements QuizClient {
 	@Override
 	public void actionBar(ServerPlayer player, Component message) {
 		actionBars.add(message);
+		actionBarsTo.add(new Bar(player, message));
+	}
+
+	@Override
+	public void sound(ServerPlayer player, SoundEvent sound) {
+		sounds.add(new Sound(player, sound));
 	}
 
 	@Override

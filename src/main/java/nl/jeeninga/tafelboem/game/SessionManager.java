@@ -67,6 +67,11 @@ public final class SessionManager {
 		return client;
 	}
 
+	/** The parent's switches; GameTests pass their own. */
+	public TafelBoemConfig config() {
+		return config;
+	}
+
 	public boolean isBusy(ServerPlayer player) {
 		return sessions.containsKey(player.getUUID());
 	}

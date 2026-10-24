@@ -76,6 +76,7 @@ public class TafelBoem implements ModInitializer {
 				playSummaries.fought(fight);
 			});
 			sessions = new SessionManager(server, new Learners(log), QuizClient.NETWORK, config);
+			LOGGER.info("TafelBoem config: {}", config.describe());
 			fights = new BossFights(sessions);
 
 			ServerLevel overworld = server.overworld();

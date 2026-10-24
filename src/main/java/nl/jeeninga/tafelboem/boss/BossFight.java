@@ -27,9 +27,9 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
-import nl.jeeninga.tafelboem.TafelBoem;
 import nl.jeeninga.tafelboem.block.BombBlock;
 import nl.jeeninga.tafelboem.boss.yeet.Yeet;
+import nl.jeeninga.tafelboem.config.TafelBoemConfig;
 import nl.jeeninga.tafelboem.core.ArenaBox;
 import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.Fight;
@@ -84,6 +84,7 @@ public final class BossFight implements QuizListener {
 	private final ServerLevel level;
 	private final GraafFout boss;
 	private final SessionManager sessions;
+	private final TafelBoemConfig config;
 	private final FightLevel fightLevel;
 	private final @Nullable ArenaBox arena;
 	private final Fight fight;
@@ -100,6 +101,7 @@ public final class BossFight implements QuizListener {
 		this.level = level;
 		this.boss = boss;
 		this.sessions = sessions;
+		this.config = sessions.config();
 		this.fightLevel = fightLevel;
 		this.arena = arena;
 		this.fight = Fight.of(fightLevel);
@@ -302,7 +304,7 @@ public final class BossFight implements QuizListener {
 	public void onMiss(ServerPlayer player, QuizSession session, Outcome outcome) {
 		tally(player.getUUID()).record(outcome);
 		// Only a typed wrong answer: "?" must stay better than guessing.
-		if (outcome == Outcome.WRONG && TafelBoem.config().wrongAnswerDamage) {
+		if (outcome == Outcome.WRONG && config.wrongAnswerDamage) {
 			BombEffects.hurt(player, fightLevel.wrongAnswerDamage());
 		}
 		int a = session.fact().a();
@@ -332,13 +334,13 @@ public final class BossFight implements QuizListener {
 			return;
 		}
 		// The bigger the bomb, the bigger the bang and the further he flies.
-		boolean craters = arena != null && TafelBoem.config().arenaCraters;
+		boolean craters = arena != null && config.arenaCraters;
 		ExplosionDamageCalculator boom = craters
 				? PlayerSafeExplosion.sparing(participants.players().stream().map(ServerPlayer::position).toList(), SAFE_FLOOR_RADIUS)
 				: PlayerSafeExplosion.SHOW;
 		level.explode(null, null, boom, boss.getX(), boss.getY() + 1, boss.getZ(), tier.blastRadius(), false,
 				craters ? Level.ExplosionInteraction.TNT : Level.ExplosionInteraction.NONE);
-		if (tier == BombTier.KIPPENBOM && TafelBoem.config().kippenbomChickens) {
+		if (tier == BombTier.KIPPENBOM && config.kippenbomChickens) {
 			BombEffects.flyingChickens(level, boss.position());
 			sessions.collectSpectacles(level, boss.blockPosition());
 		}
@@ -411,7 +413,7 @@ public final class BossFight implements QuizListener {
 
 	private void reward() {
 		// On the door levels a wrong answer costs hearts, so the reward is food that heals them. The R0.1 fight keeps its bombs.
-		Item item = fightLevel != FightLevel.CLASSIC && TafelBoem.config().foodReward ? Items.COOKED_CHICKEN : ModBlocks.bombItem(BombTier.KIPPENBOM);
+		Item item = fightLevel != FightLevel.CLASSIC && config.foodReward ? Items.COOKED_CHICKEN : ModBlocks.bombItem(BombTier.KIPPENBOM);
 		Component name = new ItemStack(item).getHoverName();
 		for (ServerPlayer player : participants.players()) {
 			ItemStack loot = new ItemStack(item, LOOT_COUNT);
