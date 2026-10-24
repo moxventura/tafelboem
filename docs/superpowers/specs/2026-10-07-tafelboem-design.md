@@ -557,7 +557,7 @@ picked at the kick and the landing when he lands.
   |---|---|
   | Knalletje | hops on one leg holding his toe, "au!", confetti around his head |
   | Gewone TNT | soot face with white eyes, and he coughs smoke |
-  | Kippenbom | runs from 4 angry chickens that appear where he lands |
+  | Kippenbom | runs from 4 angry chickens that appear where he lands, and poof when the chase ends |
 
 - **Picking rules:**
   - Each bomb remembers its own last kick. Its signature plays when that kick didn't get it and
