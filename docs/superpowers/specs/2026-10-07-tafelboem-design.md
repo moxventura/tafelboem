@@ -602,9 +602,12 @@ picked at the kick and the landing when he lands.
 
 ### The counting Kippenbom
 - A right answer on a Kippenbom for a × b sends **a** chickens out in a ring where the bomb goes off
-  (where it hits Graaf Fout, or where it stood in free play). About 1 s later each one pops into
-  **b** chickens, so 3 × 4 shows as 12 chickens in 3 groups: two generations at most. The groups
-  form while he flies, between the kicker and him, where the camera looks.
+  (where it hits Graaf Fout, or where it stood in free play). When it lands (about 1 s later, 2 s
+  at most) each one pops into a tight group of **b** chickens that stands on the ground, so 3 × 4
+  shows as 12 chickens in 3 groups: two generations at most. The groups form while he flies,
+  between the kicker and him, where the camera looks. (A group that popped in mid-air fluttered
+  down spread out and read as a flock. On 10 × 10 the ring is so full that neighbouring groups
+  touch; the playtest judges where that starts to matter.)
 - Counting chickens poof after 10 s, and no more than 150 spectacle animals live at once (the
   oldest poof first), so 10 × 10 on Moeilijk can't pile up.
 - A wrong answer on a Kippenbom lets **1** chicken hop out while counting is on: never more than the
