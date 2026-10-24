@@ -16,7 +16,8 @@ import nl.jeeninga.tafelboem.game.BombEffects;
 
 /**
  * The Kippenbom's signature: 4 angry chickens appear behind him where he landed and chase him while
- * he runs round. They aren't the counted chickens: those stay in their groups where the bomb hit.
+ * he runs round, and poof when the chase ends. They aren't the counted chickens: those stay in their
+ * groups where the bomb hit.
  */
 final class ChasedLanding extends FranticRunLanding {
 	private static final int CHICKENS = 4;
@@ -60,6 +61,12 @@ final class ChasedLanding extends FranticRunLanding {
 	@Override
 	public void finish() {
 		super.finish();
-		chickens.forEach(chicken -> chicken.getNavigation().stop());
+		// Left standing they would look like one more group next to the counting Kippenbom's.
+		for (Chicken chicken : chickens) {
+			if (chicken.isAlive() && chicken.level() instanceof ServerLevel level) {
+				BombEffects.poof(level, chicken.position());
+				chicken.discard();
+			}
+		}
 	}
 }

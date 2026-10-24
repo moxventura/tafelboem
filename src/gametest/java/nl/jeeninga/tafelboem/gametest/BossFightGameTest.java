@@ -456,6 +456,58 @@ public class BossFightGameTest {
 		});
 	}
 
+	/**
+	 * The chase's 4 chickens go when the chase ends: left standing they would look like one more group
+	 * next to the counting Kippenbom's. A level 1 fight has no counting chickens, so every spectacle
+	 * chicken near him is the chase's.
+	 */
+	@GameTest(maxTicks = 600, padding = 48)
+	@SuppressWarnings("removal") // mock players are still the only way to test without a client
+	public void theChaseChickensPoofWhenTheChaseEnds(GameTestHelper helper) {
+		OpenField.open(helper);
+		RecordingQuizClient client = new RecordingQuizClient();
+		SessionManager sessions = new SessionManager(helper.getLevel().getServer(), new Learners(new AnswerLog(tempDir())), client);
+		BossFights fights = new BossFights(sessions);
+
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		Vec3 stand = Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(1, 1, 1)));
+		player.teleportTo(stand.x, stand.y, stand.z);
+		helper.assertTrue(fights.summon(helper.getLevel(), stand.add(6, 1.5, 0)), "Graaf Fout should appear");
+		BossFight fight = fights.active().getFirst();
+		fight.queueLanding(LandingStyle.CHASED);
+
+		int[] mostDuringTheChase = {0};
+		boolean[] chased = {false};
+		boolean[] chaseOver = {false};
+		int[] leftWhenItEnded = {-1};
+		Set<Integer> answered = new HashSet<>();
+		helper.onEachTick(() -> {
+			sessions.tick();
+			fights.tick();
+			if (fight.boss().landingStyle() == LandingStyle.CHASED) {
+				chased[0] = true;
+				mostDuringTheChase[0] = Math.max(mostDuringTheChase[0], spectacleChickens(helper, stand, 60));
+			} else if (chased[0] && !chaseOver[0]) {
+				chaseOver[0] = true;
+				leftWhenItEnded[0] = spectacleChickens(helper, stand, 60);
+			}
+			for (RecordingQuizClient.Sent sent : List.copyOf(client.sentTo)) {
+				QuizS2C question = sent.payload();
+				if (question.mode() == QuizS2C.ASK && answered.add(question.sessionId())) {
+					sessions.onClientAction(sent.player(), new QuizC2S(question.sessionId(), QuizC2S.ANSWER, question.a() * question.b(), QuizC2S.VIA_KEY));
+				}
+			}
+		});
+
+		helper.succeedWhen(() -> {
+			helper.assertTrue(chaseOver[0], "wait until the chase is over");
+			helper.assertTrue(mostDuringTheChase[0] == 4, "4 chickens chased him, saw " + mostDuringTheChase[0]);
+			// Measured on the tick it ended: their 10 s timer would clear them later whatever the landing does.
+			helper.assertTrue(leftWhenItEnded[0] == 0, "the chase chickens are gone with the chase, but " + leftWhenItEnded[0] + " were left");
+			fights.endAll();
+		});
+	}
+
 	/** The landings seen so far, in order, and the most spectacle chickens near the fight at once. */
 	private record LandingWatch(List<LandingStyle> landings, int[] mostChickens, BossFights fights) {
 	}
