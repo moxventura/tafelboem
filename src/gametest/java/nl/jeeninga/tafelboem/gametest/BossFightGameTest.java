@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -29,6 +30,7 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 
 import nl.jeeninga.tafelboem.boss.BossFight;
 import nl.jeeninga.tafelboem.boss.BossFights;
+import nl.jeeninga.tafelboem.boss.GraafFout;
 import nl.jeeninga.tafelboem.config.TafelBoemConfig;
 import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.ChickenCount;
@@ -50,8 +52,10 @@ import nl.jeeninga.tafelboem.registry.ModBlocks;
 public class BossFightGameTest {
 	/** Out of the boss bar's reach (48), but within the 96 he may come back from. */
 	private static final int FAR_AWAY = 60;
-	/** The chase chickens spawn 2 blocks behind him and run to him; anything further off is not theirs. */
-	private static final int CHASE_RADIUS = 10;
+	/** The chase chickens appear 2 blocks behind him, all at one spot, on the tick the landing begins. */
+	private static final int CHASE_SPAWN_RADIUS = 4;
+	/** Spectacle chickens this close to him before the chase begins are not the chase's. */
+	private static final int NOT_THE_CHASE_RADIUS = 40;
 
 	@GameTest(maxTicks = 600)
 	@SuppressWarnings("removal") // mock players are still the only way to test without a client
@@ -181,16 +185,16 @@ public class BossFightGameTest {
 	}
 
 	/**
-	 * Two kids, one Graaf Fout who takes turns: every camera message goes to the kid whose bomb it
-	 * is, and the other kid's view is never touched. Runs until both have kicked, so a stale kicker
-	 * from the previous yeet would show up too.
-	 */
-	/**
 	 * The safety net: if Graaf Fout ever stops being ticked mid-yeet (an entity in a chunk nothing
 	 * simulates), the fight must not wait for his landing for ever. Real play can't get there, so the
-	 * test carries him past what {@link OpenField} follows, into a chunk where entities don't tick.
+	 * test carries him, right after the first kick, to a chunk beyond all the tests where entities don't
+	 * tick (a ticket of its own keeps that chunk loaded but quiet).
+	 *
+	 * <p>A neighbouring OpenField test's boss could wake him by keeping the chunks around itself
+	 * ticking; then he is put back next to the kid and the next kick freezes him in the next chunk.
+	 * Without the safety net he would never get out, so the test can't pass without it.
 	 */
-	@GameTest(maxTicks = 900, padding = 48)
+	@GameTest(maxTicks = 1500, padding = 48)
 	@SuppressWarnings("removal") // mock players are still the only way to test without a client
 	public void aFightGoesOnWhenGraafFoutFreezesMidYeet(GameTestHelper helper) {
 		OpenField.open(helper);
@@ -202,27 +206,47 @@ public class BossFightGameTest {
 		ServerPlayer player = helper.makeMockServerPlayerInLevel();
 		Vec3 stand = Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(1, 1, 1)));
 		player.teleportTo(stand.x, stand.y, stand.z);
-		helper.assertTrue(fights.summon(level, stand.add(6, 1.5, 0)), "Graaf Fout should appear");
+		Vec3 home = stand.add(6, 1.5, 0);
+		helper.assertTrue(fights.summon(level, home), "Graaf Fout should appear");
 		BossFight fight = fights.active().getFirst();
 
+		// Quiet chunks: loaded by a ticket of our own (block ticking), but outside everything the other tests keep ticking.
+		// The tests stand in a tight grid whose tickets cover all of its surroundings, so they are found a few ticks in.
+		List<ChunkPos> quiet = new ArrayList<>();
+
 		Set<Integer> answered = new HashSet<>();
-		int[] frozenAt = {-1};
-		int[] frozenTicks = {0};
+		int[] woken = {0}; // how many times a neighbour woke him
+		boolean[] isFrozen = {false};
+		int[] tickCountThen = {0};
 		int[] ticks = {0};
 		helper.onEachTick(() -> {
 			ticks[0]++;
+			if (ticks[0] == 20) {
+				for (int[] direction : new int[][] {{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
+					ChunkPos chunk = quietChunk(level, ChunkPos.containing(BlockPos.containing(stand)), direction[0], direction[1]);
+					if (chunk != null) {
+						quiet.add(chunk);
+					}
+				}
+				helper.assertFalse(quiet.isEmpty(), "found no chunk beyond the tests' tickets where entities don't tick");
+			}
+			quiet.forEach(chunk -> level.getChunkSource().addTicketWithRadius(TicketType.PORTAL, chunk, 1));
 			sessions.tick();
 			fights.tick();
-			if (frozenAt[0] < 0 && fight.boss().isReacting()) {
-				// Past what OpenField follows (the test's box plus 48), in a chunk that is loaded but where entities don't tick.
-				Vec3 spot = frozenSpot(level, stand, helper.getBounds().inflate(OpenField.RADIUS + 16 + 8));
-				helper.assertTrue(spot != null, "found no loaded chunk where entities don't tick");
-				fight.boss().teleportTo(spot.x, spot.y, spot.z);
-				frozenAt[0] = ticks[0];
-				frozenTicks[0] = fight.boss().tickCount;
-			}
-			if (frozenAt[0] >= 0 && ticks[0] == frozenAt[0] + 100) {
-				helper.assertTrue(fight.boss().tickCount == frozenTicks[0], "the setup should freeze him, but he kept ticking");
+			if (!isFrozen[0] && !quiet.isEmpty() && fight.boss().isReacting()) {
+				helper.assertTrue(woken[0] < quiet.size(), "found no quiet chunk where he stays frozen: a neighbour woke him " + woken[0] + " times");
+				ChunkPos chunk = quiet.get(woken[0]);
+				Vec3 spot = new Vec3(chunk.getMiddleBlockX() + 0.5, stand.y + 20, chunk.getMiddleBlockZ() + 0.5);
+				if (level.isLoaded(BlockPos.containing(spot)) && !level.isPositionEntityTicking(BlockPos.containing(spot))) {
+					fight.boss().teleportTo(spot.x, spot.y, spot.z);
+					tickCountThen[0] = fight.boss().tickCount;
+					isFrozen[0] = true;
+				}
+			} else if (isFrozen[0] && fight.boss().tickCount != tickCountThen[0] && fight.boss().distanceTo(player) > 40) {
+				// Ticking again out there, not brought back by the fight: a neighbour woke him. Back to the kid; the next kick freezes him elsewhere.
+				fight.boss().teleportTo(home.x, home.y, home.z);
+				woken[0]++;
+				isFrozen[0] = false;
 			}
 			for (RecordingQuizClient.Sent sent : List.copyOf(client.sentTo)) {
 				QuizS2C question = sent.payload();
@@ -233,7 +257,7 @@ public class BossFightGameTest {
 		});
 
 		helper.succeedWhen(() -> {
-			helper.assertTrue(frozenAt[0] >= 0, "wait for his first yeet");
+			helper.assertTrue(isFrozen[0], "wait for his first yeet, and a quiet chunk to carry him to");
 			helper.assertTrue(answered.size() >= 2, "wait until he throws again; he hangs " + Math.round(fight.boss().distanceTo(player)) + " blocks away");
 			helper.assertTrue(fight.boss().distanceTo(player) < 20, "he is back next to the kid, not " + Math.round(fight.boss().distanceTo(player)) + " blocks away");
 			helper.assertFalse(fight.isOver(), "the fight goes on");
@@ -241,21 +265,29 @@ public class BossFightGameTest {
 		});
 	}
 
-	/** A spot above a loaded chunk where entities don't tick, 4 to 12 chunks from {@code around} and outside {@code followed}. */
-	private static Vec3 frozenSpot(ServerLevel level, Vec3 around, AABB followed) {
-		ChunkPos centre = ChunkPos.containing(BlockPos.containing(around));
-		int[][] directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-1, -1}, {1, 1}, {-1, 1}, {1, -1}};
-		for (int distance = 4; distance <= 12; distance++) {
-			for (int[] direction : directions) {
-				BlockPos pos = new BlockPos((centre.x() + direction[0] * distance) * 16 + 8, (int) around.y + 20, (centre.z() + direction[1] * distance) * 16 + 8);
-				if (level.isLoaded(pos) && !level.isPositionEntityTicking(pos) && !followed.contains(Vec3.atCenterOf(pos))) {
-					return Vec3.atCenterOf(pos);
-				}
+	/**
+	 * The first chunk from 10 chunks out in this direction with 6 more chunks of quiet behind it, or null
+	 * when there is none within 60 chunks: nothing ticks entities there, so Graaf Fout would freeze.
+	 */
+	private static ChunkPos quietChunk(ServerLevel level, ChunkPos from, int dx, int dz) {
+		for (int distance = 10; distance <= 60; distance++) {
+			boolean quiet = true;
+			for (int i = 0; i <= 6 && quiet; i++) {
+				BlockPos pos = new BlockPos((from.x() + dx * (distance + i)) * 16 + 8, 0, (from.z() + dz * (distance + i)) * 16 + 8);
+				quiet = !level.isPositionEntityTicking(pos);
+			}
+			if (quiet) {
+				return new ChunkPos(from.x() + dx * (distance + 3), from.z() + dz * (distance + 3));
 			}
 		}
 		return null;
 	}
 
+	/**
+	 * Two kids, one Graaf Fout who takes turns: every camera message goes to the kid whose bomb it
+	 * is, and the other kid's view is never touched. Runs until both have kicked, so a stale kicker
+	 * from the previous yeet would show up too.
+	 */
 	@GameTest(maxTicks = 1200, padding = 48)
 	@SuppressWarnings("removal") // mock players are still the only way to test without a client
 	public void inMultiplayerOnlyTheKidWhoseBombItIsGetsTheirViewMoved(GameTestHelper helper) {
@@ -531,8 +563,8 @@ public class BossFightGameTest {
 
 	/**
 	 * The chase's 4 chickens go when the chase ends: left standing they would look like one more group
-	 * next to the counting Kippenbom's. A level 1 fight has no counting chickens, and the count is
-	 * taken only around him (they run to him), so a neighbouring test's chickens never count.
+	 * next to the counting Kippenbom's. Only the chickens that appear with the landing count
+	 * ({@link ChaseChickens}), so another test's chickens in the same level never do.
 	 */
 	@GameTest(maxTicks = 600, padding = 48)
 	@SuppressWarnings("removal") // mock players are still the only way to test without a client
@@ -548,6 +580,7 @@ public class BossFightGameTest {
 		helper.assertTrue(fights.summon(helper.getLevel(), stand.add(6, 1.5, 0)), "Graaf Fout should appear");
 		BossFight fight = fights.active().getFirst();
 		fight.queueLanding(LandingStyle.CHASED);
+		ChaseChickens chase = new ChaseChickens(helper, fight.boss());
 
 		int[] mostDuringTheChase = {0};
 		boolean[] chased = {false};
@@ -557,12 +590,13 @@ public class BossFightGameTest {
 		helper.onEachTick(() -> {
 			sessions.tick();
 			fights.tick();
+			chase.tick();
 			if (fight.boss().landingStyle() == LandingStyle.CHASED) {
 				chased[0] = true;
-				mostDuringTheChase[0] = Math.max(mostDuringTheChase[0], spectacleChickens(helper, fight.boss().position(), CHASE_RADIUS));
+				mostDuringTheChase[0] = Math.max(mostDuringTheChase[0], chase.alive());
 			} else if (chased[0] && !chaseOver[0]) {
 				chaseOver[0] = true;
-				leftWhenItEnded[0] = spectacleChickens(helper, fight.boss().position(), CHASE_RADIUS);
+				leftWhenItEnded[0] = chase.alive();
 			}
 			for (RecordingQuizClient.Sent sent : List.copyOf(client.sentTo)) {
 				QuizS2C question = sent.payload();
@@ -596,6 +630,7 @@ public class BossFightGameTest {
 		helper.assertTrue(fights.summon(helper.getLevel(), stand.add(6, 1.5, 0)), "Graaf Fout should appear");
 		BossFight fight = fights.active().getFirst();
 		fight.queueLanding(LandingStyle.CHASED);
+		ChaseChickens chase = new ChaseChickens(helper, fight.boss());
 
 		boolean[] ended = {false};
 		int[] chasing = {0};
@@ -604,12 +639,13 @@ public class BossFightGameTest {
 		helper.onEachTick(() -> {
 			sessions.tick();
 			fights.tick();
-			if (!ended[0] && fight.boss().landingStyle() == LandingStyle.CHASED && spectacleChickens(helper, fight.boss().position(), CHASE_RADIUS) == 4) {
+			chase.tick();
+			if (!ended[0] && fight.boss().landingStyle() == LandingStyle.CHASED && chase.alive() == 4) {
 				// Mid-chase, all four out: the fight is over now.
 				chasing[0] = 4;
 				fights.endAll();
 				ended[0] = true;
-				leftAfterTheEnd[0] = spectacleChickens(helper, fight.boss().position(), CHASE_RADIUS);
+				leftAfterTheEnd[0] = chase.alive();
 			}
 			for (RecordingQuizClient.Sent sent : List.copyOf(client.sentTo)) {
 				QuizS2C question = sent.payload();
@@ -624,6 +660,49 @@ public class BossFightGameTest {
 			helper.assertTrue(chasing[0] == 4, "four chickens chased him");
 			helper.assertTrue(leftAfterTheEnd[0] == 0, "the chase chickens go with the fight, but " + leftAfterTheEnd[0] + " were left");
 		});
+	}
+
+	/**
+	 * Tells the chase's own chickens from anyone else's. GameTests share one level and run in parallel,
+	 * so a neighbouring test's chickens may stand near Graaf Fout. Call {@link #tick} every tick: until
+	 * the CHASED landing begins it remembers the spectacle chickens already near him; on the tick it
+	 * begins, the chickens that are new and right next to him are the chase's four.
+	 */
+	private static final class ChaseChickens {
+		private final GameTestHelper helper;
+		private final GraafFout boss;
+		private Set<UUID> before = Set.of();
+		private List<UUID> own;
+
+		ChaseChickens(GameTestHelper helper, GraafFout boss) {
+			this.helper = helper;
+			this.boss = boss;
+		}
+
+		void tick() {
+			if (own != null) {
+				return;
+			}
+			if (boss.landingStyle() == LandingStyle.CHASED) {
+				own = nearBoss(CHASE_SPAWN_RADIUS).stream().filter(id -> !before.contains(id)).toList();
+				helper.assertTrue(own.size() == 4, "4 chickens appear with the chase, saw " + own.size());
+			} else {
+				before = Set.copyOf(nearBoss(NOT_THE_CHASE_RADIUS));
+			}
+		}
+
+		/** How many of the chase's chickens are still standing. */
+		int alive() {
+			if (own == null) {
+				return 0;
+			}
+			return (int) own.stream().filter(id -> helper.getLevel().getEntity(id) instanceof Chicken chicken && chicken.isAlive()).count();
+		}
+
+		private List<UUID> nearBoss(double radius) {
+			return helper.getLevel().getEntitiesOfClass(Chicken.class, boss.getBoundingBox().inflate(radius),
+					chicken -> chicken.entityTags().contains(BombEffects.SPECTACLE_TAG)).stream().map(Chicken::getUUID).toList();
+		}
 	}
 
 	/** The landings seen so far, in order, and the most spectacle chickens near the fight at once. */
