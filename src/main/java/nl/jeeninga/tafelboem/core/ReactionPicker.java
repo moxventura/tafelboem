@@ -1,18 +1,23 @@
 package nl.jeeninga.tafelboem.core;
 
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 /**
  * Picks how Graaf Fout flies off after a kick and how he lands. Flights and landings come from
- * shuffled bags and never repeat back to back. A bomb's signature landing plays whenever the last
- * landing wasn't that signature, so it comes every other kick of that bomb.
+ * shuffled bags and never repeat back to back. Each bomb remembers its own last kick: its signature
+ * landing plays when that kick didn't get it (and it doesn't look like the last landing overall), so
+ * it comes every other kick of that bomb, whatever the other bombs did in between.
  */
 public final class ReactionPicker {
 	private final ShuffleBag<YeetStyle> flights;
 	private final ShuffleBag<LandingStyle> landings;
 	private YeetStyle lastFlight;
 	private LandingStyle lastLanding;
+	/** The bombs whose last kick got their signature. */
+	private final Set<BombTier> signedLast = EnumSet.noneOf(BombTier.class);
 
 	public ReactionPicker(Random random) {
 		this.flights = new ShuffleBag<>(List.of(YeetStyle.values()), random);
@@ -42,13 +47,18 @@ public final class ReactionPicker {
 		LandingStyle landing;
 		if (flight.hasOwnEnding()) {
 			landing = LandingStyle.DIZZY;
-		} else if (signatures && !signature.looksLike(lastLanding)) {
+		} else if (signatures && !signedLast.contains(bomb) && !signature.looksLike(lastLanding)) {
 			landing = signature;
 		} else if (catalogue) {
 			LandingStyle last = lastLanding;
 			landing = landings.next(style -> !style.looksLike(last));
 		} else {
 			landing = LandingStyle.DIZZY;
+		}
+		if (landing == signature) {
+			signedLast.add(bomb);
+		} else {
+			signedLast.remove(bomb);
 		}
 		played(landing);
 		return landing;

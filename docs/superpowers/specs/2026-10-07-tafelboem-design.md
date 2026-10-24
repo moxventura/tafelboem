@@ -560,12 +560,15 @@ picked at the kick and the landing when he lands.
   | Kippenbom | runs from 4 angry chickens that appear where he lands |
 
 - **Picking rules:**
-  - A bomb's signature plays when the last landing wasn't that signature; otherwise a generic
-    landing comes from a shuffled bag.
+  - Each bomb remembers its own last kick. Its signature plays when that kick didn't get it and
+    the signature doesn't look like the last landing of any bomb; otherwise a generic landing
+    comes from a shuffled bag. So each bomb gets its signature every other kick of its own,
+    whatever the other bombs did in between.
   - The same landing never plays twice in a row; frantic running and the chicken chase count as
     one for this rule.
   - The boomerang (face down) and the wall splat (slide down) keep their own ending, followed by
-    the dizzy spell, and that counts as the landing that played.
+    the dizzy spell. That counts as the landing that played, and as "no signature" for that bomb,
+    so its next kick gets the signature.
   - Flying out of the arena cancels any landing; he comes back dizzy, as in R1.
 - **Pacing:** the cooldown after a landing is shortened by however much the landing runs past the
   dizzy spell's 30 ticks, so the time from a kick to the next throw stays what it was in R1.

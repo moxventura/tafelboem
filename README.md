@@ -69,8 +69,8 @@ so the kids can also build there in creative.
 - **Yeets and landings.** Every hit sends Graaf Fout on a flight (classic, bounce, helicopter,
   boomerang, tumble, and in an arena the wall splat) and then a landing: dizzy, head-first in the
   ground, a pancake, or running round in a panic. Each bomb has a landing of its own every other
-  kick: a Knalletje hurts his toe, a Gewone TNT leaves him black with soot, and a Kippenbom's
-  chickens chase him. Set `yeetCatalogue` or `bombSignatures` to `false` to switch them off.
+  kick of that bomb: a Knalletje hurts his toe, a Gewone TNT leaves him black with soot, and a
+  Kippenbom's chickens chase him. Set `yeetCatalogue` or `bombSignatures` to `false` to switch them off.
 - **Further and further.** A fast answer (clearly faster than your own usual time for that sum) and
   right answers in a row yeet him further, and your yeet-o-meter says why, for example "(fast, 4 in
   a row!)". Only a typed wrong answer ends a streak; "?" doesn't. Beat your own farthest yeet and

@@ -94,6 +94,45 @@ class ReactionPickerTest {
 		}
 	}
 
+	@ParameterizedTest
+	@ValueSource(longs = {1, 2, 3, 42})
+	void eachBombGetsItsSignatureOnEveryOtherKickOfItsOwnWhenTheBombsTakeTurns(long seed) {
+		ReactionPicker picker = new ReactionPicker(new Random(seed));
+		List<LandingStyle> knalletje = new ArrayList<>();
+		List<LandingStyle> gewone = new ArrayList<>();
+		List<LandingStyle> all = new ArrayList<>();
+		for (int i = 0; i < 10; i++) {
+			LandingStyle k = picker.nextLanding(BombTier.KNALLETJE, YeetStyle.CLASSIC, true, true);
+			LandingStyle g = picker.nextLanding(BombTier.GEWONE_TNT, YeetStyle.CLASSIC, true, true);
+			knalletje.add(k);
+			gewone.add(g);
+			all.add(k);
+			all.add(g);
+		}
+		for (int i = 0; i < 10; i++) {
+			assertEquals(i % 2 == 0, knalletje.get(i) == LandingStyle.TOE_HOP, "Knalletje " + knalletje);
+			assertEquals(i % 2 == 0, gewone.get(i) == LandingStyle.SOOT, "Gewone TNT " + gewone);
+		}
+		// Generic landings fill the kicks in between, so they are no rarity.
+		assertEquals(10, all.stream().filter(landing -> !landing.isSignature()).count(), all.toString());
+	}
+
+	@Test
+	void anOwnEndingFlightCountsAsNoSignatureForThatBomb() {
+		ReactionPicker picker = new ReactionPicker(new Random(12));
+		assertEquals(LandingStyle.TOE_HOP, picker.nextLanding(BombTier.KNALLETJE, YeetStyle.CLASSIC, true, true));
+		assertEquals(LandingStyle.DIZZY, picker.nextLanding(BombTier.KNALLETJE, YeetStyle.BOOMERANG, true, true));
+		assertEquals(LandingStyle.TOE_HOP, picker.nextLanding(BombTier.KNALLETJE, YeetStyle.CLASSIC, true, true));
+	}
+
+	@Test
+	void aSignatureThatLooksLikeTheLastLandingWaitsAndComesOnTheBombsNextKick() {
+		ReactionPicker picker = new ReactionPicker(new Random(13));
+		picker.played(LandingStyle.FRANTIC_RUN);
+		assertNotEquals(LandingStyle.CHASED, picker.nextLanding(BombTier.KIPPENBOM, YeetStyle.CLASSIC, true, true));
+		assertEquals(LandingStyle.CHASED, picker.nextLanding(BombTier.KIPPENBOM, YeetStyle.CLASSIC, true, true));
+	}
+
 	@Test
 	void theChaseWaitsWhenHeJustRanRound() {
 		ReactionPicker picker = new ReactionPicker(new Random(4));
