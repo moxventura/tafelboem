@@ -14,6 +14,7 @@ public final class RunCircle {
 	public static final double STEP = 0.12;
 	public static final double KID_DISTANCE = 2;
 
+	/** A spot on the ground, as the x and z of its middle. */
 	public record Point(double x, double z) {
 	}
 

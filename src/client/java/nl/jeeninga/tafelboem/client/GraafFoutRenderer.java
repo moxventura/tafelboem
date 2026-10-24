@@ -42,7 +42,7 @@ public class GraafFoutRenderer extends EvokerRenderer<GraafFout> {
 		if (state instanceof GraafFoutRenderState yeet) {
 			yeet.pose = entity.renderPose();
 			yeet.transform = entity.renderTransform(partialTicks);
-			if (yeet.pose.upsideDown()) {
+			if (entity.shownPose().upsideDown()) {
 				state.isUpsideDown = true;
 				// Legs wiggling in the air: the walk animation, running on the spot.
 				state.walkAnimationPos = state.ageInTicks * 1.6F;

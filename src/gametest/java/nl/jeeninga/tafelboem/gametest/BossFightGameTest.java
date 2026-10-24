@@ -5,7 +5,6 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -144,7 +143,6 @@ public class BossFightGameTest {
 		BossFight fight = fights.active().getFirst();
 		LANDINGS.forEach(fight::queueLanding);
 
-		Set<LandingStyle> seen = EnumSet.noneOf(LandingStyle.class);
 		// In the order they begin: with the catalogue on, the picker's own landings follow the queued ones.
 		List<LandingStyle> started = new ArrayList<>();
 		LandingStyle[] previous = {null};
@@ -154,7 +152,6 @@ public class BossFightGameTest {
 			fights.tick();
 			LandingStyle landing = fight.boss().landingStyle();
 			if (landing != null) {
-				seen.add(landing);
 				if (landing != previous[0]) {
 					started.add(landing);
 				}
