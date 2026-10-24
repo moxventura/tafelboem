@@ -15,6 +15,13 @@ import nl.jeeninga.tafelboem.core.YeetPose.Transform;
  */
 class YeetPoseTest {
 	@Test
+	void aSplatIsFlatAgainstTheWall() {
+		Transform splat = YeetPose.SPLAT.transform(2);
+		assertEquals(YeetPose.SPLAT_DEPTH, splat.depth());
+		assertEquals(1F, splat.height(), "flat front to back, not top to bottom");
+	}
+
+	@Test
 	void standingUpHasNoExtraTurnOrSquash() {
 		assertEquals(Transform.UPRIGHT, YeetPose.NONE.transform(17));
 	}

@@ -14,10 +14,22 @@ public enum YeetStyle {
 	/** Flies off, comes back and faceplants near the kid. */
 	BOOMERANG,
 	/** Rolls and flips head over heels while he spins: a real tumble. */
-	TUMBLE;
+	TUMBLE,
+	/** Flies low and fast into the arena wall, sticks there flat and slides down (R1.1, only in an arena). */
+	WALL_SPLAT;
 
-	/** The boomerang ends face down: that is its landing, with the dizzy spell after it. */
+	/** The boomerang ends face down and the wall splat slides down the wall: that is their landing, with the dizzy spell after it. */
 	public boolean hasOwnEnding() {
-		return this == BOOMERANG;
+		return this == BOOMERANG || this == WALL_SPLAT;
+	}
+
+	/** Only an arena has walls to splat against. */
+	public boolean needsWalls() {
+		return this == WALL_SPLAT;
+	}
+
+	/** New in R1.1, behind the {@code yeetCatalogue} switch. */
+	public boolean isCatalogue() {
+		return this == WALL_SPLAT;
 	}
 }

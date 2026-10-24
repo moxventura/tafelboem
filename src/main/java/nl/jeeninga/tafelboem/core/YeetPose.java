@@ -3,14 +3,15 @@ package nl.jeeninga.tafelboem.core;
 /**
  * How Graaf Fout's body is turned, squashed or sunk on top of his usual spin, for the yeets and
  * landings that need more than a spin: the tumble, the boomerang's faceplant, head-first in the
- * ground and the pancake. Only the numbers live here; the renderer applies them.
+ * ground and the pancake and the wall splat. Only the numbers live here; the renderer applies them.
  */
 public enum YeetPose {
 	NONE,
 	TUMBLE,
 	FACEPLANT,
 	HEAD_FIRST,
-	PANCAKE;
+	PANCAKE,
+	SPLAT;
 
 	/** Roll and flip at different speeds, so he tumbles instead of turning like a wheel. */
 	public static final float TUMBLE_ROLL_PER_TICK = 35F;
@@ -23,6 +24,9 @@ public enum YeetPose {
 	public static final float HEAD_FIRST_SINK = 0.6F;
 	/** A pancake is a quarter of his height. */
 	public static final float PANCAKE_HEIGHT = 0.25F;
+
+	/** Flat against a wall: a third of his depth. */
+	public static final float SPLAT_DEPTH = 0.3F;
 
 	/**
 	 * Roll (sideways) and pitch (negative is forward, onto his face) in degrees, height and depth as
@@ -40,6 +44,7 @@ public enum YeetPose {
 			case FACEPLANT -> faceplant(Math.min(1F, ticks / FACEPLANT_TICKS));
 			case HEAD_FIRST -> new Transform(0F, 0F, 1F, 1F, HEAD_FIRST_SINK);
 			case PANCAKE -> new Transform(0F, 0F, PANCAKE_HEIGHT, 1F, 0F);
+			case SPLAT -> new Transform(0F, 0F, 1F, SPLAT_DEPTH, 0F);
 		};
 	}
 

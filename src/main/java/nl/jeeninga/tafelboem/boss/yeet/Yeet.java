@@ -50,6 +50,7 @@ public abstract class Yeet {
 			case HELICOPTER -> new HelicopterYeet(boss, away, power);
 			case BOOMERANG -> new BoomerangYeet(boss, away, power, kicker);
 			case TUMBLE -> new TumbleYeet(boss, away, power);
+			case WALL_SPLAT -> new WallSplatYeet(boss, away, power);
 		};
 		yeet.launch();
 		return yeet;

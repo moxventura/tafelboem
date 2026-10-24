@@ -19,9 +19,9 @@ class ReactionPickerTest {
 	@ValueSource(longs = {1, 2, 3, 42})
 	void neverTheSameFlightTwiceInARow(long seed) {
 		ReactionPicker picker = new ReactionPicker(new Random(seed));
-		YeetStyle previous = picker.nextFlight();
+		YeetStyle previous = picker.nextFlight(true, true);
 		for (int i = 0; i < 500; i++) {
-			YeetStyle current = picker.nextFlight();
+			YeetStyle current = picker.nextFlight(true, true);
 			assertNotEquals(previous, current, "repeat at yeet " + i);
 			previous = current;
 		}
@@ -33,9 +33,31 @@ class ReactionPickerTest {
 		ReactionPicker picker = new ReactionPicker(new Random(7));
 		Set<YeetStyle> seen = EnumSet.noneOf(YeetStyle.class);
 		for (int i = 0; i < YeetStyle.values().length; i++) {
-			seen.add(picker.nextFlight());
+			seen.add(picker.nextFlight(true, true));
 		}
 		assertEquals(EnumSet.allOf(YeetStyle.class), seen);
+	}
+
+	@Test
+	void theWallSplatOnlyComesInAnArena() {
+		ReactionPicker picker = new ReactionPicker(new Random(9));
+		for (int i = 0; i < 200; i++) {
+			assertNotEquals(YeetStyle.WALL_SPLAT, picker.nextFlight(false, true));
+		}
+	}
+
+	@Test
+	void withoutTheCatalogueOnlyTheR1Flights() {
+		ReactionPicker picker = new ReactionPicker(new Random(10));
+		for (int i = 0; i < 200; i++) {
+			assertNotEquals(YeetStyle.WALL_SPLAT, picker.nextFlight(true, false));
+		}
+	}
+
+	@Test
+	void theWallSplatKeepsItsOwnEnding() {
+		ReactionPicker picker = new ReactionPicker(new Random(11));
+		assertEquals(LandingStyle.DIZZY, picker.nextLanding(BombTier.KNALLETJE, YeetStyle.WALL_SPLAT, true, true));
 	}
 
 	@Test

@@ -281,7 +281,7 @@ public class GraafFout extends Evoker {
 	private void land(ServerLevel level) {
 		Yeet landed = yeet;
 		yeet = null;
-		if (yeetPose() == YeetPose.TUMBLE) {
+		if (yeetPose() == YeetPose.TUMBLE || yeetPose() == YeetPose.SPLAT) {
 			setYeetPose(YeetPose.NONE);
 		}
 		setNoGravity(false);
