@@ -69,10 +69,10 @@ multiplayer sessions and a one-step deploy to every PC are part of R0.
 | **R0 POC "Graaf Fout komt!"** (~1 week) | see the R0 scope below | The rooted-question loop with a yeetable villain is fun, and an 8-year-old can use the question screen | see the R0 evaluation below |
 | **R0.1 "Beter mikken"** (patch) | see the R0.1 scope below | With the playtest-1 blockers fixed, the kids see every consequence of their answers, "?" is only pressed on purpose, and a correction on the HUD sticks as well as the retype did | see the R0.1 evaluation below |
 | **R1 "Kies je level"** | see the R1 scope below: the TafelBoem world with a hub and a door per level; levels 1–3 (easy, medium, hard) with their own tables, bombs and hits; arenas built from code or from structure templates, picked at random per level; stars | With a world of their own, a hub and three levels to choose from, the kids keep asking to play, and over time they pick harder levels and collect stars | see the R1 evaluation below |
-| R1.1 *(after the R1 evaluation)* | the yeet catalogue, the full yeet-o-meter, the counting Kippenbom; the kids' own arenas as they come | More variety keeps them coming back | answers per minute, the kids still asking |
+| **R1.1 "Meer yeets"** | see the R1.1 scope below: a flight plus a landing per hit (wall splat, head-first, pancake, frantic running, bomb signatures), the full yeet-o-meter (fast answers and streaks yeet further, a personal best), the counting Kippenbom; the kids' own arenas as they come | More variety keeps them coming back | see the R1.1 evaluation below |
 | R1.2 *(after R1.1)* | experiments behind toggles: dodgeable bombs and "Graaf Fout eats your mistake" | Dodging and healing don't cut answers per minute or add frustration | answers per minute vs R1, frustration tally |
 | **R2 "Leren dat blijft"** | fact states and spaced picker, a Tafelkaart screen (GUI), parent report, the daily limit, "Kies je bom", the full leg kick in third person | The practice spreads out and facts move toward Fluent | 2 weeks of logs: % Accurate/Fluent up, median time down, sessions spread over days, kids still asking |
-| **R3 "Meer boem"** | bombs 4–9, levels 4–9, particle choreographies, craters, escape aids, lethal tiers with 3 lives, inventory stash, signature reactions, co-op rescue sums, the lobby extras in the hub (Tafelkaart wall, trophy wall, animal pen) | Escalation keeps them climbing without frustration | level reached per week, favourite bombs, no tears at levels 7–9, FPS OK on the woonkamer PC |
+| **R3 "Meer boem"** | bombs 4–9, levels 4–9, particle choreographies, craters, escape aids, lethal tiers with 3 lives, inventory stash, signature reactions for bombs 4–9, co-op rescue sums, the lobby extras in the hub (Tafelkaart wall, trophy wall, animal pen) | Escalation keeps them climbing without frustration | level reached per week, favourite bombs, no tears at levels 7–9, FPS OK on the woonkamer PC |
 | R4 new villains *(when they ask for it)* | Tante Toverfout, then Robo-Rekenaar 3000 | Pulled by the kids beating Graaf Fout | |
 | R5 endgame | endless mode, hardcore, golden bomb, polish | | |
 | *Infra, after R2, only if needed* | a Fabric dedicated server on the NAS: one world and one answer log for every PC | Only if hosting on the woonkamer PC or logs spread over PCs become a problem | |
@@ -527,6 +527,126 @@ whether they asked to play again. There is no video session.
 - answers per minute are at least R0.1's (about 5)
 - no frustration about the stars
 - the checks R0.1 couldn't measure hold: they see the penalty and the yeet, and the reward arrives
+
+## R1.1 "Meer yeets" (detailed scope)
+
+Decided with Jesper on 2026-10-24, before the R1 evaluation (playtest 3 hasn't been played yet;
+Jesper chose to build R1.1 first). The plan was then reviewed from a developer's, an architect's and
+a tester's view. R1.1 is the yeet catalogue, the full yeet-o-meter and the counting Kippenbom. The
+meteor, P20 (a reaction to a sword hit) and the kids' own arenas wait.
+
+**Hypothesis:** more variety keeps them coming back.
+
+### A hit is a flight plus a landing
+Up to R1 every hit was one of five flights and the same 1.5 s dizzy spell. From R1.1 the flight is
+picked at the kick and the landing when he lands.
+- **The wall splat** (a new flight, only in an arena): he flies low and fast, slaps flat against the
+  first wall he hits, sticks for a moment and slides down. With no wall in the way he just falls.
+- **The landings,** each 2 s (40 ticks) at most:
+
+  | Landing | What he does |
+  |---|---|
+  | Dizzy | stars circle his head (the R1 landing, 1.5 s) |
+  | Head-first | stuck head-first in the ground, legs wiggling, then he pops out |
+  | Pancake | squashed flat, waddles, then *boing* back into shape |
+  | Frantic running | runs a small circle, smoke coming off his pants, arms waving; over ground only, at least 2 blocks from every kid, and he never pushes anyone |
+
+- **Bomb signatures** (the landing for that bomb):
+
+  | Bomb | Signature |
+  |---|---|
+  | Knalletje | hops on one leg holding his toe, "au!", confetti around his head |
+  | Gewone TNT | soot face with white eyes, and he coughs smoke |
+  | Kippenbom | runs from 4 angry chickens that appear where he lands |
+
+- **Picking rules:**
+  - A bomb's signature plays when the last landing wasn't that signature; otherwise a generic
+    landing comes from a shuffled bag.
+  - The same landing never plays twice in a row; frantic running and the chicken chase count as
+    one for this rule.
+  - The boomerang (face down) and the wall splat (slide down) keep their own ending, followed by
+    the dizzy spell, and that counts as the landing that played.
+  - Flying out of the arena cancels any landing; he comes back dizzy, as in R1.
+- **Pacing:** the cooldown after a landing is shortened by however much the landing runs past the
+  dizzy spell's 30 ticks, so the time from a kick to the next throw stays what it was in R1.
+- **Toggles:** `yeetCatalogue` (the wall splat and the new landings) and `bombSignatures`. With both
+  off he flies and lands as in 1.0.2.
+
+### The full yeet-o-meter
+- **Fast:** the answer took less than 0.8 × the kid's own median of their last 5 right answers on
+  this sum (3 × 7 and 7 × 3 count together). Under 3 earlier right answers on that sum there is no
+  bonus. The verdict is made before the answer is logged, so it never counts towards its own median.
+- **Streak:** right answers in a row by this kid in this fight. Only a typed wrong answer ends it;
+  "?", ESC and a timeout don't, so "?" stays better than guessing.
+- **Boost:** `factor = min(1.3, 1 + (fast ? 0.15 : 0) + 0.05 × (streak − 1))`, times the R1 power.
+
+  | Fast | Streak | Factor |
+  |---|---|---|
+  | no | 1 | 1.00 |
+  | yes | 1 | 1.15 |
+  | no | 4 | 1.15 |
+  | yes | 4 | 1.30 |
+  | yes | 9 | 1.30 |
+
+- **The helicopter's climb is capped** at its R1 maximum (55 ticks), so every flight lands within
+  the 5 s limit, even at full power. The strongest R0.1-fight yeet stays within the 96 blocks he
+  comes back from.
+- **The kicker** sees why on the meter, for example *"Graaf Fout vloog 31 blokken! (snel, 4 op een
+  rij!)"*, with the real streak. The other kids see the plain meter: no ranking between siblings.
+- **Personal best** (TafelBoem world only): each kid's farthest yeet, fly-outs included; the
+  helicopter's height doesn't count. A new best replaces the meter on the kicker's action bar,
+  *"Nieuw record! Graaf Fout vloog 41 blokken!"*, with a toast sound that only the kicker hears. The
+  first yeet on file sets the best silently, so the first kick after the update isn't a "record".
+  The best comes from the fights log (new field `farthestYeet`), so there is no other saved state.
+- **Toggles:** `yeetBoost` and `yeetRecords`.
+
+### The counting Kippenbom
+- A right answer on a Kippenbom for a × b sends **a** chickens out in a ring where the bomb goes off
+  (where it hits Graaf Fout, or where it stood in free play). About 1 s later each one pops into
+  **b** chickens, so 3 × 4 shows as 12 chickens in 3 groups: two generations at most. The groups
+  form while he flies, between the kicker and him, where the camera looks.
+- Counting chickens poof after 10 s, and no more than 150 spectacle animals live at once (the
+  oldest poof first), so 10 × 10 on Moeilijk can't pile up.
+- A wrong answer on a Kippenbom lets **1** chicken hop out while counting is on: never more than the
+  smallest right answer (1 × 1), and it only hops, while a right answer's chickens fly.
+- **Toggle:** `countingKippenbom`. Off, a Kippenbom lets 12 chickens fly as in 1.0.2;
+  `kippenbomChickens` off still means no chickens in a fight.
+
+### Outside a TafelBoem world
+An exception to "R0.1 behaviour stays": the catalogue (without the wall splat), the signatures, the
+boost and the counting work in every world. Records are TafelBoem-world only.
+
+### Logs for the evaluation
+The action bar never reaches `latest.log`, so the host's log gets:
+- `TafelBoem config:` once per world, with every toggle
+- `TafelBoem yeet:` per kick: kicker, bomb, sum, answer time and usual time, fast, streak, factor,
+  flight, landing (signature or not), blocks, flew out, record and the previous best
+- `TafelBoem chickens:` per counting burst: the sum, the groups, and fight or free play
+- the `TafelBoem fight:` line adds the kid's farthest yeet
+
+### R1.1 tests
+- **Unit tests:** the reaction picker (signatures alternate, nothing twice in a row with running and
+  chase as one, the wall splat only in an arena, own endings, toggles off), the boost table, the
+  answer times (last 5, at least 3, the current answer not counted), the chicken count for all 100
+  sums (never fewer than a wrong answer's 1), the streak rules, an old fights-log line, the pose
+  transforms, the running circle (inside the arena, away from kids), the pacing.
+- **Game tests:** a fight forced through every landing never stalls; every flight at full boosted
+  power lands within the limit; a 3 × 4 burst gives 12 chickens and none are left after 12 s; the
+  boost text and the record reach only the kicker; a fly-out during a landing cancels it. Slow
+  fight tests run three times.
+- **Client game test:** screenshots of head-first, pancake, splat, soot face and toe hop.
+
+**R1.1 evaluation (one playtest, compared with R0.1).** The same session fills in the numbers of
+`R1.md`; R1's and R1.1's effects can't be told apart, the yeet lines show what R1.1 did. Record it in
+`docs/evaluations/R1.1.md`.
+
+**Go when:**
+- answers per minute are about 5 or more (R0.1), and % right and "?" are no worse than R0.1
+- the kids still ask to play
+- each kid names a favourite reaction
+- they noticed the record or the boost
+- the counting chickens were seen as groups
+- the yeet lines show the fast bonus on a minority of kicks, not on half
 
 ## Product vision (the backlog for R1+, re-prioritised after every evaluation)
 
