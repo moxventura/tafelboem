@@ -14,9 +14,10 @@ human or agent.
   - `core/`: pure Java rules (levels, picker, stars, shapes, stats). It imports nothing from
     `net.minecraft`, `com.mojang` or `net.fabricmc`; `CoreArchitectureTest` fails otherwise. Put
     logic here when you can, and test it with JUnit.
-  - Minecraft side: `boss/` (Graaf Fout and his fight), `game/` (questions, bombs, explosions),
-    `world/` (the TafelBoem world: hub, arenas, doors), `block/`, `item/`, `registry/`, `command/`,
-    `log/` (answer and fights logs), `config/`; client code in `src/client/java/`.
+  - Minecraft side: `boss/` (Graaf Fout and his fight; one class per flight in `boss/yeet/` and per
+    landing in `boss/landing/`), `game/` (questions, bombs, explosions), `world/` (the TafelBoem
+    world: hub, arenas, doors), `block/`, `item/`, `registry/`, `command/`, `log/` (answer and
+    fights logs), `config/`; client code in `src/client/java/`.
 - **Tests:** `src/test/java/` (JUnit), `src/gametest/java/` (GameTests and client GameTests).
 
 ## Rules for the game
@@ -26,6 +27,10 @@ human or agent.
 - Our booms never hurt players (`PlayerSafeExplosion`); a correct answer never hurts the kid.
 - A typed wrong answer costs hearts on Gemiddeld and Moeilijk (`FightLevel.wrongAnswerDamage`), never
   the last half heart; "?" and ESC never do.
+- A boost only ever adds: a fast answer or a streak yeets Graaf Fout further, a slow answer still
+  gets a full yeet. Only a typed wrong answer ends a streak.
+- No ranking between siblings: stars, the boost's reasons and records show only to the kid they
+  belong to.
 - Vanilla look: vanilla blocks, widgets and menu conventions, no new colours on screens.
 - Every user-facing string goes in both `en_us.json` and `nl_nl.json` with the same arguments
   (`LanguageFilesTest`). Game terms stay Dutch in code: Knalletje, Gewone TNT, Kippenbom, Graaf Fout.
@@ -54,6 +59,10 @@ and a check. Put new world work on arena entry rather than on world load.
 | arena entry | music | the slot gets its level's biome (`ArenaBiomes`) | `WorldClientGameTest` |
 | login | a kid inside an arena without a fight | to the hub | `TafelBoemWorldGameTest` |
 | any time | the void | everyone who falls is caught, never fatally | `TafelBoemWorldGameTest` |
+
+Spectacle animals that appear after the boom (the counting Kippenbom's groups, the chase) get their
+poof timer from `SessionManager.track` when they spawn; `collectSpectacles` only finds what is
+there at the boom.
 
 ## Code style
 
@@ -119,5 +128,8 @@ GameTest pitfalls:
   `room-data` event). Only read, never send `code-change`.
 - From 1.0.1 on, the host PC's `latest.log` has a `TafelBoem fight:` line per fight and a
   `TafelBoem session:` line per kid, with the evaluation's numbers.
+- From 1.1.0 on, it also has a `TafelBoem config:` line per world (the switches), a
+  `TafelBoem yeet:` line per kick (answer time, boost, flight, landing, record) and a
+  `TafelBoem chickens:` line per counting Kippenbom.
 - Record each playtest in `docs/evaluations/R<x>.md`: findings with their cause checked in the
   code, then the go/no-go and backlog changes.

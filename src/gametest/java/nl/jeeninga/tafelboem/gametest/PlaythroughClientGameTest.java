@@ -1,12 +1,16 @@
 package nl.jeeninga.tafelboem.gametest;
 
+import java.util.List;
+
 import org.lwjgl.glfw.GLFW;
 
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.ChatVisiblity;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
@@ -14,10 +18,12 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 
 import nl.jeeninga.tafelboem.TafelBoem;
+import nl.jeeninga.tafelboem.boss.BossFight;
 import nl.jeeninga.tafelboem.boss.GraafFout;
 import nl.jeeninga.tafelboem.client.CorrectionHud;
 import nl.jeeninga.tafelboem.client.QuestionScreen;
 import nl.jeeninga.tafelboem.core.BombTier;
+import nl.jeeninga.tafelboem.core.LandingStyle;
 import nl.jeeninga.tafelboem.core.YeetPose;
 import nl.jeeninga.tafelboem.core.YeetStyle;
 import nl.jeeninga.tafelboem.registry.ModBlocks;
@@ -97,7 +103,7 @@ public class PlaythroughClientGameTest implements FabricClientGameTest {
 			context.waitTicks(14);
 			context.takeScreenshot("tafelboem-08-yeet");
 			context.waitTicks(30);
-			context.takeScreenshot("tafelboem-09-dizzy");
+			context.takeScreenshot("tafelboem-09-landing");
 
 			// 4. The tumble and the boomerang's faceplant, on cue, since a fight picks yeets at random.
 			yeetOnCue(world, YeetStyle.TUMBLE);
@@ -124,6 +130,41 @@ public class PlaythroughClientGameTest implements FabricClientGameTest {
 			context.getInput().lookAt(faceDownAt);
 			context.waitTicks(2);
 			context.takeScreenshot("tafelboem-13-faceplant-side");
+
+			// 5. The R1.1 landings and the wall splat, on cue, since a fight picks them at random. Chat
+			// is hidden: Graaf Fout's lines would cover the low poses.
+			context.runOnClient(client -> client.options.chatVisibility().set(ChatVisiblity.HIDDEN));
+			for (LandingStyle landing : List.of(LandingStyle.HEAD_FIRST, LandingStyle.PANCAKE, LandingStyle.TOE_HOP, LandingStyle.SOOT,
+					LandingStyle.CHASED)) {
+				yeetOnCue(world, YeetStyle.CLASSIC, landing);
+				for (int tick = 0; !landedIn(world, landing); tick++) {
+					check(tick < 150, "the yeet should end in " + landing);
+					context.waitTicks(1);
+				}
+				context.waitTicks(10);
+				String name = "tafelboem-r1.1-" + landing.id().replace('_', '-');
+				lookAtBoss(context, world);
+				context.takeScreenshot(name);
+				if (landing == LandingStyle.HEAD_FIRST || landing == LandingStyle.SOOT) {
+					// Both leave something on him (upside down, a black face) that must be gone once he is up.
+					for (int tick = 0; landedIn(world, landing); tick++) {
+						check(tick < 300, "the " + landing + " landing should end");
+						context.waitTicks(1);
+					}
+					context.waitTicks(10);
+					lookAtBoss(context, world);
+					context.takeScreenshot(name + "-after");
+				}
+			}
+			splatOnCue(world);
+			for (int tick = 0; !posed(world, YeetPose.SPLAT); tick++) {
+				check(tick < 100, "the wall splat should end flat against the wall");
+				context.waitTicks(1);
+			}
+			context.waitTicks(4);
+			closeQuestion(context, world);
+			context.takeScreenshot("tafelboem-r1.1-wall-splat");
+			context.runOnClient(client -> client.options.chatVisibility().set(ChatVisiblity.FULL));
 			world.getServer().runOnServer(server -> TafelBoem.fights().endAll());
 		}
 	}
@@ -135,11 +176,17 @@ public class PlaythroughClientGameTest implements FabricClientGameTest {
 		});
 	}
 
+	private static void yeetOnCue(TestSingleplayerContext world, YeetStyle style) {
+		yeetOnCue(world, style, null);
+	}
+
 	/**
 	 * A fresh Graaf Fout 8 blocks ahead, yeeted sideways across the view, with the camera assist
 	 * following him the way it does after a kick.
+	 *
+	 * @param landing how he lands; null lets the fight pick
 	 */
-	private static void yeetOnCue(TestSingleplayerContext world, YeetStyle style) {
+	private static void yeetOnCue(TestSingleplayerContext world, YeetStyle style, LandingStyle landing) {
 		world.getServer().runOnServer(server -> {
 			TafelBoem.fights().endAll();
 			ServerPlayer player = server.getPlayerList().getPlayers().getFirst();
@@ -147,9 +194,73 @@ public class PlaythroughClientGameTest implements FabricClientGameTest {
 			Direction side = facing.getClockWise();
 			Vec3 spot = player.position().add(facing.getStepX() * 8, 1.5, facing.getStepZ() * 8);
 			TafelBoem.fights().summon(player.level(), spot);
-			GraafFout boss = TafelBoem.fights().active().getFirst().boss();
+			BossFight fight = TafelBoem.fights().active().getFirst();
+			if (landing != null) {
+				fight.queueLanding(landing);
+			}
 			Vec3 from = spot.subtract(side.getStepX() * 2, 0, side.getStepZ() * 2);
-			boss.yeet(from, 1.2, style, player.position());
+			fight.boss().yeet(from, 1.2, style, player.position());
+			TafelBoem.sessions().client().track(player, fight.boss(), 100, false);
+		});
+	}
+
+	/**
+	 * A fight that goes on throws a bomb at us, and its question covers the screen and roots us; the
+	 * session ends, then we stand 4 blocks beside Graaf Fout, looking at him, so the pose can be seen.
+	 */
+	private static void lookAtBoss(ClientGameTestContext context, TestSingleplayerContext world) {
+		closeQuestion(context, world);
+		BlockPos at = world.getServer().computeOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().getFirst();
+			GraafFout boss = TafelBoem.fights().active().getFirst().boss();
+			Vec3 side = Vec3.directionFromRotation(0, boss.getYRot() + 90F).scale(4);
+			player.teleportTo(boss.getX() + side.x, boss.getY(), boss.getZ() + side.z);
+			return boss.blockPosition();
+		});
+		context.waitTicks(2);
+		context.getInput().lookAt(at);
+		context.waitTicks(2);
+	}
+
+	/**
+	 * The question a fight's bomb opened would root us in place, so drop the session on the server and
+	 * close the screen. This is a test shortcut; the kid's own ESC would count as a chicken-out.
+	 */
+	private static void closeQuestion(ClientGameTestContext context, TestSingleplayerContext world) {
+		world.getServer().runOnServer(server -> TafelBoem.sessions().onDisconnect(server.getPlayerList().getPlayers().getFirst()));
+		context.runOnClient(client -> {
+			if (client.gui.screen() instanceof QuestionScreen) {
+				client.gui.setScreen(null);
+			}
+		});
+		context.waitTicks(2);
+	}
+
+	private static boolean landedIn(TestSingleplayerContext world, LandingStyle landing) {
+		return world.getServer().computeOnServer(server -> TafelBoem.fights().active().getFirst().boss().landingStyle() == landing);
+	}
+
+	private static boolean posed(TestSingleplayerContext world, YeetPose pose) {
+		return world.getServer().computeOnServer(server -> TafelBoem.fights().active().getFirst().boss().yeetPose() == pose);
+	}
+
+	/** Graaf Fout 8 blocks ahead with an obsidian wall 5 blocks to his side, splatted against it. */
+	private static void splatOnCue(TestSingleplayerContext world) {
+		world.getServer().runOnServer(server -> {
+			TafelBoem.fights().endAll();
+			ServerPlayer player = server.getPlayerList().getPlayers().getFirst();
+			Direction facing = player.getDirection();
+			Direction side = facing.getClockWise();
+			Vec3 spot = player.position().add(facing.getStepX() * 8, 1.5, facing.getStepZ() * 8);
+			BlockPos wall = BlockPos.containing(spot.add(side.getStepX() * 5, -1.5, side.getStepZ() * 5));
+			for (int along = -3; along <= 3; along++) {
+				for (int up = 0; up < 4; up++) {
+					player.level().setBlockAndUpdate(wall.relative(facing, along).above(up), Blocks.OBSIDIAN.defaultBlockState());
+				}
+			}
+			TafelBoem.fights().summon(player.level(), spot);
+			GraafFout boss = TafelBoem.fights().active().getFirst().boss();
+			boss.yeet(spot.subtract(side.getStepX() * 2, 0, side.getStepZ() * 2), 1.0, YeetStyle.WALL_SPLAT, player.position());
 			TafelBoem.sessions().client().track(player, boss, 60, false);
 		});
 	}
