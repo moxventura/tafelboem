@@ -19,7 +19,7 @@ public record ChickenCount(int groups, int perGroup) {
 		return groups * perGroup;
 	}
 
-	/** How fast the first generation flies out: more groups fly further, so the groups stay apart (0.2 + 0.04 per group; 0.03 per group let 10 groups of 10 touch). */
+	/** How fast the first generation flies out: more groups fly further, so the groups stay apart. */
 	public double ringSpeed() {
 		return 0.2 + 0.04 * groups;
 	}
