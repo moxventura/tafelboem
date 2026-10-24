@@ -16,11 +16,14 @@ final class HelicopterYeet extends Yeet {
 	/** He rises this many ticks per unit of yeet power: a bigger bomb, a higher flight. */
 	private static final double RISE_TICKS_PER_POWER = 22;
 
+	/** His R1 maximum (a strong Kippenbom), so even a boosted climb comes down within the 5 s a yeet may last. */
+	private static final int MAX_RISE_TICKS = 55;
+
 	private final int riseTicks;
 
 	HelicopterYeet(GraafFout boss, Vec3 away, double power) {
 		super(YeetStyle.HELICOPTER, boss, away, power);
-		this.riseTicks = (int) Math.round(RISE_TICKS_PER_POWER * power);
+		this.riseTicks = (int) Math.min(MAX_RISE_TICKS, Math.round(RISE_TICKS_PER_POWER * power));
 	}
 
 	@Override

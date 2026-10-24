@@ -186,23 +186,22 @@ public class GraafFout extends Evoker {
 	 * He flew out of the arena (or fell through a gap): poof back near the kids, dizzy as after a
 	 * normal landing when he was being yeeted.
 	 *
-	 * @return how far he flew in this yeet, or -1 when he wasn't being yeeted
+	 * @return the yeet he was on, or null when he wasn't being yeeted
 	 */
-	public int comeBack(ServerLevel level, Vec3 nearKid, ArenaBox arena) {
-		boolean wasYeeted = yeet != null;
-		int blocks = wasYeeted ? yeet.blocks() : -1;
+	public @Nullable Yeet comeBack(ServerLevel level, Vec3 nearKid, ArenaBox arena) {
+		Yeet cut = yeet;
 		yeet = null;
 		setYeetPose(YeetPose.NONE);
 		setDeltaMovement(Vec3.ZERO);
 		armsUp(false);
 		teleportNear(level, nearKid, arena);
-		if (wasYeeted) {
+		if (cut != null) {
 			dizzyTicks = DIZZY_TICKS;
 			setNoGravity(false);
 		} else {
 			setNoGravity(true);
 		}
-		return blocks;
+		return cut;
 	}
 
 	public void teleportNear(ServerLevel level, Vec3 around) {

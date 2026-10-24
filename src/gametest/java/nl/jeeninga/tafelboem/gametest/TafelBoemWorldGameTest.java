@@ -7,6 +7,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
@@ -245,6 +246,53 @@ public class TafelBoemWorldGameTest {
 			helper.assertTrue(fights.size() == 1 && fights.getFirst().won(), "the win is the only line: " + fights);
 			test.close();
 		});
+	}
+
+	@GameTest(maxTicks = 1200, padding = TestWorld.PADDING)
+	public void aYeetFurtherThanTheKidsBestIsANewRecordForThatKid(GameTestHelper helper) {
+		TestWorld test = new TestWorld(helper).running();
+		ServerPlayer kid = test.kidInTheHub();
+		test.log.append(new FightRecord(0L, kid.getPlainTextName(), 1, "default", FightRecord.WON, 11, 0, 0, 0, 3, 120, 1, "1.1.0", 1));
+		test.whenLoaded(() -> test.world.enterDoor(kid, 1));
+
+		helper.succeedWhen(() -> {
+			helper.assertTrue(test.client.actionBarsTo.stream().anyMatch(bar -> bar.player() == kid && isRecord(bar.message())),
+					"wait for a yeet further than the 1 block on file");
+			helper.assertTrue(test.client.sounds.stream().anyMatch(sound -> sound.player() == kid && sound.sound() == SoundEvents.UI_TOAST_CHALLENGE_COMPLETE),
+					"with a toast only the kid hears");
+			test.close();
+		});
+	}
+
+	@GameTest(maxTicks = 1200, padding = TestWorld.PADDING)
+	public void aKidsFirstYeetOnFileIsNoRecordButGoesInTheFightsLog(GameTestHelper helper) {
+		TestWorld test = new TestWorld(helper).running();
+		ServerPlayer kid = test.kidInTheHub();
+		test.whenLoaded(() -> test.world.enterDoor(kid, 1));
+		boolean[] left = {false};
+		helper.onEachTick(() -> {
+			if (!left[0] && test.client.actionBars.stream().anyMatch(TafelBoemWorldGameTest::isDistanceMeter)) {
+				left[0] = true;
+				test.world.enterDoor(kid, 0);
+			}
+		});
+
+		helper.succeedWhen(() -> {
+			helper.assertTrue(left[0], "wait for the first yeet that is measured in distance");
+			helper.assertFalse(test.client.actionBars.stream().anyMatch(TafelBoemWorldGameTest::isRecord), "the first yeet on file only sets the best");
+			List<FightRecord> fights = test.log.read(kid.getPlainTextName());
+			helper.assertTrue(!fights.isEmpty() && fights.getLast().farthestYeet() > 0, "the fights log has the farthest yeet: " + fights);
+			test.close();
+		});
+	}
+
+	private static boolean isRecord(Component message) {
+		return message.getContents() instanceof TranslatableContents translatable && translatable.getKey().equals("tafelboem.message.yeet_record");
+	}
+
+	private static boolean isDistanceMeter(Component message) {
+		return message.getContents() instanceof TranslatableContents translatable
+				&& (translatable.getKey().equals("tafelboem.message.yeet_distance") || translatable.getKey().equals("tafelboem.message.yeet_out"));
 	}
 
 	private static boolean showsTwoStars(Component message) {

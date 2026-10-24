@@ -7,12 +7,19 @@ package nl.jeeninga.tafelboem.core;
  * @param result {@link #WON}, {@link #LEFT} (through the exit door) or {@link #DISCONNECTED}
  * @param stars  0 unless won, see {@link Stars#forWin(int)}
  * @param kids   how many kids took part in the fight
+ * @param farthestYeet the kid's farthest yeet in this fight in blocks (helicopter heights don't count); 0 in lines from before 1.1
  */
 public record FightRecord(long timestamp, String player, int level, String arena, String result, int answers, int wrong,
-		int dontKnow, int chickenOut, int stars, long seconds, int kids, String version) {
+		int dontKnow, int chickenOut, int stars, long seconds, int kids, String version, int farthestYeet) {
 	public static final String WON = "won";
 	public static final String LEFT = "left";
 	public static final String DISCONNECTED = "disconnected";
+
+	/** A fight without a farthest yeet, as every line before 1.1. */
+	public FightRecord(long timestamp, String player, int level, String arena, String result, int answers, int wrong, int dontKnow,
+			int chickenOut, int stars, long seconds, int kids, String version) {
+		this(timestamp, player, level, arena, result, answers, wrong, dontKnow, chickenOut, stars, seconds, kids, version, 0);
+	}
 
 	public boolean won() {
 		return WON.equals(result);
@@ -22,6 +29,6 @@ public record FightRecord(long timestamp, String player, int level, String arena
 	public String describe() {
 		return player + ": level " + level + " in arena " + arena + ", " + result + (won() ? " " + "★".repeat(stars) : "")
 				+ " (" + answers + (answers == 1 ? " answer, " : " answers, ") + wrong + " wrong, " + dontKnow + " \"?\", " + chickenOut + " ESC, " + seconds + " s, "
-				+ kids + (kids == 1 ? " kid)" : " kids)");
+				+ kids + (kids == 1 ? " kid" : " kids") + (farthestYeet > 0 ? ", farthest yeet " + farthestYeet + " blocks" : "") + ")";
 	}
 }

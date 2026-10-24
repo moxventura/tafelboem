@@ -51,4 +51,11 @@ class PlaySummaryTest {
 		FightRecord one = new FightRecord(0L, "Daan", 1, "default", FightRecord.LEFT, 1, 0, 0, 0, 0, 13, 1, "1.0.1");
 		assertEquals("Daan: level 1 in arena default, left (1 answer, 0 wrong, 0 \"?\", 0 ESC, 13 s, 1 kid)", one.describe());
 	}
+
+	@Test
+	void aFightLineSaysTheFarthestYeet() {
+		FightRecord fight = new FightRecord(0L, "Mark", 1, "default", FightRecord.WON, 11, 0, 0, 0, 3, 120, 1, "1.1.0", 31);
+		assertEquals("Mark: level 1 in arena default, won ★★★ (11 answers, 0 wrong, 0 \"?\", 0 ESC, 120 s, 1 kid, farthest yeet 31 blocks)",
+				fight.describe());
+	}
 }

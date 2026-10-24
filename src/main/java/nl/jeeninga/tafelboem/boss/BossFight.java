@@ -95,6 +95,8 @@ public final class BossFight implements QuizListener {
 	private int throwCount;
 	private UUID currentTarget;
 	private @Nullable Kick kick;
+	private double kickFactor = 1.0;
+	private final YeetMeter meter;
 	private final YeetPicker yeets = new YeetPicker(new Random());
 
 	BossFight(ServerLevel level, GraafFout boss, SessionManager sessions, FightLevel fightLevel, @Nullable ArenaBox arena) {
@@ -106,6 +108,7 @@ public final class BossFight implements QuizListener {
 		this.arena = arena;
 		this.fight = Fight.of(fightLevel);
 		this.participants = new Participants(level, boss, arena, sessions);
+		this.meter = new YeetMeter(boss, participants, sessions.client(), config);
 		boss.attach(this);
 	}
 
@@ -142,6 +145,11 @@ public final class BossFight implements QuizListener {
 
 	public List<UUID> participants() {
 		return participants.ids();
+	}
+
+	/** The kids' records in a TafelBoem world; without them (any other world) the meter shows none. */
+	public void useYeetRecords(@Nullable YeetRecords records) {
+		meter.useRecords(records);
 	}
 
 	void start() {
@@ -281,14 +289,16 @@ public final class BossFight implements QuizListener {
 
 	@Override
 	public void onCorrect(ServerPlayer player, QuizSession session) {
-		tally(player.getUUID()).record(Outcome.CORRECT);
+		FightTally tally = tally(player.getUUID());
+		tally.record(Outcome.CORRECT);
 		BlockPos pos = session.bombPos();
 		if (level.getBlockState(pos).getBlock() instanceof BombBlock) {
 			level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
 		}
 		ThrownBomb thrown = ThrownBomb.kicked(level, player, session.tier(), this, boss);
 		thrown.setPos(Vec3.atCenterOf(pos));
-		kick = new Kick(player.getUUID(), session.fact(), session.tier());
+		kick = new Kick(player.getUUID(), session.fact(), session.tier(), session.answerMillis(), session.usualMillis(), session.wasFast(),
+				tally.streak());
 		level.addFreshEntity(thrown);
 
 		// The simple kick: a vanilla swing everyone sees, a whoosh, and a camera bump on the kid's screen.
@@ -364,7 +374,9 @@ public final class BossFight implements QuizListener {
 
 		ServerPlayer kicker = kicker();
 		Vec3 kickedFrom = kicker != null ? kicker.position() : where;
-		boss.yeet(where, (0.9 + level.getRandom().nextDouble() * 0.5) * tier.yeetPower(), yeets.next(), kickedFrom);
+		kickFactor = kick == null ? 1.0 : kick.factor(config.yeetBoost);
+		double power = (0.9 + level.getRandom().nextDouble() * 0.5) * tier.yeetPower() * kickFactor;
+		boss.yeet(where, power, yeets.next(), kickedFrom);
 		phase = Phase.REACTING;
 		phaseTicks = 20;
 	}
@@ -375,32 +387,28 @@ public final class BossFight implements QuizListener {
 			return;
 		}
 		followKickerFor(LANDED_CAM_TICKS);
-		int blocks = yeet.blocks();
-		if (blocks < 1) {
-			return;
-		}
-		String key = yeet.measuresHeight() ? "tafelboem.message.yeet_height" : "tafelboem.message.yeet_distance";
-		Component message = Component.translatable(key, boss.getDisplayName(), blocks)
-				.withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD);
-		for (ServerPlayer player : participants.nearBoss()) {
-			sessions.client().actionBar(player, message);
-		}
+		farthest(yeet);
+		meter.landed(yeet, false, kick, "dizzy", false, kickFactor);
 	}
 
 	/** Out of the arena and into the void: say how far he got, then he comes straight back. */
 	private void flewOut() {
 		ServerPlayer kid = kicker() != null ? kicker() : participants.players().stream().findFirst().orElse(null);
 		Vec3 near = kid != null ? kid.position() : new Vec3(arena.middleX(), arena.minY() + 3, arena.middleZ());
-		int blocks = boss.comeBack(level, near, arena);
-		if (blocks < 0) {
+		Yeet cut = boss.comeBack(level, near, arena);
+		if (cut == null) {
 			return;
 		}
-		Component message = Component.translatable("tafelboem.message.yeet_out", boss.getDisplayName(), blocks)
-				.withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD);
-		for (ServerPlayer player : participants.players()) {
-			sessions.client().actionBar(player, message);
-		}
+		farthest(cut);
+		meter.landed(cut, true, kick, "dizzy", false, kickFactor);
 		followKickerFor(LANDED_CAM_TICKS);
+	}
+
+	/** The kicker's farthest yeet in this fight, for the fights log; helicopter heights don't count. */
+	private void farthest(Yeet yeet) {
+		if (kick != null && !yeet.measuresHeight()) {
+			tally(kick.kicker()).yeeted(yeet.blocks());
+		}
 	}
 
 	/** Keeps the kicker's view on Graaf Fout for a little longer, then lets go. */
