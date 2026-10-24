@@ -70,7 +70,7 @@ multiplayer sessions and a one-step deploy to every PC are part of R0.
 | **R0.1 "Beter mikken"** (patch) | see the R0.1 scope below | With the playtest-1 blockers fixed, the kids see every consequence of their answers, "?" is only pressed on purpose, and a correction on the HUD sticks as well as the retype did | see the R0.1 evaluation below |
 | **R1 "Kies je level"** | see the R1 scope below: the TafelBoem world with a hub and a door per level; levels 1–3 (easy, medium, hard) with their own tables, bombs and hits; arenas built from code or from structure templates, picked at random per level; stars | With a world of their own, a hub and three levels to choose from, the kids keep asking to play, and over time they pick harder levels and collect stars | see the R1 evaluation below |
 | **R1.1 "Meer yeets"** | see the R1.1 scope below: a flight plus a landing per hit (wall splat, head-first, pancake, frantic running, bomb signatures), the full yeet-o-meter (fast answers and streaks yeet further, a personal best), the counting Kippenbom; the kids' own arenas as they come | More variety keeps them coming back | see the R1.1 evaluation below |
-| *Faster tests, right after R1.1* | nothing new: the same tests, quicker. At 1.1.0 a `./gradlew build` takes about 1 min (JUnit and 68 GameTests), each extra `runGameTest` 1¼–1½ min and `runClientGameTest` 2½ min, and a slow fight test is run three times before it is trusted. Also make tests that count entities count only their own: the GameTest grid puts tests a few blocks apart in one level, so the exact chicken counts (`ChickenGameTest`) only stay apart by luck | A suite that is quicker to run keeps releases small and cheap to check | time per `build`, `runGameTest` and `runClientGameTest` before and after; no test loses what it proves |
+| *Faster tests, right after R1.1* | nothing new for the kids (see the faster-tests scope below): the same tests, quicker; a quick and a fights group on two servers side by side; tests that count entities count only their own | A suite that is quicker to run keeps releases small and cheap to check | see the faster-tests targets below; no test loses what it proves |
 | R1.2 *(after R1.1)* | experiments behind toggles: dodgeable bombs and "Graaf Fout eats your mistake" | Dodging and healing don't cut answers per minute or add frustration | answers per minute vs R1, frustration tally |
 | **R2 "Leren dat blijft"** | fact states and spaced picker, a Tafelkaart screen (GUI), parent report, the daily limit, "Kies je bom", the full leg kick in third person | The practice spreads out and facts move toward Fluent | 2 weeks of logs: % Accurate/Fluent up, median time down, sessions spread over days, kids still asking |
 | **R3 "Meer boem"** | bombs 4–9, levels 4–9, particle choreographies, craters, escape aids, lethal tiers with 3 lives, inventory stash, signature reactions for bombs 4–9, co-op rescue sums, the lobby extras in the hub (Tafelkaart wall, trophy wall, animal pen) | Escalation keeps them climbing without frustration | level reached per week, favourite bombs, no tears at levels 7–9, FPS OK on the woonkamer PC |
@@ -656,6 +656,109 @@ The action bar never reaches `latest.log`, so the host's log gets:
 - they noticed the record or the boost
 - the counting chickens were seen as groups
 - the yeet lines show the fast bonus on a minority of kicks, not on half
+
+## Faster tests (detailed scope)
+
+Nothing changes for the kids: the same tests, quicker to run, so every change and every release is
+cheap to check. Decided with Jesper on 2026-10-24.
+
+### Where the time goes (measured at 1.1.0)
+| Run | Time | Of which |
+|---|---|---|
+| `./gradlew build` | 57 s | almost all of it is one GameTest run (JUnit and compiling take seconds) |
+| `./gradlew runGameTest` | 56 s | server start 11 s; set-up 11 s; batch 0 (50 tests) 17 s; batch 1 (20 tests) 8 s; shutdown 9 s |
+| `./gradlew runClientGameTest` | 2 min 26 s | start 23 s; the playthrough 60 s; the world test (close and reopen) 57 s |
+| a new slow test, run three times | about 3 min | three full runs |
+| a release check | about 6 min | `build`, two more GameTest runs, the client test, `publishPack`'s own build |
+
+- **Set-up:** every run generates terrain at a new random spot, and every test then clears its
+  padded box (97–113 blocks a side), about 66 million blocks per run.
+- **Shutdown:** 8 of its 9 s is saving that terrain; the GameTest world had grown to 1.2 GB.
+- **Batches:** Minecraft runs at most 50 tests per batch and the batches one after the other, so
+  the slowest test of each batch counts: a whole fight to the win, 7–9 s.
+- **Grid:** tests are placed only 6 blocks apart (their 1-block structure plus 5); padding doesn't
+  space them out. A test that counts the entities near it can count a neighbour's.
+- The 70 GameTests add up to 150 s, but most of that runs side by side.
+
+### Decisions
+- The everyday loop comes first (one change, the tests that matter), then the full build and the
+  release check.
+- Whole-fight tests stay real: they keep playing a real fight to the win. Only the harness around
+  them gets faster.
+- All three directions: a faster harness, a quick group and a fights group, and the two groups on
+  two servers side by side.
+
+### Two groups on two servers
+- **Fights:** the tests that play a whole fight (about 12, 3–9 s each), marked as such in the test
+  code. **Quick:** all the others.
+- A small hook in the test mod (`src/gametest`, never the mod itself) keeps only the chosen group
+  when the server starts, plus an optional pattern on the test name and a repeat count. A check
+  fails the run if a test is in no group or in both, or if a pattern matches nothing, so no test
+  silently drops out.
+- Gradle tasks, each with its own run folder so they can run at once:
+  - `runQuickGameTests`: the quick group; `./gradlew build` runs it.
+  - `runFightGameTests`: the fights group.
+  - `runGameTest`: both groups side by side.
+  - `-Ptests=<pattern>` runs only matching tests; `-Prepeat=<n>` runs each of them n times in one
+    server (Minecraft's own repeat).
+  - `publishPack` runs `build` and the fights group: nothing is published without every GameTest.
+
+### A faster harness
+- **A fresh world each run, not saved:** Gradle deletes the run folder's world before each run,
+  and the test mod switches saving off. No 8 s of saving, no growing world.
+- **One batch per server:** the test mod raises Minecraft's 50-tests-per-batch limit, so each
+  server's slowest test counts once.
+- **Less clearing (an experiment):** lower the padding class by class, and keep a lower padding
+  only if that class stays green three runs in a row. A test that needs the space below it (the
+  void under an arena) keeps what it needs.
+- The server start (11 s: Java, Fabric, Minecraft) stays as it is.
+
+### Isolation
+Before any speed-up, every test that counts entities counts only its own, by id, with one shared
+helper (grown from the chase tests' `ChaseChickens`): `ChickenGameTest`, the Kippenbom counts in
+the fight tests and the spectacle-cap test. One batch and two servers put even more tests side by
+side, so this comes first.
+
+### The client test
+Its time is real time: the client can't run ticks faster the way the test server does. Replace
+fixed waits with "wait until it is there" where there is something to wait for, keeping every
+screenshot and every check. Stop if that gains less than 15 s; the bigger saving is running it less
+often (below).
+
+### Working rules (`AGENTS.md`)
+| When | Run |
+|---|---|
+| after every change | `./gradlew build` (JUnit and the quick group) |
+| before committing a task that touches `boss/`, `game/` or `world/`, or a fight test | `./gradlew runGameTest` (both groups) |
+| a new or changed slow test | `./gradlew runFightGameTests -Ptests=<pattern> -Prepeat=3`, in place of three full runs |
+| client code, a world (re)load, a load-contract row or the screenshots changed; before every release | `./gradlew runClientGameTest` |
+
+### Measuring
+- Every GameTest run writes Fabric's JUnit XML report (`fabric-api.gametest.report-file`) to
+  `build/reports/gametest-<group>.xml`, so each test's time is always at hand.
+- Each step is measured over three runs against the 1.1.0 numbers above; the medians go in
+  `docs/evaluations/faster-tests.md`. A step that doesn't save time is taken out again.
+- Order: the report and the baseline; isolation; the fresh unsaved world; one batch; the two groups
+  on two servers with pattern and repeat; less clearing; the client test's waits; `AGENTS.md` and
+  the evaluation.
+
+### Done when
+| Run | 1.1.0 | Target |
+|---|---|---|
+| `./gradlew build` | 57 s | 30 s or less |
+| `./gradlew runGameTest` (all) | 56 s | 35 s or less |
+| one slow test three times | about 3 min | 45 s or less |
+| a release check | about 6 min | 3½ min or less |
+| `./gradlew runClientGameTest` | 2 min 26 s | 2 min or less, or written down as not worth it |
+
+- Every GameTest still runs before every publish.
+- All 70 GameTests stay, with what they assert; the only changes are the isolation fixes.
+- Five full runs in a row pass.
+
+### Shipping
+No game code changes, so nothing is published for this: it merges into `main`, and the next
+published build (1.1.1 or R1.2) carries it. Until then `main` is ahead of the published build by
+test and build changes only.
 
 ## Product vision (the backlog for R1+, re-prioritised after every evaluation)
 
