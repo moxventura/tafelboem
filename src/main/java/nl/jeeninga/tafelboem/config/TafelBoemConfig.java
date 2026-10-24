@@ -47,6 +47,9 @@ public final class TafelBoemConfig {
 	/** In a TafelBoem world, a yeet further than the kid's own best says "New record!" to that kid. */
 	public boolean yeetRecords = true;
 
+	/** After a yeet he may land head-first, as a pancake or running round and fly into a wall; off, the R1 yeets and dizzy spell. */
+	public boolean yeetCatalogue = true;
+
 	/** Each level's arena plays its own music: Otherside, Pigstep, "Boss". Applies from the next arena placed. */
 	public boolean arenaMusic = true;
 

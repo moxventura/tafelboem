@@ -11,6 +11,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
@@ -49,7 +50,7 @@ public class GraafFout extends Evoker {
 	/** Client side: when the pose last changed and what came before, so the renderer can ease in and out. */
 	private YeetPose shownPose = YeetPose.NONE;
 	private YeetPose previousPose = YeetPose.NONE;
-	private YeetPose.Angles previousAngles = YeetPose.Angles.UPRIGHT;
+	private YeetPose.Transform previousTransform = YeetPose.Transform.UPRIGHT;
 	private int poseChangedAt;
 
 	public GraafFout(EntityType<? extends GraafFout> type, Level level) {
@@ -79,7 +80,7 @@ public class GraafFout extends Evoker {
 
 	/** The extra roll or faceplant on top of his spin; the server decides, every client draws it. */
 	public YeetPose yeetPose() {
-		return YeetPose.values()[entityData.get(DATA_YEET_POSE)];
+		return YeetPose.byId(entityData.get(DATA_YEET_POSE));
 	}
 
 	public void setYeetPose(YeetPose pose) {
@@ -90,7 +91,7 @@ public class GraafFout extends Evoker {
 	public void onSyncedDataUpdated(EntityDataAccessor<?> accessor) {
 		super.onSyncedDataUpdated(accessor);
 		if (DATA_YEET_POSE.equals(accessor) && level().isClientSide()) {
-			previousAngles = renderAngles(0F);
+			previousTransform = renderTransform(0F);
 			previousPose = shownPose;
 			shownPose = yeetPose();
 			poseChangedAt = tickCount;
@@ -102,10 +103,10 @@ public class GraafFout extends Evoker {
 		return shownPose != YeetPose.NONE ? shownPose : previousPose;
 	}
 
-	/** Client side: the extra roll and pitch to draw him with right now. */
-	public YeetPose.Angles renderAngles(float partialTick) {
+	/** Client side: the extra roll, pitch, squash and sink to draw him with right now. */
+	public YeetPose.Transform renderTransform(float partialTick) {
 		float ticks = tickCount - poseChangedAt + partialTick;
-		return shownPose != YeetPose.NONE ? shownPose.angles(ticks) : YeetPose.settle(previousAngles, ticks);
+		return shownPose != YeetPose.NONE ? shownPose.transform(ticks) : YeetPose.settle(previousTransform, ticks);
 	}
 
 	public boolean isReacting() {
@@ -131,6 +132,11 @@ public class GraafFout extends Evoker {
 	@Override
 	public boolean isPushable() {
 		return false;
+	}
+
+	@Override
+	protected void doPush(Entity entity) {
+		// Running round after a landing, he would shove the kids about.
 	}
 
 	@Override
@@ -253,12 +259,17 @@ public class GraafFout extends Evoker {
 		setDeltaMovement(0, dy, 0);
 	}
 
-	/** Stops spinning, turns to face where he was flying and falls flat on his face. */
-	public void faceplantTowards(Vec3 direction) {
+	/** Turns him to look the way of {@code direction}, without his usual spin. */
+	public void face(Vec3 direction) {
 		float yaw = (float) (Mth.atan2(direction.z, direction.x) * Mth.RAD_TO_DEG) - 90F;
 		setYRot(yaw);
 		setYBodyRot(yaw);
 		setYHeadRot(yaw);
+	}
+
+	/** Stops spinning, turns to face where he was flying and falls flat on his face. */
+	public void faceplantTowards(Vec3 direction) {
+		face(direction);
 		setYeetPose(YeetPose.FACEPLANT);
 	}
 
