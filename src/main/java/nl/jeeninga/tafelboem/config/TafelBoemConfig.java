@@ -38,6 +38,9 @@ public final class TafelBoemConfig {
 	/** A Kippenbom lets chickens loose after a right answer (12, at Graaf Fout) and a wrong one (3, at the kid). */
 	public boolean kippenbomChickens = true;
 
+	/** A Kippenbom's right answer on a × b shows a groups of b chickens; off, 12 fly as in 1.0.2. */
+	public boolean countingKippenbom = true;
+
 	/** Each level's arena plays its own music: Otherside, Pigstep, "Boss". Applies from the next arena placed. */
 	public boolean arenaMusic = true;
 

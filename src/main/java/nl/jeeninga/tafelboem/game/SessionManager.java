@@ -15,11 +15,15 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.animal.chicken.Chicken;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
+import nl.jeeninga.tafelboem.TafelBoem;
 import nl.jeeninga.tafelboem.config.TafelBoemConfig;
 import nl.jeeninga.tafelboem.core.AnswerRecord;
 import nl.jeeninga.tafelboem.core.BombTier;
+import nl.jeeninga.tafelboem.core.ChickenCount;
 import nl.jeeninga.tafelboem.core.DerivedFactTips;
 import nl.jeeninga.tafelboem.core.EscapeModel;
 import nl.jeeninga.tafelboem.core.Fact;
@@ -38,6 +42,12 @@ public final class SessionManager {
 	static final int ANSWER_TIMEOUT_TICKS = 20 * 120;
 	static final int CORRECTION_TIMEOUT_TICKS = 20 * 60;
 	static final int SPECTACLE_LIFETIME_TICKS = 20 * 60;
+	/** Counting chickens go sooner than other spectacle animals, so 10 × 10 on Moeilijk never piles up. */
+	static final int COUNTING_LIFETIME_TICKS = 20 * 10;
+	/** The first generation flies for a second before it pops into the groups. */
+	static final int COUNTING_POP_TICKS = 20;
+	/** Above this many spectacle animals the oldest poof first, so nothing lags the PC. */
+	public static final int MAX_SPECTACLES = 150;
 
 	private final MinecraftServer server;
 	private final Learners learners;
@@ -46,6 +56,7 @@ public final class SessionManager {
 	private final Map<UUID, QuizSession> sessions = new HashMap<>();
 	private final List<PendingBoom> booms = new ArrayList<>();
 	private final List<Spectacle> spectacles = new ArrayList<>();
+	private final List<ChickenBurst> bursts = new ArrayList<>();
 	private int nextSessionId = 1;
 
 	public SessionManager(MinecraftServer server, Learners learners, QuizClient client) {
@@ -155,7 +166,7 @@ public final class SessionManager {
 		}
 
 		int escapeTicks = EscapeModel.escapeTicks(session.tier().blastRadius(), millis);
-		booms.add(new PendingBoom(player.level(), session.bombPos(), session.tier(), escapeTicks, player.getUUID()));
+		booms.add(new PendingBoom(player.level(), session.bombPos(), session.tier(), session.fact(), escapeTicks, player.getUUID()));
 		actionBar(player, Component.translatable("tafelboem.message.run"));
 	}
 
@@ -169,7 +180,8 @@ public final class SessionManager {
 				BombEffects.fizzle(level, session.bombPos());
 				BombEffects.penalty(level, player, session.tier());
 				if (session.tier() == BombTier.KIPPENBOM && config.kippenbomChickens) {
-					BombEffects.hoppingChickens(level, player.position());
+					BombEffects.hoppingChickens(level, player.position(),
+							config.countingKippenbom ? ChickenCount.WRONG_ANSWER : BombEffects.WRONG_ANSWER_CHICKENS);
 					collectSpectacles(level, player.blockPosition());
 				}
 			}
@@ -228,6 +240,7 @@ public final class SessionManager {
 	public void tick() {
 		tickSessions();
 		tickBooms();
+		tickBursts();
 		tickSpectacles();
 	}
 
@@ -269,7 +282,14 @@ public final class SessionManager {
 
 			if (boom.ticksLeft <= 0) {
 				it.remove();
-				BombEffects.boom(boom.level, boom.pos, boom.tier);
+				if (BombEffects.boom(boom.level, boom.pos, boom.tier) && boom.tier == BombTier.KIPPENBOM) {
+					Vec3 center = Vec3.atCenterOf(boom.pos);
+					if (config.countingKippenbom) {
+						countChickens(boom.level, center, boom.fact, "free play");
+					} else {
+						BombEffects.flyingChickens(boom.level, center);
+					}
+				}
 				collectSpectacles(boom.level, boom.pos);
 			}
 		}
@@ -279,25 +299,69 @@ public final class SessionManager {
 	public void collectSpectacles(ServerLevel level, BlockPos pos) {
 		for (Entity entity : level.getEntities((Entity) null, new AABB(pos).inflate(3),
 				entity -> entity.entityTags().contains(BombEffects.SPECTACLE_TAG))) {
-			if (spectacles.stream().noneMatch(spectacle -> spectacle.entity == entity)) {
-				spectacles.add(new Spectacle(entity, SPECTACLE_LIFETIME_TICKS));
+			track(entity, SPECTACLE_LIFETIME_TICKS);
+		}
+	}
+
+	/**
+	 * This spectacle animal poofs after {@code ticks}. Animals that appear after the boom (the counting
+	 * Kippenbom's groups, the chase) come here when they spawn: {@link #collectSpectacles} only finds
+	 * what is there at the boom. Above {@link #MAX_SPECTACLES} the oldest go first.
+	 */
+	public void track(Entity entity, int ticks) {
+		if (spectacles.stream().anyMatch(spectacle -> spectacle.entity == entity)) {
+			return;
+		}
+		spectacles.add(new Spectacle(entity, ticks));
+		while (spectacles.size() > MAX_SPECTACLES) {
+			poof(spectacles.removeFirst().entity);
+		}
+	}
+
+	/**
+	 * The counting Kippenbom: one chicken per group flies out, and a second later each pops into its
+	 * group, so the kids see a × b as a groups of b.
+	 *
+	 * @param where "fight" or "free play", for the game log
+	 */
+	public void countChickens(ServerLevel level, Vec3 at, Fact fact, String where) {
+		ChickenCount count = ChickenCount.of(fact);
+		List<Chicken> firsts = BombEffects.countingChickens(level, at, count.groups(), count.ringSpeed());
+		firsts.forEach(chicken -> track(chicken, COUNTING_LIFETIME_TICKS));
+		bursts.add(new ChickenBurst(level, firsts, count.perGroup()));
+		TafelBoem.LOGGER.info("TafelBoem chickens: {}", count.describe(where));
+	}
+
+	private void tickBursts() {
+		for (Iterator<ChickenBurst> it = bursts.iterator(); it.hasNext(); ) {
+			ChickenBurst burst = it.next();
+			if (--burst.ticksLeft > 0) {
+				continue;
+			}
+			it.remove();
+			for (Chicken first : burst.firsts) {
+				BombEffects.popChicken(burst.level, first, burst.perGroup).forEach(chicken -> track(chicken, COUNTING_LIFETIME_TICKS));
 			}
 		}
 	}
 
-	/** Chickens and friends poof away after a minute so nothing piles up and lags the PC. */
+	/** Chickens and friends poof away after their time so nothing piles up and lags the PC. */
 	private void tickSpectacles() {
 		for (Iterator<Spectacle> it = spectacles.iterator(); it.hasNext(); ) {
 			Spectacle spectacle = it.next();
 			if (!spectacle.entity.isAlive()) {
 				it.remove();
 			} else if (--spectacle.ticksLeft <= 0) {
-				if (spectacle.entity.level() instanceof ServerLevel level) {
-					BombEffects.poof(level, spectacle.entity.position());
-				}
-				spectacle.entity.discard();
+				poof(spectacle.entity);
 				it.remove();
 			}
+		}
+	}
+
+	private static void poof(Entity entity) {
+		if (entity.isAlive() && entity.level() instanceof ServerLevel level) {
+			BombEffects.poof(level, entity.position());
+			entity.discard();
 		}
 	}
 
@@ -314,15 +378,30 @@ public final class SessionManager {
 		final ServerLevel level;
 		final BlockPos pos;
 		final BombTier tier;
+		final Fact fact;
 		final UUID playerId;
 		int ticksLeft;
 
-		PendingBoom(ServerLevel level, BlockPos pos, BombTier tier, int ticksLeft, UUID playerId) {
+		PendingBoom(ServerLevel level, BlockPos pos, BombTier tier, Fact fact, int ticksLeft, UUID playerId) {
 			this.level = level;
 			this.pos = pos;
 			this.tier = tier;
+			this.fact = fact;
 			this.ticksLeft = ticksLeft;
 			this.playerId = playerId;
+		}
+	}
+
+	private static final class ChickenBurst {
+		final ServerLevel level;
+		final List<Chicken> firsts;
+		final int perGroup;
+		int ticksLeft = COUNTING_POP_TICKS;
+
+		ChickenBurst(ServerLevel level, List<Chicken> firsts, int perGroup) {
+			this.level = level;
+			this.firsts = firsts;
+			this.perGroup = perGroup;
 		}
 	}
 

@@ -94,7 +94,7 @@ public final class BossFight implements QuizListener {
 	private int phaseTicks = FIRST_THROW_DELAY;
 	private int throwCount;
 	private UUID currentTarget;
-	private @Nullable UUID lastKicker;
+	private @Nullable Kick kick;
 	private final YeetPicker yeets = new YeetPicker(new Random());
 
 	BossFight(ServerLevel level, GraafFout boss, SessionManager sessions, FightLevel fightLevel, @Nullable ArenaBox arena) {
@@ -286,10 +286,10 @@ public final class BossFight implements QuizListener {
 		if (level.getBlockState(pos).getBlock() instanceof BombBlock) {
 			level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
 		}
-		ThrownBomb kick = ThrownBomb.kicked(level, player, session.tier(), this, boss);
-		kick.setPos(Vec3.atCenterOf(pos));
-		lastKicker = player.getUUID();
-		level.addFreshEntity(kick);
+		ThrownBomb thrown = ThrownBomb.kicked(level, player, session.tier(), this, boss);
+		thrown.setPos(Vec3.atCenterOf(pos));
+		kick = new Kick(player.getUUID(), session.fact(), session.tier());
+		level.addFreshEntity(thrown);
 
 		// The simple kick: a vanilla swing everyone sees, a whoosh, and a camera bump on the kid's screen.
 		player.swing(InteractionHand.MAIN_HAND, true);
@@ -341,8 +341,12 @@ public final class BossFight implements QuizListener {
 		level.explode(null, null, boom, boss.getX(), boss.getY() + 1, boss.getZ(), tier.blastRadius(), false,
 				craters ? Level.ExplosionInteraction.TNT : Level.ExplosionInteraction.NONE);
 		if (tier == BombTier.KIPPENBOM && config.kippenbomChickens) {
-			BombEffects.flyingChickens(level, boss.position());
-			sessions.collectSpectacles(level, boss.blockPosition());
+			if (config.countingKippenbom && kick != null) {
+				sessions.countChickens(level, boss.position(), kick.fact(), "fight");
+			} else {
+				BombEffects.flyingChickens(level, boss.position());
+				sessions.collectSpectacles(level, boss.blockPosition());
+			}
 		}
 		fight.registerHit();
 		participants.showHealth(fight.healthFraction());
@@ -408,7 +412,7 @@ public final class BossFight implements QuizListener {
 	}
 
 	private @Nullable ServerPlayer kicker() {
-		return lastKicker == null ? null : level.getServer().getPlayerList().getPlayer(lastKicker);
+		return kick == null ? null : level.getServer().getPlayerList().getPlayer(kick.kicker());
 	}
 
 	private void reward() {
