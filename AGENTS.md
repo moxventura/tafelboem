@@ -129,7 +129,8 @@ GameTest pitfalls:
 - From 1.0.1 on, the host PC's `latest.log` has a `TafelBoem fight:` line per fight and a
   `TafelBoem session:` line per kid, with the evaluation's numbers.
 - From 1.1.0 on, it also has a `TafelBoem config:` line per world (the switches), a
-  `TafelBoem yeet:` line per kick (answer time, boost, flight, landing, record) and a
-  `TafelBoem chickens:` line per counting Kippenbom.
+  `TafelBoem yeet:` line per kick (answer time, boost, flight, landing, record), a
+  `TafelBoem chickens:` line per counting Kippenbom and, if he ever froze mid-yeet and the fight
+  brought him back, a `TafelBoem stuck:` line.
 - Record each playtest in `docs/evaluations/R<x>.md`: findings with their cause checked in the
   code, then the go/no-go and backlog changes.

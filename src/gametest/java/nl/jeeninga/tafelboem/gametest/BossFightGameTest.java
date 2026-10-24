@@ -183,6 +183,77 @@ public class BossFightGameTest {
 	 * is, and the other kid's view is never touched. Runs until both have kicked, so a stale kicker
 	 * from the previous yeet would show up too.
 	 */
+	/**
+	 * The safety net: if Graaf Fout ever stops being ticked mid-yeet (an entity in a chunk nothing
+	 * simulates), the fight must not wait for his landing for ever. Real play can't get there, so the
+	 * test carries him past what {@link OpenField} follows, into a chunk where entities don't tick.
+	 */
+	@GameTest(maxTicks = 900, padding = 48)
+	@SuppressWarnings("removal") // mock players are still the only way to test without a client
+	public void aFightGoesOnWhenGraafFoutFreezesMidYeet(GameTestHelper helper) {
+		OpenField.open(helper);
+		ServerLevel level = helper.getLevel();
+		RecordingQuizClient client = new RecordingQuizClient();
+		SessionManager sessions = new SessionManager(level.getServer(), new Learners(new AnswerLog(tempDir())), client);
+		BossFights fights = new BossFights(sessions);
+
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		Vec3 stand = Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(1, 1, 1)));
+		player.teleportTo(stand.x, stand.y, stand.z);
+		helper.assertTrue(fights.summon(level, stand.add(6, 1.5, 0)), "Graaf Fout should appear");
+		BossFight fight = fights.active().getFirst();
+
+		Set<Integer> answered = new HashSet<>();
+		int[] frozenAt = {-1};
+		int[] frozenTicks = {0};
+		int[] ticks = {0};
+		helper.onEachTick(() -> {
+			ticks[0]++;
+			sessions.tick();
+			fights.tick();
+			if (frozenAt[0] < 0 && fight.boss().isReacting()) {
+				// Past what OpenField follows (the test's box plus 48), in a chunk that is loaded but where entities don't tick.
+				Vec3 spot = frozenSpot(level, stand, helper.getBounds().inflate(OpenField.RADIUS + 16 + 8));
+				helper.assertTrue(spot != null, "found no loaded chunk where entities don't tick");
+				fight.boss().teleportTo(spot.x, spot.y, spot.z);
+				frozenAt[0] = ticks[0];
+				frozenTicks[0] = fight.boss().tickCount;
+			}
+			if (frozenAt[0] >= 0 && ticks[0] == frozenAt[0] + 100) {
+				helper.assertTrue(fight.boss().tickCount == frozenTicks[0], "the setup should freeze him, but he kept ticking");
+			}
+			for (RecordingQuizClient.Sent sent : List.copyOf(client.sentTo)) {
+				QuizS2C question = sent.payload();
+				if (question.mode() == QuizS2C.ASK && answered.add(question.sessionId())) {
+					sessions.onClientAction(sent.player(), new QuizC2S(question.sessionId(), QuizC2S.ANSWER, question.a() * question.b(), QuizC2S.VIA_KEY));
+				}
+			}
+		});
+
+		helper.succeedWhen(() -> {
+			helper.assertTrue(frozenAt[0] >= 0, "wait for his first yeet");
+			helper.assertTrue(answered.size() >= 2, "wait until he throws again; he hangs " + Math.round(fight.boss().distanceTo(player)) + " blocks away");
+			helper.assertTrue(fight.boss().distanceTo(player) < 20, "he is back next to the kid, not " + Math.round(fight.boss().distanceTo(player)) + " blocks away");
+			helper.assertFalse(fight.isOver(), "the fight goes on");
+			fights.endAll();
+		});
+	}
+
+	/** A spot above a loaded chunk where entities don't tick, 4 to 12 chunks from {@code around} and outside {@code followed}. */
+	private static Vec3 frozenSpot(ServerLevel level, Vec3 around, AABB followed) {
+		ChunkPos centre = ChunkPos.containing(BlockPos.containing(around));
+		int[][] directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-1, -1}, {1, 1}, {-1, 1}, {1, -1}};
+		for (int distance = 4; distance <= 12; distance++) {
+			for (int[] direction : directions) {
+				BlockPos pos = new BlockPos((centre.x() + direction[0] * distance) * 16 + 8, (int) around.y + 20, (centre.z() + direction[1] * distance) * 16 + 8);
+				if (level.isLoaded(pos) && !level.isPositionEntityTicking(pos) && !followed.contains(Vec3.atCenterOf(pos))) {
+					return Vec3.atCenterOf(pos);
+				}
+			}
+		}
+		return null;
+	}
+
 	@GameTest(maxTicks = 1200, padding = 48)
 	@SuppressWarnings("removal") // mock players are still the only way to test without a client
 	public void inMultiplayerOnlyTheKidWhoseBombItIsGetsTheirViewMoved(GameTestHelper helper) {

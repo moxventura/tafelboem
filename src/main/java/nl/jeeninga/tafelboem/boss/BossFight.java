@@ -29,6 +29,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
+import nl.jeeninga.tafelboem.TafelBoem;
 import nl.jeeninga.tafelboem.block.BombBlock;
 import nl.jeeninga.tafelboem.boss.landing.Landing;
 import nl.jeeninga.tafelboem.boss.yeet.Yeet;
@@ -62,6 +63,8 @@ public final class BossFight implements QuizListener {
 	 */
 	static final int AFTER_MISS_COOLDOWN = 120;
 	static final int FLIGHT_TIMEOUT = 100;
+	/** A kick's reaction is never over before this: the fight only looks at it after a second. */
+	static final int REACTION_MIN_TICKS = 20;
 	static final int FINALE_TICKS = 60;
 	static final int LOOT_COUNT = 4;
 	static final double MAX_THROW_DISTANCE = 16;
@@ -212,6 +215,8 @@ public final class BossFight implements QuizListener {
 			case REACTING -> {
 				if (!boss.isReacting() && phaseTicks <= 0) {
 					cooldown(reactionCooldown);
+				} else if (boss.isReacting() && phaseTicks <= -Pacing.STUCK_TICKS) {
+					recoverFromStall();
 				}
 			}
 			case FINALE -> {
@@ -399,7 +404,7 @@ public final class BossFight implements QuizListener {
 		reactionCooldown = COOLDOWN_TICKS;
 		boss.yeet(where, power, reactions.nextFlight(arena != null, config.yeetCatalogue), kickedFrom);
 		phase = Phase.REACTING;
-		phaseTicks = 20;
+		phaseTicks = REACTION_MIN_TICKS;
 	}
 
 	/** He is down: pick how he lands, keep the view on him for that long, and show the yeet-o-meter. */
@@ -435,6 +440,29 @@ public final class BossFight implements QuizListener {
 		farthest(cut);
 		meter.landed(cut, true, kick, LandingStyle.DIZZY.id(), false, kickFactor);
 		followKickerFor(LANDED_CAM_TICKS);
+	}
+
+	/**
+	 * Safety net: he has been reacting far longer than any yeet or landing lasts, so he stopped being
+	 * ticked (an entity in a chunk nobody simulates). Bring him back next to a kid and carry on; it
+	 * wasn't a real landing, so no meter, no record.
+	 */
+	private void recoverFromStall() {
+		TafelBoem.LOGGER.warn("TafelBoem stuck: boss={} yeet={} landing={} waited={}", boss.position(), boss.yeetStyle(), boss.landingStyle(),
+				REACTION_MIN_TICKS - phaseTicks);
+		ServerPlayer kid = kicker() != null ? kicker() : participants.players().stream().findFirst().orElse(null);
+		Vec3 near;
+		if (kid != null) {
+			near = kid.position();
+		} else if (arena != null) {
+			near = new Vec3(arena.middleX(), arena.minY() + 3, arena.middleZ());
+		} else {
+			near = boss.position();
+		}
+		if (boss.comeBack(level, near, arena) != null) {
+			reactions.played(LandingStyle.DIZZY);
+		}
+		cooldown(COOLDOWN_TICKS);
 	}
 
 	/** Where a landing happens: this fight's arena, its kids, and the session's poof timers. */
