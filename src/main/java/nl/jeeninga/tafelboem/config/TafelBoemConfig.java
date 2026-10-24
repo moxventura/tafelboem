@@ -59,6 +59,11 @@ public final class TafelBoemConfig {
 		}
 	}
 
+	/** Every switch on one line, for the game log the parent shares after a playtest. */
+	public String describe() {
+		return new Gson().toJson(this);
+	}
+
 	private void save(Path file) {
 		try {
 			Files.createDirectories(file.getParent());

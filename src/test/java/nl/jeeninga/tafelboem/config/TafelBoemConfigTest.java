@@ -66,4 +66,12 @@ class TafelBoemConfigTest {
 		assertTrue(config.cameraAssist);
 		assertEquals("{ this is not json", Files.readString(file), "the parent's file stays as it was, to fix by hand");
 	}
+
+	@Test
+	void theGameLogGetsEverySwitchOnOneLine() {
+		String line = new TafelBoemConfig().describe();
+
+		assertFalse(line.contains("\n"), "one line: " + line);
+		assertTrue(line.contains("\"correctionRetype\":false") && line.contains("\"arenaMusic\":true"), line);
+	}
 }
