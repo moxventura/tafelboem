@@ -10,6 +10,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.ChatVisiblity;
 import net.minecraft.world.entity.animal.chicken.Chicken;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -81,23 +82,12 @@ public class PlaythroughClientGameTest implements FabricClientGameTest {
 			context.takeScreenshot("tafelboem-05-kippenbom-boom");
 
 			// 2b. The counting Kippenbom on cue: the question is random, so a sum with 3 groups of 4 is
-			// counted out directly, once the first Kippenbom's chickens have poofed. The first 3 chickens
-			// pop into their groups 20 ticks after they fly out.
-			for (int tick = 0; spectacleChickens(world, BlockPos.containing(spotAhead(world, 6))) > 0; tick++) {
-				check(tick < 300, "the first Kippenbom's chickens should poof");
-				context.waitTicks(1);
-			}
-			BlockPos counting = BlockPos.containing(spotAhead(world, 10));
-			world.getServer().runOnServer(server -> TafelBoem.sessions().countChickens(server.overworld(),
-					Vec3.atCenterOf(counting).add(0, 1, 0), new Fact(3, 4), "client test"));
-			for (int tick = 0; spectacleChickens(world, counting) < 12; tick++) {
-				check(tick < 100, "the 3 chickens should pop into 12");
-				context.waitTicks(1);
-			}
-			lookAtChickens(context, world, counting);
-			// Just after the pop the groups still stand apart; by 15 ticks they have spread into a flock.
-			context.waitTicks(6);
-			context.takeScreenshot("tafelboem-r1.1-counting");
+			// counted out directly, once the first Kippenbom's chickens have poofed. Each of the 3 chickens
+			// pops into its group where it lands; the groups are shot 20 ticks after the last pop.
+			countOnCue(context, world, 3, 4, 8, 6, "tafelboem-r1.1-counting");
+
+			// A 10 x 10 (Moeilijk) for a look at whether the groups touch; not for the README.
+			countOnCue(context, world, 10, 10, 16, 14, "tafelboem-r1.1-counting-10x10");
 
 			// 3. Graaf Fout: summon, wait for his bomb, kick it back, watch him fly.
 			Vec3 bossSpot = world.getServer().computeOnServer(server -> {
@@ -270,8 +260,34 @@ public class PlaythroughClientGameTest implements FabricClientGameTest {
 		context.waitTicks(2);
 	}
 
-	/** The counting chickens' groups fill the view: stand 8 blocks from the middle of them and look at it. */
-	private static void lookAtChickens(ClientGameTestContext context, TestSingleplayerContext world, BlockPos bomb) {
+	/** Counts out a × b 10 blocks ahead once nothing else flies, and takes a shot 20 ticks after the last group has popped. */
+	private static void countOnCue(ClientGameTestContext context, TestSingleplayerContext world, int a, int b, int distance, int height, String shot) {
+		for (int tick = 0; spectacleChickens(world, BlockPos.containing(spotAhead(world, 6))) > 0; tick++) {
+			check(tick < 300, "the earlier chickens should poof");
+			context.waitTicks(1);
+		}
+		BlockPos at = BlockPos.containing(spotAhead(world, 10));
+		world.getServer().runOnServer(server -> TafelBoem.sessions().countChickens(server.overworld(),
+				Vec3.atCenterOf(at).add(0, 1, 0), new Fact(a, b), "client test"));
+		for (int tick = 0; spectacleChickens(world, at) < a * b; tick++) {
+			check(tick < 100, "the " + a + " chickens should pop into " + a * b);
+			context.waitTicks(1);
+		}
+		context.waitTicks(20);
+		GameType before = world.getServer().computeOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().getFirst();
+			GameType mode = player.gameMode.getGameModeForPlayer();
+			player.setGameMode(GameType.SPECTATOR);
+			return mode;
+		});
+		lookAtChickens(context, world, at, distance, height);
+		context.takeScreenshot(shot);
+		world.getServer().runOnServer(server -> server.getPlayerList().getPlayers().getFirst().setGameMode(before));
+		context.waitTicks(2);
+	}
+
+	/** The groups fill the view: float this far from the middle of them and this high (spectator, so no falling), and look at it. */
+	private static void lookAtChickens(ClientGameTestContext context, TestSingleplayerContext world, BlockPos bomb, int distance, int height) {
 		BlockPos middle = world.getServer().computeOnServer(server -> {
 			ServerPlayer player = server.getPlayerList().getPlayers().getFirst();
 			Vec3 sum = Vec3.ZERO;
@@ -280,8 +296,8 @@ public class PlaythroughClientGameTest implements FabricClientGameTest {
 				sum = sum.add(chicken.position());
 			}
 			Vec3 centre = sum.scale(1.0 / chickens.size());
-			Vec3 away = Vec3.atBottomCenterOf(bomb).subtract(player.position()).multiply(1, 0, 1).normalize().scale(-8);
-			player.teleportTo(centre.x + away.x, bomb.getY(), centre.z + away.z);
+			Vec3 away = Vec3.atBottomCenterOf(bomb).subtract(player.position()).multiply(1, 0, 1).normalize().scale(-distance);
+			player.teleportTo(centre.x + away.x, bomb.getY() + height, centre.z + away.z);
 			return BlockPos.containing(centre);
 		});
 		context.waitTicks(2);

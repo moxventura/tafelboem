@@ -27,6 +27,7 @@ class ChickenCountTest {
 	@Test
 	void moreGroupsFlyFurtherSoTheyStayApart() {
 		assertTrue(ChickenCount.of(new Fact(10, 2)).ringSpeed() > ChickenCount.of(new Fact(2, 10)).ringSpeed());
+		assertEquals(0.6, ChickenCount.of(new Fact(10, 10)).ringSpeed(), 1e-9);
 	}
 
 	@Test
