@@ -4,7 +4,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.LongStream;
 
 /**
  * A parent-facing summary of the answer log.
@@ -52,7 +51,7 @@ public final class StatsReport {
 				.filter(answer -> answer.a() == table || answer.b() == table)
 				.toList();
 		int correct = (int) forTable.stream().filter(AnswerRecord::correct).count();
-		long median = median(forTable.stream().filter(AnswerRecord::correct).mapToLong(AnswerRecord::millis));
+		long median = Medians.of(forTable.stream().filter(AnswerRecord::correct).mapToLong(AnswerRecord::millis));
 		return new TableStats(table, forTable.size(), correct, median);
 	}
 
@@ -69,11 +68,11 @@ public final class StatsReport {
 		Comparator<Map.Entry<Fact, List<AnswerRecord>>> byMistakes = Comparator.comparingLong(
 				entry -> entry.getValue().stream().filter(answer -> !answer.correct()).count());
 		Comparator<Map.Entry<Fact, List<AnswerRecord>>> byTime = Comparator.comparingLong(
-				entry -> median(entry.getValue().stream().mapToLong(AnswerRecord::millis)));
+				entry -> Medians.of(entry.getValue().stream().mapToLong(AnswerRecord::millis)));
 
 		return byFamily.entrySet().stream()
 				.filter(entry -> entry.getValue().stream().anyMatch(answer -> !answer.correct())
-						|| median(entry.getValue().stream().mapToLong(AnswerRecord::millis)) > QuestionPicker.SLOW_MILLIS)
+						|| Medians.of(entry.getValue().stream().mapToLong(AnswerRecord::millis)) > QuestionPicker.SLOW_MILLIS)
 				.sorted(byMistakes.thenComparing(byTime).reversed())
 				.limit(limit)
 				.map(Map.Entry::getKey)
@@ -103,14 +102,5 @@ public final class StatsReport {
 	/** "?" pressed while digits were already typed: probably meant to press OK. */
 	public int likelyMisclicks() {
 		return (int) answers.stream().filter(AnswerRecord::isLikelyMisclick).count();
-	}
-
-	private static long median(LongStream values) {
-		long[] sorted = values.sorted().toArray();
-		if (sorted.length == 0) {
-			return 0;
-		}
-		int middle = sorted.length / 2;
-		return sorted.length % 2 == 1 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
 	}
 }

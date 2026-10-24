@@ -1,5 +1,6 @@
 package nl.jeeninga.tafelboem.game;
 
+import java.util.OptionalLong;
 import java.util.UUID;
 
 import org.jspecify.annotations.Nullable;
@@ -7,6 +8,7 @@ import org.jspecify.annotations.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 
+import nl.jeeninga.tafelboem.core.AnswerTimes;
 import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.Fact;
 
@@ -30,6 +32,8 @@ public final class QuizSession {
 	private final long startedAtMillis;
 	private State state = State.ASKING;
 	private int ageTicks;
+	private long answerMillis = -1;
+	private OptionalLong usualMillis = OptionalLong.empty();
 
 	QuizSession(int id, UUID playerId, Fact fact, BombTier tier, BlockPos bombPos, Vec3 anchor, String context,
 			@Nullable QuizListener listener) {
@@ -78,6 +82,26 @@ public final class QuizSession {
 
 	public long elapsedMillis() {
 		return System.currentTimeMillis() - startedAtMillis;
+	}
+
+	/** The right answer came after {@code millis}; {@code usual} is the kid's usual time from before it. */
+	void answered(long millis, OptionalLong usual) {
+		this.answerMillis = millis;
+		this.usualMillis = usual;
+	}
+
+	/** How long the right answer took, in milliseconds; -1 before it was given. */
+	public long answerMillis() {
+		return answerMillis;
+	}
+
+	/** The kid's usual time for this sum from before this answer; empty with too little history. */
+	public OptionalLong usualMillis() {
+		return usualMillis;
+	}
+
+	public boolean wasFast() {
+		return AnswerTimes.isFast(usualMillis, answerMillis);
 	}
 
 	public State state() {
