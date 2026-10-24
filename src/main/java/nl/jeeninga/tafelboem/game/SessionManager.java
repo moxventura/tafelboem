@@ -186,7 +186,12 @@ public final class SessionManager {
 				if (session.tier() == BombTier.KIPPENBOM && config.kippenbomChickens) {
 					BombEffects.hoppingChickens(level, player.position(),
 							config.countingKippenbom ? ChickenCount.WRONG_ANSWER : BombEffects.WRONG_ANSWER_CHICKENS);
-					collectSpectacles(level, player.blockPosition());
+					if (config.countingKippenbom) {
+						// It stands among the counted groups for a while, so it goes when they go.
+						collectSpectacles(level, player.blockPosition(), COUNTING_LIFETIME_TICKS);
+					} else {
+						collectSpectacles(level, player.blockPosition());
+					}
 				}
 			}
 			case CHICKEN_OUT -> {
@@ -301,9 +306,13 @@ public final class SessionManager {
 
 	/** The spectacle animals around this spot poof after a minute, like every bomb's. */
 	public void collectSpectacles(ServerLevel level, BlockPos pos) {
+		collectSpectacles(level, pos, SPECTACLE_LIFETIME_TICKS);
+	}
+
+	private void collectSpectacles(ServerLevel level, BlockPos pos, int lifetimeTicks) {
 		for (Entity entity : level.getEntities((Entity) null, new AABB(pos).inflate(3),
 				entity -> entity.entityTags().contains(BombEffects.SPECTACLE_TAG))) {
-			track(entity, SPECTACLE_LIFETIME_TICKS);
+			track(entity, lifetimeTicks);
 		}
 	}
 
