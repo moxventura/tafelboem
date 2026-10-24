@@ -26,6 +26,7 @@ import net.minecraft.world.phys.Vec3;
 import nl.jeeninga.tafelboem.TafelBoem;
 import nl.jeeninga.tafelboem.boss.BossFight;
 import nl.jeeninga.tafelboem.boss.BossFights;
+import nl.jeeninga.tafelboem.boss.YeetRecords;
 import nl.jeeninga.tafelboem.command.ArenaSetup;
 import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.core.FightRecord;
@@ -60,6 +61,20 @@ public final class TafelBoemWorld {
 	private final Map<UUID, QueuedDoor> queuedDoors = new LinkedHashMap<>();
 	private final Map<UUID, Integer> doorCooldown = new HashMap<>();
 	private final Map<String, int[]> bestStars = new HashMap<>();
+	private final Map<String, Integer> bestYeets = new HashMap<>();
+	/** Each kid's farthest yeet, from the fights log, kept up to date during the session. */
+	private final YeetRecords yeetRecords = new YeetRecords() {
+		@Override
+		public int best(ServerPlayer kid) {
+			return bestYeets.computeIfAbsent(kid.getPlainTextName(),
+					name -> fightLog.read(name).stream().mapToInt(FightRecord::farthestYeet).max().orElse(0));
+		}
+
+		@Override
+		public void beaten(ServerPlayer kid, int blocks) {
+			bestYeets.put(kid.getPlainTextName(), Math.max(best(kid), blocks));
+		}
+	};
 	private PlacedArea hub;
 	private int ticks;
 
@@ -194,7 +209,11 @@ public final class TafelBoemWorld {
 	private void tick(ArenaRun run) {
 		if (run.fight() == null && ticks >= run.startAt() && !run.kids().isEmpty()) {
 			Vec3 spot = run.arena().middle().add(0, 1.5, 0);
-			run.start(fights.summon(level, spot, run.level(), run.arena().bounds()));
+			BossFight fight = fights.summon(level, spot, run.level(), run.arena().bounds());
+			if (fight != null) {
+				fight.useYeetRecords(yeetRecords);
+			}
+			run.start(fight);
 		}
 
 		// A kid who is somewhere else now (a command, another dimension) has left the fight.
@@ -273,7 +292,7 @@ public final class TafelBoemWorld {
 		FightTally tally = run.fight() == null ? new FightTally() : run.fight().tally(kid.getUUID());
 		long seconds = (System.currentTimeMillis() - run.startedAtMillis()) / 1000;
 		fightLog.append(new FightRecord(System.currentTimeMillis(), kid.getPlainTextName(), run.level().number(), run.arena().name(), result,
-				tally.answers(), tally.wrong(), tally.dontKnow(), tally.chickenOut(), stars, seconds, run.everyone().size(), TafelBoem.version()));
+				tally.answers(), tally.wrong(), tally.dontKnow(), tally.chickenOut(), stars, seconds, run.everyone().size(), TafelBoem.version(), tally.farthestYeet()));
 	}
 
 	/** Falling is never fatal: back to the arena's arrival spot in a fight, otherwise to the hub. */

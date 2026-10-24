@@ -41,6 +41,12 @@ public final class TafelBoemConfig {
 	/** A Kippenbom's right answer on a × b shows a groups of b chickens; off, 12 fly as in 1.0.2. */
 	public boolean countingKippenbom = true;
 
+	/** A fast answer or right answers in a row yeet Graaf Fout further, and the kicker's meter says why. */
+	public boolean yeetBoost = true;
+
+	/** In a TafelBoem world, a yeet further than the kid's own best says "New record!" to that kid. */
+	public boolean yeetRecords = true;
+
 	/** Each level's arena plays its own music: Otherside, Pigstep, "Boss". Applies from the next arena placed. */
 	public boolean arenaMusic = true;
 

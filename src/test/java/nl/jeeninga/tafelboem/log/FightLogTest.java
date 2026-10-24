@@ -61,4 +61,23 @@ class FightLogTest {
 		Files.writeString(dir.resolve("fights-Sanne.jsonl"), "null\n", StandardOpenOption.APPEND);
 		assertEquals(List.of(fight("Sanne", 1, FightRecord.WON, 1)), log.read("Sanne"));
 	}
+
+	@Test
+	void aLineFromBefore11HasNoFarthestYeet() throws IOException {
+		Files.writeString(dir.resolve("fights-Sanne.jsonl"), "{\"timestamp\":0,\"player\":\"Sanne\",\"level\":2,\"arena\":\"default\","
+				+ "\"result\":\"won\",\"answers\":12,\"wrong\":1,\"dontKnow\":0,\"chickenOut\":0,\"stars\":2,\"seconds\":120,\"kids\":1,"
+				+ "\"version\":\"1.0.2\"}\n");
+
+		FightRecord old = new FightLog(dir).read("Sanne").getFirst();
+		assertEquals(0, old.farthestYeet());
+		assertEquals(2, old.stars());
+	}
+
+	@Test
+	void theFarthestYeetIsWrittenAndReadBack() {
+		FightLog log = new FightLog(dir);
+		log.append(new FightRecord(0L, "Sanne", 1, "default", FightRecord.WON, 12, 0, 0, 0, 3, 100, 1, "1.1.0", 31));
+
+		assertEquals(31, log.read("Sanne").getFirst().farthestYeet());
+	}
 }

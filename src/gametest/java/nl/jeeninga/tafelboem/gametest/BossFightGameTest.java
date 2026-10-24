@@ -176,6 +176,56 @@ public class BossFightGameTest {
 	}
 
 	/**
+	 * Two kids: a kid's second right answer in a row yeets him further, and only that kid's meter says
+	 * so. The other kid sees the plain meter: no ranking between siblings.
+	 */
+	@GameTest(maxTicks = 2400, padding = 48)
+	@SuppressWarnings("removal") // mock players are still the only way to test without a client
+	public void onlyTheKidWhoKickedSeesWhyHeFlewFurther(GameTestHelper helper) {
+		OpenField.open(helper);
+		RecordingQuizClient client = new RecordingQuizClient();
+		SessionManager sessions = new SessionManager(helper.getLevel().getServer(), new Learners(new AnswerLog(tempDir())), client);
+		BossFights fights = new BossFights(sessions);
+
+		ServerPlayer first = helper.makeMockServerPlayerInLevel();
+		ServerPlayer second = helper.makeMockServerPlayerInLevel();
+		Vec3 stand = Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(1, 1, 1)));
+		first.teleportTo(stand.x, stand.y, stand.z);
+		second.teleportTo(stand.x, stand.y, stand.z + 3);
+		helper.assertTrue(fights.summon(helper.getLevel(), stand.add(6, 1.5, 1.5)), "Graaf Fout should appear");
+
+		Set<Integer> answered = new HashSet<>();
+		ServerPlayer[] kicker = {null};
+		int[] checked = {0};
+		boolean[] whySeen = {false};
+		helper.onEachTick(() -> {
+			sessions.tick();
+			fights.tick();
+			for (RecordingQuizClient.Sent sent : List.copyOf(client.sentTo)) {
+				QuizS2C question = sent.payload();
+				if (question.mode() == QuizS2C.ASK && answered.add(question.sessionId())) {
+					sessions.onClientAction(sent.player(), new QuizC2S(question.sessionId(), QuizC2S.ANSWER, question.a() * question.b(), QuizC2S.VIA_KEY));
+					kicker[0] = sent.player();
+				}
+			}
+			for (; checked[0] < client.actionBarsTo.size(); checked[0]++) {
+				RecordingQuizClient.Bar bar = client.actionBarsTo.get(checked[0]);
+				if (!isYeetOMeter(bar.message())) {
+					continue;
+				}
+				boolean why = !bar.message().getSiblings().isEmpty();
+				helper.assertTrue(!why || bar.player() == kicker[0], "only the kid who kicked sees why he flew further");
+				whySeen[0] |= why;
+			}
+		});
+
+		helper.succeedWhen(() -> {
+			helper.assertTrue(whySeen[0], "wait until a kid has two right answers in a row and sees it on their meter");
+			fights.endAll();
+		});
+	}
+
+	/**
 	 * Playtest 2: a kid beat him and got nothing. The reward came after he had flown off into the
 	 * sky, and by then nobody counted as near him any more.
 	 */

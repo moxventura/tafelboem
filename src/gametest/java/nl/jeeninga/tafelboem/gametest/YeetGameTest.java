@@ -19,6 +19,7 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import nl.jeeninga.tafelboem.boss.BossFight;
 import nl.jeeninga.tafelboem.boss.BossFights;
 import nl.jeeninga.tafelboem.boss.GraafFout;
+import nl.jeeninga.tafelboem.core.YeetBoost;
 import nl.jeeninga.tafelboem.core.YeetPose;
 import nl.jeeninga.tafelboem.core.YeetStyle;
 import nl.jeeninga.tafelboem.game.SessionManager;
@@ -35,6 +36,8 @@ public class YeetGameTest {
 	/** The yeet power range of a Knalletje and of a Gewone TNT (random 0.9–1.4 times the bomb's power). */
 	private static final double WEAKEST_KNALLETJE = 0.9;
 	private static final double STRONGEST_GEWONE_TNT = 1.4 * 1.5;
+	/** A boosted Kippenbom: the strongest yeet there is. */
+	private static final double FULL_POWER = 1.8 * 1.4 * YeetBoost.MAX;
 
 	private static final String DISTANCE = "tafelboem.message.yeet_distance";
 	private static final String HEIGHT = "tafelboem.message.yeet_height";
@@ -74,6 +77,14 @@ public class YeetGameTest {
 	}
 
 	@GameTest(maxTicks = 200, padding = PADDING)
+	public void aFullPowerHelicopterComesDownBeforeTheYeetTimesOut(GameTestHelper helper) {
+		yeetAndLand(helper, YeetStyle.HELICOPTER, FULL_POWER, landed -> {
+			landed.assertMeter(HEIGHT);
+			helper.assertTrue(landed.onGroundWhenMeasured(), "he lands on the ground, not in mid-air when his 5 s are up");
+		});
+	}
+
+	@GameTest(maxTicks = 200, padding = PADDING)
 	public void boomerangFaceplantsInFrontOfTheKid(GameTestHelper helper) {
 		yeetAndLand(helper, YeetStyle.BOOMERANG, 1.0, landed -> {
 			landed.assertMeter(DISTANCE);
@@ -97,7 +108,7 @@ public class YeetGameTest {
 
 	/** What a yeet looked like, for the checks after he is back on his feet. */
 	private record Landed(GameTestHelper helper, ServerPlayer kid, GraafFout boss, Component meter, Set<YeetPose> posesInFlight,
-			boolean faceplanted, boolean facedTheKid) {
+			boolean faceplanted, boolean facedTheKid, boolean onGroundWhenMeasured) {
 		/** Checks which yeet-o-meter message he got and returns the number of blocks. */
 		int assertMeter(String key) {
 			TranslatableContents contents = (TranslatableContents) meter.getContents();
@@ -123,6 +134,8 @@ public class YeetGameTest {
 		Set<YeetPose> poses = EnumSet.noneOf(YeetPose.class);
 		boolean[] faceplanted = {false};
 		boolean[] facedTheKid = {false};
+		boolean[] measured = {false};
+		boolean[] onGround = {false};
 		helper.onEachTick(() -> {
 			sessions.tick();
 			fights.tick();
@@ -135,6 +148,10 @@ public class YeetGameTest {
 				Vec3 toKid = kid.position().subtract(boss.position()).multiply(1, 0, 1).normalize();
 				facedTheKid[0] |= facing.dot(toKid) > 0.7;
 			}
+			if (!measured[0] && client.actionBars.stream().anyMatch(YeetGameTest::isYeetOMeter)) {
+				measured[0] = true;
+				onGround[0] = boss.onGround();
+			}
 		});
 
 		boss.yeet(kid.position(), power, style, kid.position());
@@ -143,7 +160,7 @@ public class YeetGameTest {
 			helper.assertFalse(boss.isReacting(), style + ": he should be back on his feet");
 			Component meter = client.actionBars.stream().filter(YeetGameTest::isYeetOMeter).reduce((first, second) -> second)
 					.orElseThrow(() -> helper.assertionException(Component.literal(style + ": the yeet-o-meter should say how far he flew")));
-			check.accept(new Landed(helper, kid, boss, meter, poses, faceplanted[0], facedTheKid[0]));
+			check.accept(new Landed(helper, kid, boss, meter, poses, faceplanted[0], facedTheKid[0], onGround[0]));
 			fights.endAll();
 		});
 	}
