@@ -1,5 +1,7 @@
 package nl.jeeninga.tafelboem.boss;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +30,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 import nl.jeeninga.tafelboem.block.BombBlock;
+import nl.jeeninga.tafelboem.boss.landing.Landing;
 import nl.jeeninga.tafelboem.boss.yeet.Yeet;
 import nl.jeeninga.tafelboem.config.TafelBoemConfig;
 import nl.jeeninga.tafelboem.core.ArenaBox;
@@ -35,8 +38,10 @@ import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.Fight;
 import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.core.FightTally;
+import nl.jeeninga.tafelboem.core.LandingStyle;
 import nl.jeeninga.tafelboem.core.Outcome;
-import nl.jeeninga.tafelboem.core.YeetPicker;
+import nl.jeeninga.tafelboem.core.Pacing;
+import nl.jeeninga.tafelboem.core.ReactionPicker;
 import nl.jeeninga.tafelboem.game.BombEffects;
 import nl.jeeninga.tafelboem.game.PlayerSafeExplosion;
 import nl.jeeninga.tafelboem.game.QuizListener;
@@ -50,7 +55,7 @@ import nl.jeeninga.tafelboem.registry.ModBlocks;
  */
 public final class BossFight implements QuizListener {
 	static final int FIRST_THROW_DELAY = 60;
-	static final int COOLDOWN_TICKS = 50;
+	static final int COOLDOWN_TICKS = Pacing.COOLDOWN_TICKS;
 	/**
 	 * Long enough for the penalty and the correction on the HUD (6 s) before the next bomb flies: the
 	 * next question would clear it. Reading time, not a show, so a miss stays less fun than a kick.
@@ -67,7 +72,11 @@ public final class BossFight implements QuizListener {
 	 * for a kick that never arrives. Landing then shortens it to the time he lies dizzy.
 	 */
 	public static final int KICK_CAM_MAX_TICKS = 140;
-	public static final int LANDED_CAM_TICKS = GraafFout.DIZZY_TICKS;
+	/**
+	 * After flying out he lies dizzy this long; a landing keeps the view on him for as long as it
+	 * lasts.
+	 */
+	public static final int LANDED_CAM_TICKS = LandingStyle.DIZZY.ticks();
 	/** The final launch goes straight up; follow the start of it, not minutes of empty sky. */
 	static final int FINALE_CAM_TICKS = 40;
 
@@ -97,7 +106,10 @@ public final class BossFight implements QuizListener {
 	private @Nullable Kick kick;
 	private double kickFactor = 1.0;
 	private final YeetMeter meter;
-	private final YeetPicker yeets = new YeetPicker(new Random());
+	private final ReactionPicker reactions = new ReactionPicker(new Random());
+	private final Deque<LandingStyle> queuedLandings = new ArrayDeque<>();
+	/** The pause after this landing, so a kick-to-throw takes as long whatever the landing. */
+	private int reactionCooldown = COOLDOWN_TICKS;
 
 	BossFight(ServerLevel level, GraafFout boss, SessionManager sessions, FightLevel fightLevel, @Nullable ArenaBox arena) {
 		this.level = level;
@@ -152,6 +164,14 @@ public final class BossFight implements QuizListener {
 		meter.useRecords(records);
 	}
 
+	/**
+	 * The next yeet lands like this instead of a picked landing. GameTests and the client test use it to
+	 * see every landing; play never does.
+	 */
+	public void queueLanding(LandingStyle landing) {
+		queuedLandings.add(landing);
+	}
+
 	void start() {
 		participants.update();
 		participants.say(Component.translatable("tafelboem.boss.graaf_fout.intro"));
@@ -191,7 +211,7 @@ public final class BossFight implements QuizListener {
 			}
 			case REACTING -> {
 				if (!boss.isReacting() && phaseTicks <= 0) {
-					cooldown(COOLDOWN_TICKS);
+					cooldown(reactionCooldown);
 				}
 			}
 			case FINALE -> {
@@ -376,19 +396,28 @@ public final class BossFight implements QuizListener {
 		Vec3 kickedFrom = kicker != null ? kicker.position() : where;
 		kickFactor = kick == null ? 1.0 : kick.factor(config.yeetBoost);
 		double power = (0.9 + level.getRandom().nextDouble() * 0.5) * tier.yeetPower() * kickFactor;
-		boss.yeet(where, power, yeets.next(), kickedFrom);
+		reactionCooldown = COOLDOWN_TICKS;
+		boss.yeet(where, power, reactions.nextFlight(), kickedFrom);
 		phase = Phase.REACTING;
 		phaseTicks = 20;
 	}
 
-	/** The yeet-o-meter: everyone in the fight sees how far (or for the helicopter, how high) he flew. */
+	/** He is down: pick how he lands, keep the view on him for that long, and show the yeet-o-meter. */
 	void onYeetLanded(Yeet yeet) {
 		if (phase == Phase.FINALE || phase == Phase.OVER) {
 			return;
 		}
-		followKickerFor(LANDED_CAM_TICKS);
+		LandingStyle landing = queuedLandings.poll();
+		if (landing == null) {
+			landing = reactions.nextLanding(kick == null ? BombTier.KNALLETJE : kick.tier(), yeet.style(), false, false);
+		} else {
+			reactions.played(landing);
+		}
+		boss.startLanding(landing, scene());
+		reactionCooldown = Pacing.cooldownAfter(landing);
+		followKickerFor(landing.ticks());
 		farthest(yeet);
-		meter.landed(yeet, false, kick, "dizzy", false, kickFactor);
+		meter.landed(yeet, false, kick, landing.id(), landing.isSignature(), kickFactor);
 	}
 
 	/** Out of the arena and into the void: say how far he got, then he comes straight back. */
@@ -399,9 +428,17 @@ public final class BossFight implements QuizListener {
 		if (cut == null) {
 			return;
 		}
+		// He comes back dizzy: that is his landing this time.
+		reactions.played(LandingStyle.DIZZY);
+		reactionCooldown = Pacing.cooldownAfter(LandingStyle.DIZZY);
 		farthest(cut);
-		meter.landed(cut, true, kick, "dizzy", false, kickFactor);
+		meter.landed(cut, true, kick, LandingStyle.DIZZY.id(), false, kickFactor);
 		followKickerFor(LANDED_CAM_TICKS);
+	}
+
+	/** Where a landing happens: this fight's arena, its kids, and the session's poof timers. */
+	private Landing.Scene scene() {
+		return new Landing.Scene(arena, () -> participants.players().stream().map(ServerPlayer::position).toList(), sessions::track);
 	}
 
 	/** The kicker's farthest yeet in this fight, for the fights log; helicopter heights don't count. */

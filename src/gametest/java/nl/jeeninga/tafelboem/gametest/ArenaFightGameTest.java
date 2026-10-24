@@ -20,8 +20,10 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import nl.jeeninga.tafelboem.boss.BossFight;
 import nl.jeeninga.tafelboem.boss.BossFights;
 import nl.jeeninga.tafelboem.boss.GraafFout;
+import nl.jeeninga.tafelboem.boss.landing.Landing;
 import nl.jeeninga.tafelboem.core.ArenaBox;
 import nl.jeeninga.tafelboem.core.FightLevel;
+import nl.jeeninga.tafelboem.core.LandingStyle;
 import nl.jeeninga.tafelboem.core.YeetStyle;
 import nl.jeeninga.tafelboem.game.PlayerSafeExplosion;
 import nl.jeeninga.tafelboem.game.ProtectedAreas;
@@ -62,6 +64,39 @@ public class ArenaFightGameTest {
 			helper.assertTrue(client.actionBars.stream().anyMatch(ArenaFightGameTest::isFlewOut), "the yeet-o-meter says he flew out");
 			helper.assertFalse(fight.isOver(), "the fight goes on");
 			fights.endAll();
+		});
+	}
+
+	/** Falling out of the arena during a landing (off a crater's edge, say) cuts it short: no meter, no record. */
+	@GameTest(maxTicks = 100, padding = 48)
+	@SuppressWarnings("removal") // mock players are still the only way to test without a client
+	public void fallingOutDuringALandingCutsItShortWithoutAMeter(GameTestHelper helper) {
+		OpenField.open(helper);
+		RecordingQuizClient client = new RecordingQuizClient();
+		SessionManager sessions = new SessionManager(helper.getLevel().getServer(), new Learners(new AnswerLog(tempDir())), client);
+		BossFights fights = new BossFights(sessions);
+		BlockPos corner = helper.absolutePos(new BlockPos(-10, -1, -10));
+		ArenaBox arena = ArenaBox.of(corner.getX(), corner.getY(), corner.getZ(), 21, 6, 21);
+
+		ServerPlayer kid = helper.makeMockServerPlayerInLevel();
+		kid.teleportTo(arena.middleX(), corner.getY() + 1, arena.middleZ() + 5);
+		BossFight fight = fights.summon(helper.getLevel(), new Vec3(arena.middleX(), corner.getY() + 2.5, arena.middleZ()), FightLevel.MAKKELIJK, arena);
+		helper.assertTrue(fight != null, "Graaf Fout should appear");
+		GraafFout boss = fight.boss();
+		boss.startLanding(LandingStyle.DIZZY, Landing.Scene.NONE);
+		boss.teleportTo(arena.middleX(), arena.minY() - 4, arena.middleZ());
+
+		helper.onEachTick(() -> {
+			sessions.tick();
+			fights.tick();
+		});
+		// The dizzy spell lasts 30 ticks: 3 ticks in, only a fall can have ended it.
+		helper.runAfterDelay(3, () -> {
+			helper.assertTrue(arena.holds(boss.getX(), boss.getY(), boss.getZ()), "he is back in the arena");
+			helper.assertTrue(boss.landingStyle() == null, "the landing was cut short");
+			helper.assertFalse(client.actionBars.stream().anyMatch(ArenaFightGameTest::isFlewOut), "no meter: he wasn't being yeeted");
+			fights.endAll();
+			helper.succeed();
 		});
 	}
 

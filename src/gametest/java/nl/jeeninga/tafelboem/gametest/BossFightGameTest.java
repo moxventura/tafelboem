@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -32,6 +34,7 @@ import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.ChickenCount;
 import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.core.FightTally;
+import nl.jeeninga.tafelboem.core.LandingStyle;
 import nl.jeeninga.tafelboem.game.BombEffects;
 import nl.jeeninga.tafelboem.game.SessionManager;
 import nl.jeeninga.tafelboem.log.AnswerLog;
@@ -116,8 +119,51 @@ public class BossFightGameTest {
 			int boss = fight.boss().getId();
 			helper.assertFalse(client.actionBars.stream().noneMatch(BossFightGameTest::isYeetOMeter), "wait until he has landed");
 			helper.assertTrue(client.tracks.stream().anyMatch(t -> t.player() == player && t.entityId() == boss
-					&& t.ticksAfterScreen() == BossFight.LANDED_CAM_TICKS && !t.kick()),
+					&& isLandingCam(t)),
 					"once he lands, the view stays on him while he is dizzy and then lets go");
+			fights.endAll();
+		});
+	}
+
+	/** The landings this test forces, one per kick; every one of them must end and let the fight go on. */
+	private static final List<LandingStyle> LANDINGS = List.of(LandingStyle.DIZZY);
+
+	/** A landing that never ends would stall the fight: after each one he gets up and throws again. */
+	@GameTest(maxTicks = 2400, padding = 48)
+	@SuppressWarnings("removal") // mock players are still the only way to test without a client
+	public void afterEveryLandingHeGetsUpAndThrowsAgain(GameTestHelper helper) {
+		OpenField.open(helper);
+		RecordingQuizClient client = new RecordingQuizClient();
+		SessionManager sessions = new SessionManager(helper.getLevel().getServer(), new Learners(new AnswerLog(tempDir())), client);
+		BossFights fights = new BossFights(sessions);
+
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		Vec3 stand = Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(1, 1, 1)));
+		player.teleportTo(stand.x, stand.y, stand.z);
+		helper.assertTrue(fights.summon(helper.getLevel(), stand.add(6, 1.5, 0)), "Graaf Fout should appear");
+		BossFight fight = fights.active().getFirst();
+		LANDINGS.forEach(fight::queueLanding);
+
+		Set<LandingStyle> seen = EnumSet.noneOf(LandingStyle.class);
+		Set<Integer> answered = new HashSet<>();
+		helper.onEachTick(() -> {
+			sessions.tick();
+			fights.tick();
+			LandingStyle landing = fight.boss().landingStyle();
+			if (landing != null) {
+				seen.add(landing);
+			}
+			for (RecordingQuizClient.Sent sent : List.copyOf(client.sentTo)) {
+				QuizS2C question = sent.payload();
+				if (question.mode() == QuizS2C.ASK && answered.add(question.sessionId())) {
+					sessions.onClientAction(sent.player(), new QuizC2S(question.sessionId(), QuizC2S.ANSWER, question.a() * question.b(), QuizC2S.VIA_KEY));
+				}
+			}
+		});
+
+		helper.succeedWhen(() -> {
+			helper.assertTrue(seen.containsAll(LANDINGS), "wait until every landing has played: " + seen);
+			helper.assertTrue(answered.size() > LANDINGS.size(), "and he threw again after the last one");
 			fights.endAll();
 		});
 	}
@@ -168,7 +214,7 @@ public class BossFightGameTest {
 		helper.succeedWhen(() -> {
 			for (ServerPlayer kid : List.of(first, second)) {
 				helper.assertTrue(client.tracks.stream().anyMatch(t -> t.player() == kid && t.kick()), "wait until both kids have kicked");
-				helper.assertTrue(client.tracks.stream().anyMatch(t -> t.player() == kid && t.ticksAfterScreen() == BossFight.LANDED_CAM_TICKS),
+				helper.assertTrue(client.tracks.stream().anyMatch(t -> t.player() == kid && isLandingCam(t)),
 						"wait until both yeets have landed, each followed by the kid who kicked");
 			}
 			fights.endAll();
@@ -456,6 +502,11 @@ public class BossFightGameTest {
 	private static int spectacleChickens(GameTestHelper helper, Vec3 around, double radius) {
 		return helper.getLevel().getEntitiesOfClass(Chicken.class, new AABB(around, around).inflate(radius),
 				chicken -> chicken.entityTags().contains(BombEffects.SPECTACLE_TAG)).size();
+	}
+
+	/** The view stays on him for as long as his landing lasts, whichever landing it is. */
+	private static boolean isLandingCam(RecordingQuizClient.Track track) {
+		return !track.kick() && Arrays.stream(LandingStyle.values()).anyMatch(landing -> landing.ticks() == track.ticksAfterScreen());
 	}
 
 	private static boolean isYeetOMeter(Component message) {

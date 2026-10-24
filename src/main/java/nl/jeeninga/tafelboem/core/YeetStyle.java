@@ -14,5 +14,10 @@ public enum YeetStyle {
 	/** Flies off, comes back and faceplants near the kid. */
 	BOOMERANG,
 	/** Rolls and flips head over heels while he spins: a real tumble. */
-	TUMBLE
+	TUMBLE;
+
+	/** The boomerang ends face down: that is its landing, with the dizzy spell after it. */
+	public boolean hasOwnEnding() {
+		return this == BOOMERANG;
+	}
 }
