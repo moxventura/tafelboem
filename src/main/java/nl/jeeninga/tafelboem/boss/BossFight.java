@@ -508,6 +508,8 @@ public final class BossFight implements QuizListener {
 		phase = Phase.OVER;
 		participants.hideBossBar();
 		if (boss.isAlive()) {
+			// Ending the landing here sends a chase's chickens off with him.
+			boss.endLanding();
 			BombEffects.poof(level, boss.position());
 			boss.discard();
 		}

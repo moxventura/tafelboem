@@ -320,7 +320,7 @@ public class GraafFout extends Evoker {
 		return landing == null ? null : landing.style();
 	}
 
-	private void endLanding() {
+	void endLanding() {
 		if (landing != null) {
 			landing.finish();
 			landing = null;
