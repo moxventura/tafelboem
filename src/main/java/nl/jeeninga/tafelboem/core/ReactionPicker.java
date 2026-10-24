@@ -19,10 +19,15 @@ public final class ReactionPicker {
 		this.landings = new ShuffleBag<>(LandingStyle.GENERIC, random);
 	}
 
-	/** How he flies off: every flight once before any comes again, never the same twice in a row. */
-	public YeetStyle nextFlight() {
+	/**
+	 * How he flies off: every flight once before any comes again, never the same twice in a row.
+	 *
+	 * @param inArena   only an arena has walls for the wall splat
+	 * @param catalogue false: only the R1 flights
+	 */
+	public YeetStyle nextFlight(boolean inArena, boolean catalogue) {
 		YeetStyle last = lastFlight;
-		lastFlight = flights.next(style -> style != last);
+		lastFlight = flights.next(style -> style != last && (inArena || !style.needsWalls()) && (catalogue || !style.isCatalogue()));
 		return lastFlight;
 	}
 

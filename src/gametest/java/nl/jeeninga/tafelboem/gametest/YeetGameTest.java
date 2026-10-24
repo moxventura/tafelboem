@@ -12,6 +12,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
@@ -106,6 +107,27 @@ public class YeetGameTest {
 		});
 	}
 
+	/** The wall's distance from the kid: 6 blocks behind Graaf Fout, the way he gets kicked. */
+	private static final int WALL = 11;
+
+	@GameTest(maxTicks = 200, padding = PADDING)
+	public void theWallSplatSticksToTheWallAndSlidesDown(GameTestHelper helper) {
+		yeetAndLand(helper, YeetStyle.WALL_SPLAT, 1.0, stand -> {
+			// In an arena this is the obsidian wall.
+			for (int up = 0; up < 4; up++) {
+				for (int side = -4; side <= 4; side++) {
+					helper.getLevel().setBlockAndUpdate(BlockPos.containing(stand.x + WALL, stand.y + up, stand.z + side),
+							Blocks.OBSIDIAN.defaultBlockState());
+				}
+			}
+		}, landed -> {
+			landed.assertMeter(DISTANCE);
+			helper.assertTrue(landed.posesInFlight().contains(YeetPose.SPLAT), "he goes flat against the wall");
+			helper.assertTrue(landed.kid().getX() + WALL - landed.boss().getX() < 2, "he slid down the wall, he didn't land somewhere else");
+			helper.assertTrue(landed.boss().yeetPose() == YeetPose.NONE, "he is back in shape after the landing");
+		});
+	}
+
 	/** What a yeet looked like, for the checks after he is back on his feet. */
 	private record Landed(GameTestHelper helper, ServerPlayer kid, GraafFout boss, Component meter, Set<YeetPose> posesInFlight,
 			boolean faceplanted, boolean facedTheKid, boolean onGroundWhenMeasured) {
@@ -117,8 +139,14 @@ public class YeetGameTest {
 		}
 	}
 
-	@SuppressWarnings("removal") // mock players are still the only way to test without a client
 	private static void yeetAndLand(GameTestHelper helper, YeetStyle style, double power, Consumer<Landed> check) {
+		yeetAndLand(helper, style, power, stand -> {
+		}, check);
+	}
+
+	/** @param scenery builds what the yeet needs around the spot where the kid stands */
+	@SuppressWarnings("removal") // mock players are still the only way to test without a client
+	private static void yeetAndLand(GameTestHelper helper, YeetStyle style, double power, Consumer<Vec3> scenery, Consumer<Landed> check) {
 		OpenField.open(helper);
 		RecordingQuizClient client = new RecordingQuizClient();
 		SessionManager sessions = new SessionManager(helper.getLevel().getServer(), new Learners(new AnswerLog(tempDir())), client);
@@ -127,6 +155,7 @@ public class YeetGameTest {
 		ServerPlayer kid = helper.makeMockServerPlayerInLevel();
 		Vec3 stand = Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(1, 1, 1)));
 		kid.teleportTo(stand.x, stand.y, stand.z);
+		scenery.accept(stand);
 		helper.assertTrue(fights.summon(helper.getLevel(), stand.add(5, 0, 0)), "Graaf Fout should appear");
 		BossFight fight = fights.active().getFirst();
 		GraafFout boss = fight.boss();

@@ -397,7 +397,7 @@ public final class BossFight implements QuizListener {
 		kickFactor = kick == null ? 1.0 : kick.factor(config.yeetBoost);
 		double power = (0.9 + level.getRandom().nextDouble() * 0.5) * tier.yeetPower() * kickFactor;
 		reactionCooldown = COOLDOWN_TICKS;
-		boss.yeet(where, power, reactions.nextFlight(), kickedFrom);
+		boss.yeet(where, power, reactions.nextFlight(arena != null, config.yeetCatalogue), kickedFrom);
 		phase = Phase.REACTING;
 		phaseTicks = 20;
 	}
