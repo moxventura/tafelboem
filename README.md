@@ -26,7 +26,7 @@ go/no-go (see the spec):
 | **R0 "Graaf Fout komt!"** | Core question loop, 3 bombs, basic Graaf Fout (yeeted on every hit), LAN, answer log | ✅ playtest 1 done |
 | **R0.1 "Beter mikken"** | Fixes from playtest 1: clearer question screen, correction on the HUD, distinct bombs, camera assist, a simple kick, more yeets, world setup, better stats, self-updating Prism instance | ✅ playtest 2 done |
 | **R1 "Kies je level"** | TafelBoem world with a hub and a door per level, levels 1–3 with their own tables and bombs, arenas (random per level, replaceable by the kids' own), stars; from 1.0.2 hearts, food, music per level | ✅ published (1.0.x), playtest 3 to do |
-| R1.1 | Yeet catalogue, full yeet-o-meter, counting Kippenbom, the kids' own arenas | backlog |
+| **R1.1 "Meer yeets"** | A flight plus a landing per hit (wall splat, head-first, pancake, running round, a landing per bomb), fast answers and streaks yeet Graaf Fout further with a record per kid, the counting Kippenbom | ✅ 1.1.x, playtest to do |
 | R1.2 | Experiments: dodgeable bombs, Graaf Fout eats your mistake | backlog |
 | R2 "Leren dat blijft" | Fact states, spaced practice, Tafelkaart, parent report, daily limit, "Kies je bom", leg-kick animation | backlog |
 | R3 "Meer boem" | Bombs 4–9, craters, particle shows, lives, co-op rescue | backlog |
@@ -45,6 +45,10 @@ so the kids can also build there in creative.
 |---|---|---|
 | ![The hub with its three doors](docs/screenshots/r1-01-hub.png) | ![Arena of level 2](docs/screenshots/r1-03-arena-2.png) | ![A yeet in an arena](docs/screenshots/r1-05-yeet-in-arena.png) |
 
+| Head-first | Pancake | Counting Kippenbom (3 groups) |
+|---|---|---|
+| ![Graaf Fout head-first in the ground](docs/screenshots/r1.1-head-first.png) | ![Graaf Fout as a pancake](docs/screenshots/r1.1-pancake.png) | ![A Kippenbom's chickens in groups](docs/screenshots/r1.1-counting-kippenbom.png) |
+
 - **The hub.** You start on a stone platform facing three doors, one per level. A sign above each
   door says which level it is, and the bombs Graaf Fout throws there sit beside it in item frames.
   Builds on the hub's own platform are reset every time the world loads; builds beside it stay.
@@ -62,8 +66,20 @@ so the kids can also build there in creative.
 - **Hearts.** In survival, a typed wrong answer costs 1 heart on level 2 and 2 hearts on level 3,
   never on level 1 and never the last half heart. "?" and ESC never cost hearts. Creative players
   can't be hurt. Set `wrongAnswerDamage` to `false` to switch it off.
-- **Kippenbom chickens.** A Kippenbom kicked into Graaf Fout lets 12 chickens fly; a wrong answer on
-  a Kippenbom lets 3 chickens hop out at you. They poof after a minute.
+- **Yeets and landings.** Every hit sends Graaf Fout on a flight (classic, bounce, helicopter,
+  boomerang, tumble, and in an arena the wall splat) and then a landing: dizzy, head-first in the
+  ground, a pancake, or running round in a panic. Each bomb has a landing of its own every other
+  kick: a Knalletje hurts his toe, a Gewone TNT leaves him black with soot, and a Kippenbom's
+  chickens chase him. Set `yeetCatalogue` or `bombSignatures` to `false` to switch them off.
+- **Further and further.** A fast answer (clearly faster than your own usual time for that sum) and
+  right answers in a row yeet him further, and your yeet-o-meter says why, for example "(fast, 4 in
+  a row!)". Only a typed wrong answer ends a streak; "?" doesn't. Beat your own farthest yeet and
+  you see "New record!". Nobody else sees your reasons or records. Set `yeetBoost` or `yeetRecords`
+  to `false` to switch them off.
+- **The counting Kippenbom.** A right answer on a Kippenbom counts its chickens out as the sum: for
+  3 × 4, 3 chickens fly out and each pops into 4, so you see 3 groups of 4. They poof after 10
+  seconds. A wrong answer lets 1 chicken hop out at you. Set `countingKippenbom` to `false` for 12
+  flying chickens as in 1.0.
 - **A win.** Everyone still in the arena gets 4 cooked chicken and their stars, and is back in the
   hub 5 seconds later. Eat to keep the hunger bar full: with a full bar, lost hearts come back by
   themselves (on Peaceful there is no hunger at all). Set `foodReward` to `false` to give 4
@@ -75,7 +91,8 @@ so the kids can also build there in creative.
   damage: at the arrival spot in a fight, otherwise in the hub.
 - **Other worlds.** Every other world still works as before: the summon item starts the R0.1 fight
   with all tables, and `/tafelboem arena` still sets one up. In a TafelBoem world the summon item
-  only says to use the doors.
+  only says to use the doors. The R1.1 yeets, landings, boost and counting Kippenbom work there too;
+  records are only kept in a TafelBoem world.
 
 Each fight is written to `tafelboem/fights-<player>.jsonl` in the world folder, next to the answer
 log. `/tafelboem stats` shows a line per level, for example "Medium: ★★☆, 3 of 4 won".
@@ -212,7 +229,12 @@ version, and the mod warns when they don't match, even when two builds are only 
 | `arenaCraters` | `true` | In an arena, the kicked bomb that hits Graaf Fout breaks blocks (never bedrock, obsidian or the floor near a kid). `false` makes it a show only. Bombs the kids place themselves blow craters either way |
 | `wrongAnswerDamage` | `true` | In survival, a typed wrong answer costs 1 heart on level 2 and 2 on level 3, never the last half heart |
 | `foodReward` | `true` | A win on a level gives 4 cooked chicken, to heal the hearts. `false` gives 4 Kippenbommen |
-| `kippenbomChickens` | `true` | A Kippenbom lets chickens loose after a right answer (12, at Graaf Fout) and a wrong one (3, at the kid) |
+| `kippenbomChickens` | `true` | A Kippenbom kicked into Graaf Fout lets chickens loose, and a wrong answer lets some hop out at the kid. `false`: no chickens in a fight |
+| `countingKippenbom` | `true` | A Kippenbom's chickens show the sum: 3 × 4 is 3 groups of 4, and a wrong answer lets 1 hop out. `false`: 12 chickens fly (3 after a wrong answer), as in 1.0 |
+| `yeetBoost` | `true` | A fast answer or right answers in a row yeet Graaf Fout further (×1.3 at most), and the kicker's meter says why |
+| `yeetRecords` | `true` | In a TafelBoem world, a yeet further than the kid's own best shows "New record!" to that kid |
+| `yeetCatalogue` | `true` | The wall splat and the landings head-first, pancake and running round. `false`: the R1 yeets and the dizzy spell |
+| `bombSignatures` | `true` | Each bomb's own landing every other kick: sore toe, soot face, chasing chickens |
 | `arenaMusic` | `true` | Each level's arena plays its own track. `false` keeps the normal music; applies from the next arena a kid walks into |
 
 `/tafelboem stats [player]` shows accuracy and typical time per table, the hardest facts, how often a
