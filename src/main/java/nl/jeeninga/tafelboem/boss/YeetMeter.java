@@ -61,8 +61,9 @@ final class YeetMeter {
 		}
 
 		if (flewOut || blocks >= 1) {
-			String key = flewOut ? "tafelboem.message.yeet_out"
-					: yeet.measuresHeight() ? "tafelboem.message.yeet_height" : "tafelboem.message.yeet_distance";
+			// A helicopter says how high, even when it drops him out of the arena: a height is no distance.
+			String key = yeet.measuresHeight() ? "tafelboem.message.yeet_height"
+					: flewOut ? "tafelboem.message.yeet_out" : "tafelboem.message.yeet_distance";
 			Component plain = Component.translatable(key, boss.getDisplayName(), blocks).withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD);
 			for (ServerPlayer player : flewOut ? participants.players() : participants.nearBoss()) {
 				client.actionBar(player, player == kicker ? forKicker(plain, kick, record, blocks) : plain);
