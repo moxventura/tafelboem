@@ -9,8 +9,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.ChatVisiblity;
+import net.minecraft.world.entity.animal.chicken.Chicken;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
@@ -23,9 +26,11 @@ import nl.jeeninga.tafelboem.boss.GraafFout;
 import nl.jeeninga.tafelboem.client.CorrectionHud;
 import nl.jeeninga.tafelboem.client.QuestionScreen;
 import nl.jeeninga.tafelboem.core.BombTier;
+import nl.jeeninga.tafelboem.core.Fact;
 import nl.jeeninga.tafelboem.core.LandingStyle;
 import nl.jeeninga.tafelboem.core.YeetPose;
 import nl.jeeninga.tafelboem.core.YeetStyle;
+import nl.jeeninga.tafelboem.game.BombEffects;
 import nl.jeeninga.tafelboem.registry.ModBlocks;
 
 /**
@@ -74,6 +79,25 @@ public class PlaythroughClientGameTest implements FabricClientGameTest {
 			context.takeScreenshot("tafelboem-04-run");
 			context.waitTicks(80);
 			context.takeScreenshot("tafelboem-05-kippenbom-boom");
+
+			// 2b. The counting Kippenbom on cue: the question is random, so a sum with 3 groups of 4 is
+			// counted out directly, once the first Kippenbom's chickens have poofed. The first 3 chickens
+			// pop into their groups 20 ticks after they fly out.
+			for (int tick = 0; spectacleChickens(world, BlockPos.containing(spotAhead(world, 6))) > 0; tick++) {
+				check(tick < 300, "the first Kippenbom's chickens should poof");
+				context.waitTicks(1);
+			}
+			BlockPos counting = BlockPos.containing(spotAhead(world, 10));
+			world.getServer().runOnServer(server -> TafelBoem.sessions().countChickens(server.overworld(),
+					Vec3.atCenterOf(counting).add(0, 1, 0), new Fact(3, 4), "client test"));
+			for (int tick = 0; spectacleChickens(world, counting) < 12; tick++) {
+				check(tick < 100, "the 3 chickens should pop into 12");
+				context.waitTicks(1);
+			}
+			lookAtChickens(context, world, counting);
+			// Just after the pop the groups still stand apart; by 15 ticks they have spread into a flock.
+			context.waitTicks(6);
+			context.takeScreenshot("tafelboem-r1.1-counting");
 
 			// 3. Graaf Fout: summon, wait for his bomb, kick it back, watch him fly.
 			Vec3 bossSpot = world.getServer().computeOnServer(server -> {
@@ -156,13 +180,23 @@ public class PlaythroughClientGameTest implements FabricClientGameTest {
 					context.takeScreenshot(name + "-after");
 				}
 			}
-			splatOnCue(world);
+			Direction toWall = splatOnCue(world);
 			for (int tick = 0; !posed(world, YeetPose.SPLAT); tick++) {
 				check(tick < 100, "the wall splat should end flat against the wall");
 				context.waitTicks(1);
 			}
 			context.waitTicks(4);
 			closeQuestion(context, world);
+			// 4 blocks from him on the open side of the wall, so he reads against the obsidian.
+			BlockPos splatted = world.getServer().computeOnServer(server -> {
+				ServerPlayer player = server.getPlayerList().getPlayers().getFirst();
+				GraafFout boss = TafelBoem.fights().active().getFirst().boss();
+				player.teleportTo(boss.getX() - toWall.getStepX() * 4, boss.getY(), boss.getZ() - toWall.getStepZ() * 4);
+				return boss.blockPosition();
+			});
+			context.waitTicks(2);
+			context.getInput().lookAt(splatted);
+			context.waitTicks(2);
 			context.takeScreenshot("tafelboem-r1.1-wall-splat");
 			context.runOnClient(client -> client.options.chatVisibility().set(ChatVisiblity.FULL));
 			world.getServer().runOnServer(server -> TafelBoem.fights().endAll());
@@ -236,6 +270,41 @@ public class PlaythroughClientGameTest implements FabricClientGameTest {
 		context.waitTicks(2);
 	}
 
+	/** The counting chickens' groups fill the view: stand 8 blocks from the middle of them and look at it. */
+	private static void lookAtChickens(ClientGameTestContext context, TestSingleplayerContext world, BlockPos bomb) {
+		BlockPos middle = world.getServer().computeOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().getFirst();
+			Vec3 sum = Vec3.ZERO;
+			List<Chicken> chickens = spectacles(player.level(), bomb);
+			for (Chicken chicken : chickens) {
+				sum = sum.add(chicken.position());
+			}
+			Vec3 centre = sum.scale(1.0 / chickens.size());
+			Vec3 away = Vec3.atBottomCenterOf(bomb).subtract(player.position()).multiply(1, 0, 1).normalize().scale(-8);
+			player.teleportTo(centre.x + away.x, bomb.getY(), centre.z + away.z);
+			return BlockPos.containing(centre);
+		});
+		context.waitTicks(2);
+		context.getInput().lookAt(middle);
+		context.waitTicks(2);
+	}
+
+	private static Vec3 spotAhead(TestSingleplayerContext world, int distance) {
+		return world.getServer().computeOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().getFirst();
+			return player.position().add(player.getDirection().getStepX() * distance, 0, player.getDirection().getStepZ() * distance);
+		});
+	}
+
+	private static int spectacleChickens(TestSingleplayerContext world, BlockPos bomb) {
+		return world.getServer().computeOnServer(server -> spectacles(server.overworld(), bomb).size());
+	}
+
+	private static List<Chicken> spectacles(Level level, BlockPos around) {
+		return level.getEntitiesOfClass(Chicken.class, new AABB(around).inflate(30),
+				chicken -> chicken.entityTags().contains(BombEffects.SPECTACLE_TAG));
+	}
+
 	private static boolean landedIn(TestSingleplayerContext world, LandingStyle landing) {
 		return world.getServer().computeOnServer(server -> TafelBoem.fights().active().getFirst().boss().landingStyle() == landing);
 	}
@@ -244,9 +313,9 @@ public class PlaythroughClientGameTest implements FabricClientGameTest {
 		return world.getServer().computeOnServer(server -> TafelBoem.fights().active().getFirst().boss().yeetPose() == pose);
 	}
 
-	/** Graaf Fout 8 blocks ahead with an obsidian wall 5 blocks to his side, splatted against it. */
-	private static void splatOnCue(TestSingleplayerContext world) {
-		world.getServer().runOnServer(server -> {
+	/** Graaf Fout 8 blocks ahead with an obsidian wall 5 blocks to his side, splatted against it. Returns the way to the wall. */
+	private static Direction splatOnCue(TestSingleplayerContext world) {
+		return world.getServer().computeOnServer(server -> {
 			TafelBoem.fights().endAll();
 			ServerPlayer player = server.getPlayerList().getPlayers().getFirst();
 			Direction facing = player.getDirection();
@@ -262,6 +331,7 @@ public class PlaythroughClientGameTest implements FabricClientGameTest {
 			GraafFout boss = TafelBoem.fights().active().getFirst().boss();
 			boss.yeet(spot.subtract(side.getStepX() * 2, 0, side.getStepZ() * 2), 1.0, YeetStyle.WALL_SPLAT, player.position());
 			TafelBoem.sessions().client().track(player, boss, 60, false);
+			return side;
 		});
 	}
 
