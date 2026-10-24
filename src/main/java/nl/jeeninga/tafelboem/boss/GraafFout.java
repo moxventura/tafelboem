@@ -20,8 +20,10 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 
+import nl.jeeninga.tafelboem.boss.landing.Landing;
 import nl.jeeninga.tafelboem.boss.yeet.Yeet;
 import nl.jeeninga.tafelboem.core.ArenaBox;
+import nl.jeeninga.tafelboem.core.LandingStyle;
 import nl.jeeninga.tafelboem.core.YeetPose;
 import nl.jeeninga.tafelboem.core.YeetStyle;
 
@@ -36,12 +38,12 @@ public class GraafFout extends Evoker {
 	private static final EntityDataAccessor<Byte> DATA_YEET_POSE = SynchedEntityData.defineId(GraafFout.class, EntityDataSerializers.BYTE);
 
 	private static final double HOVER_HEIGHT = 1.5;
-	static final int DIZZY_TICKS = 30;
 
 	private @Nullable BossFight fight;
 	/** The flight he is on, while he is being yeeted. */
 	private @Nullable Yeet yeet;
-	private int dizzyTicks;
+	/** What he does once a yeet has put him down. */
+	private @Nullable Landing landing;
 	private boolean finale;
 
 	/** Client side: when the pose last changed and what came before, so the renderer can ease in and out. */
@@ -107,7 +109,7 @@ public class GraafFout extends Evoker {
 	}
 
 	public boolean isReacting() {
-		return yeet != null || dizzyTicks > 0;
+		return yeet != null || landing != null;
 	}
 
 	@Override
@@ -143,8 +145,11 @@ public class GraafFout extends Evoker {
 				if (yeet.tick(level)) {
 					land(level);
 				}
-			} else if (dizzyTicks > 0) {
-				dizzy(level);
+			} else if (landing != null) {
+				if (landing.tick(level)) {
+					landing.finish();
+					landing = null;
+				}
 			} else {
 				hover(level);
 			}
@@ -158,13 +163,14 @@ public class GraafFout extends Evoker {
 	 * @param kicker where the kid who kicked stands; the boomerang comes back to them
 	 */
 	public void yeet(Vec3 from, double power, YeetStyle style, Vec3 kicker) {
+		// Before the flight starts: ending a landing puts him upright with gravity off.
+		endLanding();
 		Vec3 direction = position().subtract(from).multiply(1, 0, 1);
 		if (direction.lengthSqr() < 1.0E-4) {
 			direction = new Vec3(random.nextDouble() - 0.5, 0, random.nextDouble() - 0.5);
 		}
 		yeet = Yeet.start(style, this, direction.normalize(), power, kicker);
 		setYeetPose(yeet.startPose());
-		dizzyTicks = 0;
 		needsSync = true;
 		armsUp(true);
 		playSound(SoundEvents.EVOKER_HURT, 1.5F, 1.9F);
@@ -176,6 +182,7 @@ public class GraafFout extends Evoker {
 	public void finalYeet() {
 		finale = true;
 		yeet = null;
+		endLanding();
 		setYeetPose(YeetPose.NONE);
 		setNoGravity(true);
 		armsUp(true);
@@ -191,12 +198,14 @@ public class GraafFout extends Evoker {
 	public @Nullable Yeet comeBack(ServerLevel level, Vec3 nearKid, ArenaBox arena) {
 		Yeet cut = yeet;
 		yeet = null;
+		endLanding();
 		setYeetPose(YeetPose.NONE);
 		setDeltaMovement(Vec3.ZERO);
 		armsUp(false);
 		teleportNear(level, nearKid, arena);
 		if (cut != null) {
-			dizzyTicks = DIZZY_TICKS;
+			startLanding(LandingStyle.DIZZY, Landing.Scene.NONE);
+			// After the landing has begun: finish() of a cut-short landing switched gravity off.
 			setNoGravity(false);
 		} else {
 			setNoGravity(true);
@@ -259,7 +268,6 @@ public class GraafFout extends Evoker {
 		if (yeetPose() == YeetPose.TUMBLE) {
 			setYeetPose(YeetPose.NONE);
 		}
-		dizzyTicks = DIZZY_TICKS;
 		setNoGravity(false);
 		setDeltaMovement(Vec3.ZERO);
 		armsUp(false);
@@ -272,20 +280,29 @@ public class GraafFout extends Evoker {
 		if (fight != null) {
 			fight.onYeetLanded(landed);
 		}
+		if (landing == null) {
+			// No fight to pick one (or it's over): the dizzy spell, as always.
+			startLanding(LandingStyle.DIZZY, Landing.Scene.NONE);
+		}
 	}
 
-	private void dizzy(ServerLevel level) {
-		dizzyTicks--;
-		double angle = tickCount * 0.5;
-		Vec3 head = new Vec3(getX(), getEyeY() + 0.6, getZ());
-		if (yeetPose() == YeetPose.FACEPLANT) {
-			// Face down on the ground: the stars circle where his head ended up.
-			head = position().add(Vec3.directionFromRotation(0, getYRot()).scale(1.6)).add(0, 0.4, 0);
+	/** He is down after a yeet: the fight says how he lands. Any landing still going ends first. */
+	public void startLanding(LandingStyle style, Landing.Scene scene) {
+		endLanding();
+		if (level() instanceof ServerLevel level) {
+			landing = Landing.start(style, this, scene, level);
 		}
-		level.sendParticles(ParticleTypes.CRIT, head.x + Math.cos(angle) * 0.5, head.y, head.z + Math.sin(angle) * 0.5, 1, 0, 0, 0, 0);
-		if (dizzyTicks == 0) {
-			setYeetPose(YeetPose.NONE);
-			setNoGravity(true);
+	}
+
+	/** The landing he is in, or null when he isn't down. */
+	public @Nullable LandingStyle landingStyle() {
+		return landing == null ? null : landing.style();
+	}
+
+	private void endLanding() {
+		if (landing != null) {
+			landing.finish();
+			landing = null;
 		}
 	}
 
@@ -303,7 +320,8 @@ public class GraafFout extends Evoker {
 		setYHeadRot(yaw);
 	}
 
-	private void armsUp(boolean up) {
+	/** Arms up (flailing, or waving while he runs) or down. */
+	public void armsUp(boolean up) {
 		spellCastingTickCount = up ? 200 : 0;
 		setIsCastingSpell(up ? IllagerSpell.WOLOLO : IllagerSpell.NONE);
 	}
