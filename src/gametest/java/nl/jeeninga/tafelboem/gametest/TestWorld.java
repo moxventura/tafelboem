@@ -23,6 +23,7 @@ import net.minecraft.world.phys.AABB;
 import nl.jeeninga.tafelboem.TafelBoem;
 import nl.jeeninga.tafelboem.boss.BossFight;
 import nl.jeeninga.tafelboem.boss.BossFights;
+import nl.jeeninga.tafelboem.config.TafelBoemConfig;
 import nl.jeeninga.tafelboem.core.ArenaBox;
 import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.game.ProtectedAreas;
@@ -56,6 +57,8 @@ final class TestWorld {
 	final ServerLevel level;
 	final WorldLayout layout;
 	final RecordingQuizClient client = new RecordingQuizClient();
+	/** The switches this world plays with; null: the mod's own. */
+	TafelBoemConfig config;
 	SessionManager sessions;
 	BossFights fights;
 	FightLog log;
@@ -105,10 +108,18 @@ final class TestWorld {
 		}
 	}
 
+	/** Plays with these switches instead of the mod's own; call before {@link #running()}. */
+	TestWorld withConfig(TafelBoemConfig config) {
+		this.config = config;
+		return this;
+	}
+
 	/** Runs a TafelBoem world in the layout: the hub placed, every question answered right. */
 	TestWorld running() {
 		Path dir = tempDir();
-		sessions = new SessionManager(level.getServer(), new Learners(new AnswerLog(dir)), client);
+		Learners learners = new Learners(new AnswerLog(dir));
+		sessions = config == null ? new SessionManager(level.getServer(), learners, client)
+				: new SessionManager(level.getServer(), learners, client, config);
 		fights = new BossFights(sessions);
 		log = new FightLog(dir);
 		world = new TafelBoemWorld(level, layout, fights, log,
