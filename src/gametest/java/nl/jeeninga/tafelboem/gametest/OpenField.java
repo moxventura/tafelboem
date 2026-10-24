@@ -8,6 +8,8 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 
+import nl.jeeninga.tafelboem.boss.GraafFout;
+
 /**
  * Every GameTest is boxed in by invisible barrier walls and a barrier floor, floating above the
  * world. Graaf Fout bounced off those walls after about a block, so yeet tests measured nothing.
@@ -43,6 +45,20 @@ final class OpenField {
 		// A ticket that expires by itself keeps the whole field ticking without un-forcing chunks
 		// that a neighbouring test still needs.
 		ChunkPos chunk = ChunkPos.containing(centre);
-		helper.onEachTick(() -> level.getChunkSource().addTicketWithRadius(TicketType.PORTAL, chunk, TICKET_RADIUS));
+		// Mock players simulate no chunks either, so a strong yeet from the field's centre could carry
+		// Graaf Fout to the edge of the ticking radius and freeze him there: follow him as well.
+		AABB around = bounds.inflate(RADIUS + 16);
+		helper.onEachTick(() -> {
+			level.getChunkSource().addTicketWithRadius(TicketType.PORTAL, chunk, TICKET_RADIUS);
+			level.getEntitiesOfClass(GraafFout.class, around).forEach(boss -> keepTicking(level, boss));
+		});
+	}
+
+	/**
+	 * Mock players keep no chunks simulated, and in a real world the kicker's simulation distance
+	 * always reaches Graaf Fout, so keep the chunks around him ticking (see {@link TestWorld}).
+	 */
+	static void keepTicking(ServerLevel level, GraafFout boss) {
+		level.getChunkSource().addTicketWithRadius(TicketType.PORTAL, ChunkPos.containing(boss.blockPosition()), 4);
 	}
 }
