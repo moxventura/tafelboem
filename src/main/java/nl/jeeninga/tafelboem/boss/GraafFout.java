@@ -98,6 +98,11 @@ public class GraafFout extends Evoker {
 		}
 	}
 
+	/** Client side: the pose he is in right now, none while he settles back up. */
+	public YeetPose shownPose() {
+		return shownPose;
+	}
+
 	/** Client side: the pose whose pivot the renderer should use, including while settling back up. */
 	public YeetPose renderPose() {
 		return shownPose != YeetPose.NONE ? shownPose : previousPose;
