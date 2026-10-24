@@ -21,6 +21,7 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.AABB;
 
 import nl.jeeninga.tafelboem.TafelBoem;
+import nl.jeeninga.tafelboem.boss.BossFight;
 import nl.jeeninga.tafelboem.boss.BossFights;
 import nl.jeeninga.tafelboem.core.ArenaBox;
 import nl.jeeninga.tafelboem.core.FightLevel;
@@ -93,6 +94,14 @@ final class TestWorld {
 		keepLoaded(layout.hubSlot());
 		for (FightLevel fightLevel : FightLevel.DOORS) {
 			keepLoaded(layout.arenaSlot(fightLevel));
+		}
+		// Mock players simulate no chunks, and a strong yeet can carry Graaf Fout past the slots' ticking
+		// chunks: he would hang there mid-air and the fight would wait for his landing for ever. In a real
+		// world the kicker's simulation distance always reaches him, so keep the chunks around him ticking.
+		if (fights != null) {
+			for (BossFight fight : fights.active()) {
+				level.getChunkSource().addTicketWithRadius(TicketType.PORTAL, ChunkPos.containing(fight.boss().blockPosition()), 4);
+			}
 		}
 	}
 
