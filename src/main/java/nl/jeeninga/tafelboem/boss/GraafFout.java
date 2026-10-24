@@ -311,7 +311,7 @@ public class GraafFout extends Evoker {
 	}
 
 	/** The flight he is on, or null when he isn't being yeeted. */
-	public @Nullable YeetStyle yeetStyle() {
+	@Nullable YeetStyle yeetStyle() {
 		return yeet == null ? null : yeet.style();
 	}
 
