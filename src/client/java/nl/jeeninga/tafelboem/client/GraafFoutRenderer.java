@@ -3,6 +3,7 @@ package nl.jeeninga.tafelboem.client;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 
+import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.EvokerRenderer;
 import net.minecraft.client.renderer.entity.state.EvokerRenderState;
@@ -10,25 +11,29 @@ import net.minecraft.resources.Identifier;
 
 import nl.jeeninga.tafelboem.TafelBoem;
 import nl.jeeninga.tafelboem.boss.GraafFout;
+import nl.jeeninga.tafelboem.core.YeetPose;
 
 /**
  * The vanilla evoker model in Graaf Fout's purple cape with a big red ✗. On top of the spin the
  * server sends, it draws the tumble (rolling and flipping around his middle), the faceplant
  * (tipping forward around his feet), head-first (upside down, sunk, legs wiggling) and the
- * pancake (squashed flat).
+ * pancake (squashed flat), the soot face (a second texture) and the sore toe (a model of his own).
  */
 public class GraafFoutRenderer extends EvokerRenderer<GraafFout> {
 	private static final Identifier TEXTURE = TafelBoem.id("textures/entity/graaf_fout.png");
+	private static final Identifier SOOT_TEXTURE = TafelBoem.id("textures/entity/graaf_fout_soot.png");
 	/** Squashed flat he spreads out a little, like dough. */
 	private static final float SPREAD = 0.6F;
 
 	public GraafFoutRenderer(EntityRendererProvider.Context context) {
 		super(context);
+		// The evoker model plus a pose of his own: holding his sore toe.
+		this.model = new GraafFoutModel(context.bakeLayer(ModelLayers.EVOKER));
 	}
 
 	@Override
 	public Identifier getTextureLocation(EvokerRenderState state) {
-		return TEXTURE;
+		return state instanceof GraafFoutRenderState yeet && yeet.shown == YeetPose.SOOT ? SOOT_TEXTURE : TEXTURE;
 	}
 
 	@Override
@@ -41,6 +46,7 @@ public class GraafFoutRenderer extends EvokerRenderer<GraafFout> {
 		super.extractRenderState(entity, state, partialTicks);
 		if (state instanceof GraafFoutRenderState yeet) {
 			yeet.pose = entity.renderPose();
+			yeet.shown = entity.shownPose();
 			yeet.transform = entity.renderTransform(partialTicks);
 			if (entity.shownPose().upsideDown()) {
 				state.isUpsideDown = true;

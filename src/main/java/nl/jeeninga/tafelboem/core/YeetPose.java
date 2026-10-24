@@ -3,7 +3,9 @@ package nl.jeeninga.tafelboem.core;
 /**
  * How Graaf Fout's body is turned, squashed or sunk on top of his usual spin, for the yeets and
  * landings that need more than a spin: the tumble, the boomerang's faceplant, head-first in the
- * ground and the pancake and the wall splat. Only the numbers live here; the renderer applies them.
+ * ground and the pancake and the wall splat. The soot face and the sore toe only change how he looks;
+ * the renderer picks a texture and a leg pose for them. Only the numbers live here; the renderer
+ * applies them.
  */
 public enum YeetPose {
 	NONE,
@@ -11,7 +13,9 @@ public enum YeetPose {
 	FACEPLANT,
 	HEAD_FIRST,
 	PANCAKE,
-	SPLAT;
+	SPLAT,
+	SOOT,
+	TOE_HOP;
 
 	/** Roll and flip at different speeds, so he tumbles instead of turning like a wheel. */
 	public static final float TUMBLE_ROLL_PER_TICK = 35F;
@@ -45,6 +49,7 @@ public enum YeetPose {
 			case HEAD_FIRST -> new Transform(0F, 0F, 1F, 1F, HEAD_FIRST_SINK);
 			case PANCAKE -> new Transform(0F, 0F, PANCAKE_HEIGHT, 1F, 0F);
 			case SPLAT -> new Transform(0F, 0F, 1F, SPLAT_DEPTH, 0F);
+			case SOOT, TOE_HOP -> Transform.UPRIGHT;
 		};
 	}
 

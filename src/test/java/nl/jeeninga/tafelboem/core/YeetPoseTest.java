@@ -59,6 +59,12 @@ class YeetPoseTest {
 	}
 
 	@Test
+	void theSignaturePosesChangeHowHeLooksNotHisShape() {
+		assertEquals(Transform.UPRIGHT, YeetPose.SOOT.transform(10));
+		assertEquals(Transform.UPRIGHT, YeetPose.TOE_HOP.transform(10));
+	}
+
+	@Test
 	void aPancakeIsFlatButNotThin() {
 		Transform flat = YeetPose.PANCAKE.transform(3);
 		assertEquals(YeetPose.PANCAKE_HEIGHT, flat.height());

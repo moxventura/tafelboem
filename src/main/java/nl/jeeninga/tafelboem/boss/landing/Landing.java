@@ -48,7 +48,9 @@ public abstract class Landing {
 			case HEAD_FIRST -> new HeadFirstLanding(boss, scene);
 			case PANCAKE -> new PancakeLanding(boss, scene);
 			case FRANTIC_RUN -> new FranticRunLanding(boss, scene);
-			default -> throw new IllegalArgumentException("No landing built for " + style + " yet");
+			case TOE_HOP -> new ToeHopLanding(boss, scene);
+			case SOOT -> new SootLanding(boss, scene);
+			case CHASED -> new ChasedLanding(boss, scene);
 		};
 		landing.begin(level);
 		return landing;
