@@ -29,6 +29,7 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import nl.jeeninga.tafelboem.boss.BossFight;
 import nl.jeeninga.tafelboem.boss.BossFights;
 import nl.jeeninga.tafelboem.core.BombTier;
+import nl.jeeninga.tafelboem.core.ChickenCount;
 import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.core.FightTally;
 import nl.jeeninga.tafelboem.game.BombEffects;
@@ -289,6 +290,7 @@ public class BossFightGameTest {
 		Set<Integer> answered = new HashSet<>();
 		int[] chickensAfterWrong = {-1};
 		int[] mostChickens = {0};
+		int[] firstRightProduct = {-1};
 		helper.onEachTick(() -> {
 			sessions.tick();
 			fights.tick();
@@ -297,10 +299,14 @@ public class BossFightGameTest {
 				if (question.mode() == QuizS2C.ASK && answered.add(question.sessionId())) {
 					helper.assertTrue(question.tier() == BombTier.KIPPENBOM.tier(), "only Kippenbommen on level 3, got tier " + question.tier());
 					// The first answer is wrong, the rest right.
-					int answer = answered.size() == 1 ? question.a() * question.b() + 1 : question.a() * question.b();
+					int product = question.a() * question.b();
+					int answer = answered.size() == 1 ? product + 1 : product;
 					sessions.onClientAction(sent.player(), new QuizC2S(question.sessionId(), QuizC2S.ANSWER, answer, QuizC2S.VIA_KEY));
 					if (answered.size() == 1) {
 						chickensAfterWrong[0] = spectacleChickens(helper, player.position(), 3);
+					}
+					if (answered.size() == 2) {
+						firstRightProduct[0] = product;
 					}
 				}
 			}
@@ -311,8 +317,10 @@ public class BossFightGameTest {
 			FightTally tally = fight.tally(player.getUUID());
 			helper.assertTrue(tally.answers() >= 3, "wait for three answers");
 			helper.assertTrue(tally.wrong() == 1, "one wrong answer counted, not " + tally.wrong());
-			helper.assertTrue(chickensAfterWrong[0] == 3, "a wrong answer on a Kippenbom lets 3 chickens hop out, not " + chickensAfterWrong[0]);
-			helper.assertTrue(mostChickens[0] >= 12, "a Kippenbom kicked into him lets 12 chickens fly; at most " + mostChickens[0] + " seen");
+			helper.assertTrue(chickensAfterWrong[0] == ChickenCount.WRONG_ANSWER,
+					"a wrong answer on a Kippenbom lets 1 chicken hop out, not " + chickensAfterWrong[0]);
+			helper.assertTrue(firstRightProduct[0] > 0 && mostChickens[0] >= firstRightProduct[0],
+					"a Kippenbom kicked into him counts out " + firstRightProduct[0] + " chickens; at most " + mostChickens[0] + " seen");
 			fights.endAll();
 		});
 	}

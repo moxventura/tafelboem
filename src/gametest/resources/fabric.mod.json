@@ -9,6 +9,7 @@
 			"nl.jeeninga.tafelboem.gametest.SessionGameTest",
 			"nl.jeeninga.tafelboem.gametest.BossFightGameTest",
 			"nl.jeeninga.tafelboem.gametest.YeetGameTest",
+			"nl.jeeninga.tafelboem.gametest.ChickenGameTest",
 			"nl.jeeninga.tafelboem.gametest.ArenaSetupGameTest",
 			"nl.jeeninga.tafelboem.gametest.ArenaFightGameTest",
 			"nl.jeeninga.tafelboem.gametest.LevelDoorGameTest",

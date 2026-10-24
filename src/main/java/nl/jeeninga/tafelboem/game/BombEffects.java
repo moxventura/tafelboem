@@ -1,5 +1,8 @@
 package nl.jeeninga.tafelboem.game;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
@@ -27,8 +30,8 @@ public final class BombEffects {
 	/** On the item frames beside the hub's doors, which every world load places again. */
 	public static final String HUB_TAG = "tafelboem_hub";
 	private static final int KIPPENBOM_CHICKENS = 12;
-	/** After a wrong answer: fewer and lower than after a right one, so a wrong answer stays less fun. */
-	private static final int WRONG_ANSWER_CHICKENS = 3;
+	/** After a wrong answer in 1.0.2 (and with the counting Kippenbom off): fewer and lower than after a right one. */
+	public static final int WRONG_ANSWER_CHICKENS = 3;
 
 	private BombEffects() {
 	}
@@ -44,11 +47,14 @@ public final class BombEffects {
 	}
 
 	/**
-	 * The reward: the bomb goes off where it stands.
+	 * The reward: the bomb goes off where it stands. A Kippenbom's chickens come from the caller, who
+	 * knows the sum.
+	 *
+	 * @return false when the bomb was gone already
 	 */
-	public static void boom(ServerLevel level, BlockPos pos, BombTier tier) {
+	public static boolean boom(ServerLevel level, BlockPos pos, BombTier tier) {
 		if (!(level.getBlockState(pos).getBlock() instanceof BombBlock)) {
-			return;
+			return false;
 		}
 		level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
 
@@ -62,8 +68,11 @@ public final class BombEffects {
 				level.playSound(null, pos, SoundEvents.FIREWORK_ROCKET_BLAST, SoundSource.BLOCKS, 1.5f, 1.0f);
 			}
 			case GEWONE_TNT -> level.sendParticles(ParticleTypes.LARGE_SMOKE, center.x, center.y + 1, center.z, 40, 1.0, 0.5, 1.0, 0.05);
-			case KIPPENBOM -> flyingChickens(level, center);
+			case KIPPENBOM -> {
+				// Its chickens come from the caller.
+			}
 		}
+		return true;
 	}
 
 	/** A Kippenbom going off: 12 chickens fly out in a ring. */
@@ -73,13 +82,39 @@ public final class BombEffects {
 		level.playSound(null, center.x, center.y, center.z, SoundEvents.CHICKEN_EGG, SoundSource.NEUTRAL, 2.0f, 0.8f);
 	}
 
+	/** The counting Kippenbom's first generation: one chicken per group flies out in a ring. */
+	public static List<Chicken> countingChickens(ServerLevel level, Vec3 center, int count, double speed) {
+		List<Chicken> chickens = releaseChickens(level, center, count, speed, 0.45);
+		level.sendParticles(ParticleTypes.CLOUD, center.x, center.y + 1, center.z, 30, 0.5, 0.5, 0.5, 0.1);
+		level.playSound(null, center.x, center.y, center.z, SoundEvents.CHICKEN_EGG, SoundSource.NEUTRAL, 2.0f, 0.8f);
+		return chickens;
+	}
+
+	/**
+	 * A first-generation chicken pops into its group, close together so the group shows. It pops where
+	 * it was last, even when a boom took it meanwhile, so the groups always add up to the sum.
+	 */
+	public static List<Chicken> popChicken(ServerLevel level, Chicken first, int count) {
+		Vec3 at = first.position();
+		first.discard();
+		poof(level, at);
+		level.playSound(null, at.x, at.y, at.z, SoundEvents.CHICKEN_EGG, SoundSource.NEUTRAL, 1.0f, 1.6f);
+		return releaseChickens(level, at, count, 0.08, 0.25);
+	}
+
+	/** Chickens that hop out low, for the Kippenbom's signature chase. */
+	public static List<Chicken> chasingChickens(ServerLevel level, Vec3 at, int count) {
+		return releaseChickens(level, at, count, 0.1, 0.2);
+	}
+
 	/** A wrong answer on a Kippenbom: a few chickens hop out at the kid, nothing like the real boom. */
-	public static void hoppingChickens(ServerLevel level, Vec3 at) {
-		releaseChickens(level, at, WRONG_ANSWER_CHICKENS, 0.2, 0.3);
+	public static void hoppingChickens(ServerLevel level, Vec3 at, int count) {
+		releaseChickens(level, at, count, 0.2, 0.3);
 		level.playSound(null, at.x, at.y, at.z, SoundEvents.CHICKEN_EGG, SoundSource.NEUTRAL, 1.0f, 1.5f);
 	}
 
-	private static void releaseChickens(ServerLevel level, Vec3 center, int count, double speed, double lift) {
+	private static List<Chicken> releaseChickens(ServerLevel level, Vec3 center, int count, double speed, double lift) {
+		List<Chicken> released = new ArrayList<>();
 		for (int i = 0; i < count; i++) {
 			Chicken chicken = EntityTypes.CHICKEN.create(level, EntitySpawnReason.TRIGGERED);
 			if (chicken == null) {
@@ -90,7 +125,9 @@ public final class BombEffects {
 			chicken.setDeltaMovement(Math.cos(angle) * speed, lift + level.getRandom().nextDouble() * lift * 0.5, Math.sin(angle) * speed);
 			chicken.addTag(SPECTACLE_TAG);
 			level.addFreshEntity(chicken);
+			released.add(chicken);
 		}
+		return released;
 	}
 
 	/**
