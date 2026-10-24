@@ -572,9 +572,9 @@ picked at the kick and the landing when he lands.
     so its next kick gets the signature.
   - Flying out of the arena cancels any landing; he comes back dizzy, as in R1.
 - **Pacing:** the cooldown after a landing is shortened by however much the landing runs past the
-  dizzy spell's 30 ticks, so the time from a kick to the next throw stays what it was in R1. If he is still reacting 15 s
-  after a kick (he can only freeze, never take that long), the fight brings him back next to a kid
-  and logs a `TafelBoem stuck:` line.
+  dizzy spell's 30 ticks, so the time from a kick to the next throw stays what it was in R1. If he
+  is still reacting about 15 s after a kick (he can only freeze, never take that long), the fight
+  brings him back next to a kid and logs a `TafelBoem stuck:` line.
 - **Toggles:** `yeetCatalogue` (the wall splat and the new landings) and `bombSignatures`. With both
   off he flies and lands as in 1.0.2.
 

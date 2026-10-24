@@ -428,9 +428,7 @@ public final class BossFight implements QuizListener {
 
 	/** Out of the arena and into the void: say how far he got, then he comes straight back. */
 	private void flewOut() {
-		ServerPlayer kid = kicker() != null ? kicker() : participants.players().stream().findFirst().orElse(null);
-		Vec3 near = kid != null ? kid.position() : new Vec3(arena.middleX(), arena.minY() + 3, arena.middleZ());
-		Yeet cut = boss.comeBack(level, near, arena);
+		Yeet cut = boss.comeBack(level, whereToComeBack(), arena);
 		if (cut == null) {
 			return;
 		}
@@ -442,6 +440,15 @@ public final class BossFight implements QuizListener {
 		followKickerFor(LANDED_CAM_TICKS);
 	}
 
+	/** Where he pops back to: next to the kicker, else the first kid, else the arena's middle, else where he is. */
+	private Vec3 whereToComeBack() {
+		ServerPlayer kid = kicker() != null ? kicker() : participants.players().stream().findFirst().orElse(null);
+		if (kid != null) {
+			return kid.position();
+		}
+		return arena != null ? new Vec3(arena.middleX(), arena.minY() + 3, arena.middleZ()) : boss.position();
+	}
+
 	/**
 	 * Safety net: he has been reacting far longer than any yeet or landing lasts, so he stopped being
 	 * ticked (an entity in a chunk nobody simulates). Bring him back next to a kid and carry on; it
@@ -450,15 +457,7 @@ public final class BossFight implements QuizListener {
 	private void recoverFromStall() {
 		TafelBoem.LOGGER.warn("TafelBoem stuck: boss={} yeet={} landing={} waited={}", boss.position(), boss.yeetStyle(), boss.landingStyle(),
 				REACTION_MIN_TICKS - phaseTicks);
-		ServerPlayer kid = kicker() != null ? kicker() : participants.players().stream().findFirst().orElse(null);
-		Vec3 near;
-		if (kid != null) {
-			near = kid.position();
-		} else if (arena != null) {
-			near = new Vec3(arena.middleX(), arena.minY() + 3, arena.middleZ());
-		} else {
-			near = boss.position();
-		}
+		Vec3 near = whereToComeBack();
 		if (boss.comeBack(level, near, arena) != null) {
 			reactions.played(LandingStyle.DIZZY);
 		}
