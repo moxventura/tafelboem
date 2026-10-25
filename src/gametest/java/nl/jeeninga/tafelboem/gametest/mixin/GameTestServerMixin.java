@@ -10,6 +10,7 @@ import net.minecraft.server.level.ServerLevel;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import nl.jeeninga.tafelboem.gametest.GameTestHarness;
@@ -23,7 +24,12 @@ public abstract class GameTestServerMixin {
 	}
 
 	@Inject(method = "evaluateTestsToRun", at = @At("RETURN"), cancellable = true)
-	private void tafelboem$oneBatch(ServerLevel level, CallbackInfoReturnable<List<GameTestBatch>> cir) {
-		cir.setReturnValue(GameTestHarness.oneBatch(cir.getReturnValue()));
+	private void tafelboem$chosenGroupInOneBatch(ServerLevel level, CallbackInfoReturnable<List<GameTestBatch>> cir) {
+		cir.setReturnValue(GameTestHarness.oneBatch(GameTestHarness.keepChosenGroup(cir.getReturnValue(), level)));
+	}
+
+	@ModifyVariable(method = "create", at = @At("HEAD"), argsOnly = true)
+	private static int tafelboem$repeat(int repeatCount) {
+		return GameTestHarness.repeat(repeatCount);
 	}
 }

@@ -50,6 +50,7 @@ public class TafelBoemWorldGameTest {
 	}
 
 	@GameTest(maxTicks = 2400, padding = TestWorld.PADDING)
+	@Fight
 	public void everyKidThroughTheSameDoorJoinsTheSameFight(GameTestHelper helper) {
 		TestWorld test = new TestWorld(helper).running();
 		ServerPlayer first = test.kidInTheHub();
@@ -77,6 +78,7 @@ public class TafelBoemWorldGameTest {
 	}
 
 	@GameTest(maxTicks = 9000, padding = TestWorld.PADDING)
+	@Fight
 	public void aWonFightPaysTheRewardWritesTheStarsAndSendsEveryoneHome(GameTestHelper helper) {
 		TestWorld test = new TestWorld(helper).running();
 		ServerPlayer kid = test.kidInTheHub();
@@ -232,6 +234,7 @@ public class TafelBoemWorldGameTest {
 	}
 
 	@GameTest(maxTicks = 9000, padding = TestWorld.PADDING)
+	@Fight
 	public void aKidWhoLeavesRightAfterTheWinIsLoggedOnlyOnce(GameTestHelper helper) {
 		TestWorld test = new TestWorld(helper).running();
 		ServerPlayer kid = test.kidInTheHub();
@@ -296,6 +299,7 @@ public class TafelBoemWorldGameTest {
 	 * splat, no reason on the meter and no record, even for a kid whose best is beaten.
 	 */
 	@GameTest(maxTicks = 2400, padding = TestWorld.PADDING)
+	@Fight
 	public void withEveryR11SwitchOffAFightPlaysAs102(GameTestHelper helper) {
 		TafelBoemConfig off = new TafelBoemConfig();
 		off.countingKippenbom = false;
