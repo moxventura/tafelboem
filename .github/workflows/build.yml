@@ -22,6 +22,10 @@ jobs:
         with:
           java-version: '25'
           distribution: 'microsoft'
+      - name: setup gradle
+        # Caches Gradle and the dependencies: on 2026-10-24 a push got "429 Too Many Requests" from
+        # Maven Central before it compiled anything.
+        uses: gradle/actions/setup-gradle@v6
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
       - name: build
