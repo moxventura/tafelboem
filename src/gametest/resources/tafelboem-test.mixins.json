@@ -1,0 +1,12 @@
+{
+	"required": true,
+	"package": "nl.jeeninga.tafelboem.gametest.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"mixins": [
+		"GameTestServerMixin",
+		"MinecraftServerMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

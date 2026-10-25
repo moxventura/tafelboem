@@ -39,6 +39,12 @@ loom.runs.named("gameTest") {
 	property("fabric-api.gametest.report-file", file("build/reports/gametest-all.xml").absolutePath)
 }
 
+// Every GameTest run starts in a fresh world, which the test mod never saves (GameTestHarness).
+def deleteGameTestWorld = tasks.register("deleteGameTestWorld", Delete) {
+	delete layout.projectDirectory.dir("build/run/gameTest/world")
+}
+tasks.named("runGameTest") { dependsOn(deleteGameTestWorld) }
+
 configurations {
 	// Mods that must sit next to our jar in a player's mods folder.
 	deployMods {

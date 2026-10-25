@@ -22,3 +22,8 @@ taken out again. Each GameTest's own time is in `build/reports/gametest-*.xml`; 
 
 | Step | Run | Before (s) | After (s) | Kept |
 |---|---|---|---|---|
+| fresh world, never saved | `runGameTest` | 57.5 | 49.4 | yes |
+
+Runs after this step: 49.4, 56.3, 47.5 s. The baseline ran 70 tests, this run 71 (one GameTest added
+since). The test world is now 660 KB instead of 448 MB. Run-to-run spread is about 9 s, as large as
+the gain, so the saving is only roughly measured.
