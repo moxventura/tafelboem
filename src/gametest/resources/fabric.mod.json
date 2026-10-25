@@ -21,6 +21,9 @@
 			"nl.jeeninga.tafelboem.gametest.WorldClientGameTest"
 		]
 	},
+	"mixins": [
+		"tafelboem-test.mixins.json"
+	],
 	"depends": {
 		"tafelboem": "*"
 	}
