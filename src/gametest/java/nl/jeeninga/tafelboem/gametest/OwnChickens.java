@@ -137,7 +137,7 @@ final class OwnChickens {
 	private Map<UUID, Vec3> look() {
 		Map<UUID, Vec3> found = new LinkedHashMap<>();
 		for (Chicken chicken : helper.getLevel().getEntitiesOfClass(Chicken.class, area,
-				chicken -> chicken.entityTags().contains(BombEffects.SPECTACLE_TAG))) {
+				chicken -> chicken.isAlive() && chicken.entityTags().contains(BombEffects.SPECTACLE_TAG))) {
 			found.put(chicken.getUUID(), chicken.position());
 		}
 		return found;
