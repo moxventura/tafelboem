@@ -24,6 +24,9 @@ taken out again. Each GameTest's own time is in `build/reports/gametest-*.xml`; 
 |---|---|---|---|---|
 | fresh world, never saved | `runGameTest` | 57.5 | 49.4 | yes |
 | one batch | `runGameTest` | 49.4 | 41.7 | yes |
+| two groups, two servers | `build` | 55.5 | 26.9 | yes |
+| two groups, two servers | `runGameTest` | 41.7 | 44.3 | yes |
+| two groups, two servers | one slow test three times (`-Prepeat=3`) | 172.5 | 14.4 | yes |
 
 ### Notes
 
@@ -34,3 +37,14 @@ taken out again. Each GameTest's own time is in `build/reports/gametest-*.xml`; 
   (`Running test environment 'minecraft:default' batch 0 (71 tests)`) instead of two batches, and
   all six runs (three to check, three timed) passed. The tests themselves now take about 13 s of
   each run, from "Running test environment" to "All 71 required tests passed".
+- two groups, two servers: `build` runs only the quick group (53 tests): 26.4, 26.9, 27.4 s; its
+  "before" is the baseline, as the steps before this one timed only `runGameTest`. `runGameTest`
+  runs the quick group (53) and the fights group (18) on two servers that start within a second of
+  each other: 44.3, 49.8, 40.4 s, so it saves nothing against one server with all 71 (41.7 s; the
+  spread is 9 s). Started together, each server needs about 18 s from loading to "Started game test
+  server" instead of 8 to 9 s alone, and the setup before the tests run takes longer too, so the
+  two servers cost about what they save. The step stays for `build` and the repeat. One slow test
+  three times (`-Ptests=…beating_graaf_fout_gives_the_kid_four_kippenbommen -Prepeat=3`, one
+  server): 14.4, 15.0, 14.4 s; each copy takes about 2.4 s instead of 9.2 s in the baseline's full
+  run. `build runFightGameTests`, `publishPack`'s own part of the release check: 39.2, 44.8,
+  50.3 s, median 44.8 s.

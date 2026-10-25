@@ -52,6 +52,7 @@ public class BossFightGameTest {
 	private static final int CHASE_SPAWN_RADIUS = 4;
 
 	@GameTest(maxTicks = 600)
+	@Fight
 	@SuppressWarnings("removal") // mock players are still the only way to test without a client
 	public void aCorrectAnswerKicksTheBombBackAndHitsGraafFout(GameTestHelper helper) {
 		RecordingQuizClient client = new RecordingQuizClient();
@@ -90,6 +91,7 @@ public class BossFightGameTest {
 	}
 
 	@GameTest(maxTicks = 600, padding = 48)
+	@Fight
 	@SuppressWarnings("removal") // mock players are still the only way to test without a client
 	public void theViewFollowsGraafFoutUntilHeIsDizzyOnTheGround(GameTestHelper helper) {
 		OpenField.open(helper);
@@ -130,6 +132,7 @@ public class BossFightGameTest {
 
 	/** A landing that never ends would stall the fight: after each one he gets up and throws again. */
 	@GameTest(maxTicks = 3600, padding = 48)
+	@Fight
 	@SuppressWarnings("removal") // mock players are still the only way to test without a client
 	public void afterEveryLandingHeGetsUpAndThrowsAgain(GameTestHelper helper) {
 		OpenField.open(helper);
@@ -189,6 +192,7 @@ public class BossFightGameTest {
 	 * Without the safety net he would never get out, so the test can't pass without it.
 	 */
 	@GameTest(maxTicks = 1500, padding = 48)
+	@Fight
 	@SuppressWarnings("removal") // mock players are still the only way to test without a client
 	public void aFightGoesOnWhenGraafFoutFreezesMidYeet(GameTestHelper helper) {
 		OpenField.open(helper);
@@ -283,6 +287,7 @@ public class BossFightGameTest {
 	 * from the previous yeet would show up too.
 	 */
 	@GameTest(maxTicks = 1200, padding = 48)
+	@Fight
 	@SuppressWarnings("removal") // mock players are still the only way to test without a client
 	public void inMultiplayerOnlyTheKidWhoseBombItIsGetsTheirViewMoved(GameTestHelper helper) {
 		OpenField.open(helper);
@@ -335,6 +340,7 @@ public class BossFightGameTest {
 	 * so. The other kid sees the plain meter: no ranking between siblings.
 	 */
 	@GameTest(maxTicks = 2400, padding = 48)
+	@Fight
 	@SuppressWarnings("removal") // mock players are still the only way to test without a client
 	public void onlyTheKidWhoKickedSeesWhyHeFlewFurther(GameTestHelper helper) {
 		OpenField.open(helper);
@@ -385,6 +391,7 @@ public class BossFightGameTest {
 	 * sky, and by then nobody counted as near him any more.
 	 */
 	@GameTest(maxTicks = 6000, padding = 48)
+	@Fight
 	@SuppressWarnings("removal") // mock players are still the only way to test without a client
 	public void beatingGraafFoutGivesTheKidFourKippenbommen(GameTestHelper helper) {
 		OpenField.open(helper);
@@ -424,6 +431,7 @@ public class BossFightGameTest {
 	 * away; he has to come back to the kid and throw.
 	 */
 	@GameTest(maxTicks = 400, padding = 72)
+	@Fight
 	@SuppressWarnings("removal") // mock players are still the only way to test without a client
 	public void afterAYeetThatLandsHimFarAwayHeComesBackAndThrowsAgain(GameTestHelper helper) {
 		OpenField.open(helper);
@@ -478,6 +486,7 @@ public class BossFightGameTest {
 	}
 
 	@GameTest(maxTicks = 1200, padding = 48)
+	@Fight
 	@SuppressWarnings("removal") // mock players are still the only way to test without a client
 	public void onTheHardLevelHeThrowsOnlyKippenbommenAndCountsEveryAnswer(GameTestHelper helper) {
 		OpenField.open(helper);
@@ -539,6 +548,7 @@ public class BossFightGameTest {
 
 	/** The spec: with Kippenbom chickens off there are no chickens in a fight, so the chase doesn't play either. */
 	@GameTest(maxTicks = 1500, padding = 48)
+	@Fight
 	public void withKippenbomChickensOffNoChaseBeginsAndNoChickenAppears(GameTestHelper helper) {
 		TafelBoemConfig off = new TafelBoemConfig();
 		off.kippenbomChickens = false;
@@ -553,6 +563,7 @@ public class BossFightGameTest {
 
 	/** The control: with the switch on, the chase plays as soon as the last landing wasn't it (the boomerang's own ending can come first). */
 	@GameTest(maxTicks = 1500, padding = 48)
+	@Fight
 	public void withKippenbomChickensOnTheChasePlaysWithinTwoLandings(GameTestHelper helper) {
 		LandingWatch watch = watchKippenbommenLand(helper, new TafelBoemConfig());
 		helper.succeedWhen(() -> {
@@ -568,6 +579,7 @@ public class BossFightGameTest {
 	 * ({@link OwnChickens}), so another test's chickens in the same level never do.
 	 */
 	@GameTest(maxTicks = 600, padding = 48)
+	@Fight
 	@SuppressWarnings("removal") // mock players are still the only way to test without a client
 	public void theChaseChickensPoofWhenTheChaseEnds(GameTestHelper helper) {
 		OpenField.open(helper);
@@ -623,6 +635,7 @@ public class BossFightGameTest {
 
 	/** A fight that ends during the chase takes the chase's chickens with it, instead of leaving them for their 10 s timer. */
 	@GameTest(maxTicks = 600, padding = 48)
+	@Fight
 	@SuppressWarnings("removal") // mock players are still the only way to test without a client
 	public void whenTheFightEndsDuringTheChaseTheChickensGoWithIt(GameTestHelper helper) {
 		OpenField.open(helper);
@@ -728,6 +741,7 @@ public class BossFightGameTest {
 	 * nothing, so "?" stays better than guessing.
 	 */
 	@GameTest(maxTicks = 1600, padding = 48)
+	@Fight
 	@SuppressWarnings("removal") // mock players are still the only way to test without a client
 	public void onTheHardLevelAWrongAnswerCostsTwoHeartsButNeverTheLast(GameTestHelper helper) {
 		Survival kid = answerInSurvival(helper, FightLevel.MOEILIJK, (player, count) -> {

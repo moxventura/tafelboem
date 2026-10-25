@@ -28,22 +28,55 @@ fabricApi {
 	configureTests {
 		createSourceSet = true
 		modId = "tafelboem-test"
-		enableGameTests = true
+		// The quick and fights groups below replace Loom's one run of every GameTest.
+		enableGameTests = false
 		enableClientGameTests = true
 		eula = true
 	}
 }
 
-// Each GameTest's time, as JUnit XML, for docs/evaluations/faster-tests.md.
-loom.runs.named("gameTest") {
-	property("fabric-api.gametest.report-file", file("build/reports/gametest-all.xml").absolutePath)
+// --- GameTests: a quick group and a fights group ----------------------------------------------
+// A GameTest marked @Fight plays a whole fight and runs in the fights group; all others run in the
+// quick group. `build` runs the quick group, `runGameTest` both, on two servers side by side.
+// -Ptests=<pattern> runs only the matching tests of the group (Minecraft's selector: * and ?), and
+// -Prepeat=<n> runs each of them n times in one server. Every run starts in a fresh world that the
+// test mod never saves, and writes each test's time to build/reports/gametest-<group>.xml.
+def gameTestPattern = providers.gradleProperty("tests")
+def gameTestRepeat = providers.gradleProperty("repeat")
+if (gameTestRepeat.isPresent() && !gameTestPattern.isPresent()) {
+	throw new GradleException("-Prepeat needs -Ptests=<pattern>: Minecraft repeats only selected tests")
 }
-
-// Every GameTest run starts in a fresh world, which the test mod never saves (GameTestHarness).
-def deleteGameTestWorld = tasks.register("deleteGameTestWorld", Delete) {
-	delete layout.projectDirectory.dir("build/run/gameTest/world")
+[quick: "QuickGameTests", fights: "FightGameTests"].each { groupName, runName ->
+	def dir = "build/run/gameTest-${groupName}"
+	def deleteWorld = tasks.register("delete${runName}World", Delete) {
+		delete layout.projectDirectory.dir("${dir}/world")
+	}
+	loom.runs.create(runName.uncapitalize()) {
+		inherit(loom.runs.getByName("server"))
+		source("gametest")
+		runDir(dir)
+		property("fabric-api.gametest")
+		property("fabric-api.gametest.report-file", file("build/reports/gametest-${groupName}.xml").absolutePath)
+		property("tafelboem.gametest.group", groupName)
+		if (gameTestPattern.isPresent()) {
+			property("fabric-api.gametest.filter", gameTestPattern.get())
+		}
+		if (gameTestRepeat.isPresent()) {
+			property("tafelboem.gametest.repeat", gameTestRepeat.get())
+		}
+	}
+	tasks.named("run${runName}") {
+		group = "tafelboem"
+		description = "Runs the ${groupName} GameTests on a headless server."
+		dependsOn(deleteWorld)
+	}
 }
-tasks.named("runGameTest") { dependsOn(deleteGameTestWorld) }
+tasks.register("runGameTest") {
+	group = "tafelboem"
+	description = "Runs every GameTest: the quick and the fights group, on two servers side by side."
+	dependsOn("runQuickGameTests", "runFightGameTests")
+}
+tasks.named("check") { dependsOn("runQuickGameTests") }
 
 configurations {
 	// Mods that must sit next to our jar in a player's mods folder.
@@ -137,7 +170,7 @@ tasks.withType(JavaCompile).configureEach { mustRunAfter(checkRelease) }
 tasks.register("publishPack", nl.jeeninga.tafelboem.build.PublishPack) {
 	group = "tafelboem"
 	description = "Builds, tests and publishes the tagged HEAD to the pack repo; Prism installs it on the next Play."
-	dependsOn(checkRelease, "build")
+	dependsOn(checkRelease, "build", "runFightGameTests")
 	modJar = tasks.named("jar", Jar).flatMap { it.archiveFile }
 	fabricApi.from(configurations.deployMods)
 	instanceZip = prismInstance.flatMap { it.zip }
