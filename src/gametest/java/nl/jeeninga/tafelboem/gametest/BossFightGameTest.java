@@ -18,26 +18,22 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.animal.chicken.Chicken;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.Heightmap;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 
 import nl.jeeninga.tafelboem.boss.BossFight;
 import nl.jeeninga.tafelboem.boss.BossFights;
-import nl.jeeninga.tafelboem.boss.GraafFout;
 import nl.jeeninga.tafelboem.config.TafelBoemConfig;
 import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.ChickenCount;
 import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.core.FightTally;
 import nl.jeeninga.tafelboem.core.LandingStyle;
-import nl.jeeninga.tafelboem.game.BombEffects;
 import nl.jeeninga.tafelboem.game.SessionManager;
 import nl.jeeninga.tafelboem.log.AnswerLog;
 import nl.jeeninga.tafelboem.log.Learners;
@@ -54,8 +50,6 @@ public class BossFightGameTest {
 	private static final int FAR_AWAY = 60;
 	/** The chase chickens appear 2 blocks behind him, all at one spot, on the tick the landing begins. */
 	private static final int CHASE_SPAWN_RADIUS = 4;
-	/** Spectacle chickens this close to him before the chase begins are not the chase's. */
-	private static final int NOT_THE_CHASE_RADIUS = 40;
 
 	@GameTest(maxTicks = 600)
 	@SuppressWarnings("removal") // mock players are still the only way to test without a client
@@ -498,6 +492,10 @@ public class BossFightGameTest {
 		helper.assertTrue(fight != null, "Graaf Fout should appear");
 		helper.assertTrue(fight.hitsRemaining() == 13, "level 3 needs 13 hits, not " + fight.hitsRemaining());
 
+		// A kick lets the counted chickens out where he is hit, a wrong answer one at the kid.
+		OwnChickens chickens = new OwnChickens(helper).followPops();
+		chickens.watch(() -> fight.boss().position());
+
 		Set<Integer> answered = new HashSet<>();
 		int[] chickensAfterWrong = {-1};
 		int[] mostChickens = {0};
@@ -505,6 +503,7 @@ public class BossFightGameTest {
 		helper.onEachTick(() -> {
 			sessions.tick();
 			fights.tick();
+			chickens.tick();
 			for (RecordingQuizClient.Sent sent : List.copyOf(client.sentTo)) {
 				QuizS2C question = sent.payload();
 				if (question.mode() == QuizS2C.ASK && answered.add(question.sessionId())) {
@@ -512,16 +511,18 @@ public class BossFightGameTest {
 					// The first answer is wrong, the rest right.
 					int product = question.a() * question.b();
 					int answer = answered.size() == 1 ? product + 1 : product;
-					sessions.onClientAction(sent.player(), new QuizC2S(question.sessionId(), QuizC2S.ANSWER, answer, QuizC2S.VIA_KEY));
+					QuizC2S reply = new QuizC2S(question.sessionId(), QuizC2S.ANSWER, answer, QuizC2S.VIA_KEY);
 					if (answered.size() == 1) {
-						chickensAfterWrong[0] = spectacleChickens(helper, player.position(), 3);
+						chickensAfterWrong[0] = chickens.claimDuring(() -> sessions.onClientAction(sent.player(), reply), player.position(), 3).size();
+					} else {
+						sessions.onClientAction(sent.player(), reply);
 					}
 					if (answered.size() == 2) {
 						firstRightProduct[0] = product;
 					}
 				}
 			}
-			mostChickens[0] = Math.max(mostChickens[0], spectacleChickens(helper, stand, 40));
+			mostChickens[0] = Math.max(mostChickens[0], chickens.alive());
 		});
 
 		helper.succeedWhen(() -> {
@@ -564,7 +565,7 @@ public class BossFightGameTest {
 	/**
 	 * The chase's 4 chickens go when the chase ends: left standing they would look like one more group
 	 * next to the counting Kippenbom's. Only the chickens that appear with the landing count
-	 * ({@link ChaseChickens}), so another test's chickens in the same level never do.
+	 * ({@link OwnChickens}), so another test's chickens in the same level never do.
 	 */
 	@GameTest(maxTicks = 600, padding = 48)
 	@SuppressWarnings("removal") // mock players are still the only way to test without a client
@@ -580,7 +581,7 @@ public class BossFightGameTest {
 		helper.assertTrue(fights.summon(helper.getLevel(), stand.add(6, 1.5, 0)), "Graaf Fout should appear");
 		BossFight fight = fights.active().getFirst();
 		fight.queueLanding(LandingStyle.CHASED);
-		ChaseChickens chase = new ChaseChickens(helper, fight.boss());
+		OwnChickens chase = new OwnChickens(helper);
 
 		int[] mostDuringTheChase = {0};
 		boolean[] chased = {false};
@@ -592,6 +593,11 @@ public class BossFightGameTest {
 			fights.tick();
 			chase.tick();
 			if (fight.boss().landingStyle() == LandingStyle.CHASED) {
+				if (!chased[0]) {
+					// The chase's four appear behind him on the tick it begins; anyone else's chickens don't.
+					List<UUID> four = chase.claimNew(fight.boss().position(), CHASE_SPAWN_RADIUS);
+					helper.assertTrue(four.size() == 4, "4 chickens appear with the chase, saw " + four.size());
+				}
 				chased[0] = true;
 				mostDuringTheChase[0] = Math.max(mostDuringTheChase[0], chase.alive());
 			} else if (chased[0] && !chaseOver[0]) {
@@ -630,7 +636,8 @@ public class BossFightGameTest {
 		helper.assertTrue(fights.summon(helper.getLevel(), stand.add(6, 1.5, 0)), "Graaf Fout should appear");
 		BossFight fight = fights.active().getFirst();
 		fight.queueLanding(LandingStyle.CHASED);
-		ChaseChickens chase = new ChaseChickens(helper, fight.boss());
+		OwnChickens chase = new OwnChickens(helper);
+		boolean[] claimed = {false};
 
 		boolean[] ended = {false};
 		int[] chasing = {0};
@@ -640,6 +647,12 @@ public class BossFightGameTest {
 			sessions.tick();
 			fights.tick();
 			chase.tick();
+			if (!claimed[0] && fight.boss().landingStyle() == LandingStyle.CHASED) {
+				// The chase's four appear behind him on the tick it begins; anyone else's chickens don't.
+				claimed[0] = true;
+				List<UUID> four = chase.claimNew(fight.boss().position(), CHASE_SPAWN_RADIUS);
+				helper.assertTrue(four.size() == 4, "4 chickens appear with the chase, saw " + four.size());
+			}
 			if (!ended[0] && fight.boss().landingStyle() == LandingStyle.CHASED && chase.alive() == 4) {
 				// Mid-chase, all four out: the fight is over now.
 				chasing[0] = 4;
@@ -662,49 +675,6 @@ public class BossFightGameTest {
 		});
 	}
 
-	/**
-	 * Tells the chase's own chickens from anyone else's. GameTests share one level and run in parallel,
-	 * so a neighbouring test's chickens may stand near Graaf Fout. Call {@link #tick} every tick: until
-	 * the CHASED landing begins it remembers the spectacle chickens already near him; on the tick it
-	 * begins, the chickens that are new and right next to him are the chase's four.
-	 */
-	private static final class ChaseChickens {
-		private final GameTestHelper helper;
-		private final GraafFout boss;
-		private Set<UUID> before = Set.of();
-		private List<UUID> own;
-
-		ChaseChickens(GameTestHelper helper, GraafFout boss) {
-			this.helper = helper;
-			this.boss = boss;
-		}
-
-		void tick() {
-			if (own != null) {
-				return;
-			}
-			if (boss.landingStyle() == LandingStyle.CHASED) {
-				own = nearBoss(CHASE_SPAWN_RADIUS).stream().filter(id -> !before.contains(id)).toList();
-				helper.assertTrue(own.size() == 4, "4 chickens appear with the chase, saw " + own.size());
-			} else {
-				before = Set.copyOf(nearBoss(NOT_THE_CHASE_RADIUS));
-			}
-		}
-
-		/** How many of the chase's chickens are still standing. */
-		int alive() {
-			if (own == null) {
-				return 0;
-			}
-			return (int) own.stream().filter(id -> helper.getLevel().getEntity(id) instanceof Chicken chicken && chicken.isAlive()).count();
-		}
-
-		private List<UUID> nearBoss(double radius) {
-			return helper.getLevel().getEntitiesOfClass(Chicken.class, boss.getBoundingBox().inflate(radius),
-					chicken -> chicken.entityTags().contains(BombEffects.SPECTACLE_TAG)).stream().map(Chicken::getUUID).toList();
-		}
-	}
-
 	/** The landings seen so far, in order, and the most spectacle chickens near the fight at once. */
 	private record LandingWatch(List<LandingStyle> landings, int[] mostChickens, BossFights fights) {
 	}
@@ -720,7 +690,12 @@ public class BossFightGameTest {
 		ServerPlayer player = helper.makeMockServerPlayerInLevel();
 		Vec3 stand = Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(1, 1, 1)));
 		player.teleportTo(stand.x, stand.y, stand.z);
-		helper.assertTrue(fights.summon(helper.getLevel(), stand.add(6, 1.5, 0), FightLevel.MOEILIJK, null) != null, "Graaf Fout should appear");
+		BossFight fight = fights.summon(helper.getLevel(), stand.add(6, 1.5, 0), FightLevel.MOEILIJK, null);
+		helper.assertTrue(fight != null, "Graaf Fout should appear");
+		// Every chicken a fight lets out appears where he is hit, behind him for the chase, or at the kid.
+		OwnChickens chickens = new OwnChickens(helper).followPops();
+		chickens.watch(() -> fight.boss().position());
+		chickens.watch(player::position);
 
 		List<LandingStyle> landings = new ArrayList<>();
 		int[] mostChickens = {0};
@@ -729,6 +704,7 @@ public class BossFightGameTest {
 		helper.onEachTick(() -> {
 			sessions.tick();
 			fights.tick();
+			chickens.tick();
 			for (RecordingQuizClient.Sent sent : List.copyOf(client.sentTo)) {
 				QuizS2C question = sent.payload();
 				if (question.mode() == QuizS2C.ASK && answered.add(question.sessionId())) {
@@ -742,7 +718,7 @@ public class BossFightGameTest {
 				}
 				last[0] = now;
 			}
-			mostChickens[0] = Math.max(mostChickens[0], spectacleChickens(helper, stand, 40));
+			mostChickens[0] = Math.max(mostChickens[0], chickens.alive());
 		});
 		return new LandingWatch(landings, mostChickens, fights);
 	}
@@ -823,11 +799,6 @@ public class BossFightGameTest {
 			}
 		});
 		return new Survival(health, fights);
-	}
-
-	private static int spectacleChickens(GameTestHelper helper, Vec3 around, double radius) {
-		return helper.getLevel().getEntitiesOfClass(Chicken.class, new AABB(around, around).inflate(radius),
-				chicken -> chicken.entityTags().contains(BombEffects.SPECTACLE_TAG)).size();
 	}
 
 	/** The view stays on him for as long as his landing lasts, whichever landing it is. */
