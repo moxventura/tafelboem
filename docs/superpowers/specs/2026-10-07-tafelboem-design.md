@@ -676,8 +676,10 @@ cheap to check. Decided with Jesper on 2026-10-24.
 - **Shutdown:** 8 of its 9 s is saving that terrain; the GameTest world had grown to 1.2 GB.
 - **Batches:** Minecraft runs at most 50 tests per batch and the batches one after the other, so
   the slowest test of each batch counts: a whole fight to the win, 7–9 s.
-- **Grid:** tests are placed only 6 blocks apart (their 1-block structure plus 5); padding doesn't
-  space them out. A test that counts the entities near it can count a neighbour's.
+- **Grid:** each test stands in its own padded box, and the boxes are 5 blocks apart, so the padding
+  is also the distance to the next test: about 100 blocks at padding 48. That is what keeps one
+  test's yeets out of the next test's field. A fight still reaches further: in R1.1 a neighbouring
+  test's chickens stood next to Graaf Fout in a chase test.
 - The 70 GameTests add up to 150 s, but most of that runs side by side.
 
 ### Decisions
@@ -689,11 +691,12 @@ cheap to check. Decided with Jesper on 2026-10-24.
   two servers side by side.
 
 ### Two groups on two servers
-- **Fights:** the tests that play a whole fight (about 12, 3–9 s each), marked as such in the test
-  code. **Quick:** all the others.
+- **Fights:** the tests that play Graaf Fout's fight and took 3 s or more at 1.1.0 (18 of them,
+  3–9 s each), marked as such in the test code. **Quick:** all the others.
 - A small hook in the test mod (`src/gametest`, never the mod itself) keeps only the chosen group
-  when the server starts, plus an optional pattern on the test name and a repeat count. A check
-  fails the run if a test is in no group or in both, or if a pattern matches nothing, so no test
+  when the server starts, plus an optional pattern on the test name and a repeat count. A test is a
+  fight exactly when it carries the mark, so every test is in one group. The run fails if the mark
+  sits on something that is no test, or if a pattern matches no test in the group, so no test
   silently drops out.
 - Gradle tasks, each with its own run folder so they can run at once:
   - `runQuickGameTests`: the quick group; `./gradlew build` runs it.
@@ -708,16 +711,18 @@ cheap to check. Decided with Jesper on 2026-10-24.
   and the test mod switches saving off. No 8 s of saving, no growing world.
 - **One batch per server:** the test mod raises Minecraft's 50-tests-per-batch limit, so each
   server's slowest test counts once.
-- **Less clearing (an experiment):** lower the padding class by class, and keep a lower padding
-  only if that class stays green three runs in a row. A test that needs the space below it (the
-  void under an arena) keeps what it needs.
+- **Less clearing:** before each test, Minecraft sets every block of its padded box (a cube of
+  2 × padding + 1 blocks a side) to air or stone, with block updates, even a block that already is
+  air or stone. In a fresh world nearly all of them already are, so the test mod skips those. The
+  result is the same blocks. Lowering the padding would clear less too, but it would also move the
+  tests closer together (see Grid), so the padding stays.
 - The server start (11 s: Java, Fabric, Minecraft) stays as it is.
 
 ### Isolation
 Before any speed-up, every test that counts entities counts only its own, by id, with one shared
 helper (grown from the chase tests' `ChaseChickens`): `ChickenGameTest`, the Kippenbom counts in
-the fight tests and the spectacle-cap test. One batch and two servers put even more tests side by
-side, so this comes first.
+the fight tests and the spectacle-cap test. One batch runs every test of a server at the same time,
+so this comes first.
 
 ### The client test
 Its time is real time: the client can't run ticks faster the way the test server does. Replace
