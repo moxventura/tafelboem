@@ -733,14 +733,21 @@ often (below).
 | a new or changed slow test | `./gradlew runFightGameTests -Ptests=<pattern> -Prepeat=3`, in place of three full runs |
 | client code, a world (re)load, a load-contract row or the screenshots changed; before every release | `./gradlew runClientGameTest` |
 
+### CI
+- The GitHub workflow caches Gradle and its dependencies with the standard
+  `gradle/actions/setup-gradle` step. Without it every run downloads Gradle and every dependency
+  from Maven Central: on 2026-10-24 the `main` push, 21 s after the `v1.1.0` tag's push of the same
+  commit, was refused with "429 Too Many Requests" before it compiled anything.
+- CI runs every GameTest on every push: `./gradlew build runFightGameTests`.
+
 ### Measuring
 - Every GameTest run writes Fabric's JUnit XML report (`fabric-api.gametest.report-file`) to
   `build/reports/gametest-<group>.xml`, so each test's time is always at hand.
 - Each step is measured over three runs against the 1.1.0 numbers above; the medians go in
   `docs/evaluations/faster-tests.md`. A step that doesn't save time is taken out again.
-- Order: the report and the baseline; isolation; the fresh unsaved world; one batch; the two groups
-  on two servers with pattern and repeat; less clearing; the client test's waits; `AGENTS.md` and
-  the evaluation.
+- Order: the report and the baseline; the CI cache; isolation; the fresh unsaved world; one batch;
+  the two groups on two servers with pattern and repeat (and CI running both); less clearing; the
+  client test's waits; `AGENTS.md` and the evaluation.
 
 ### Done when
 | Run | 1.1.0 | Target |
