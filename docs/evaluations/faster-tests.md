@@ -23,7 +23,14 @@ taken out again. Each GameTest's own time is in `build/reports/gametest-*.xml`; 
 | Step | Run | Before (s) | After (s) | Kept |
 |---|---|---|---|---|
 | fresh world, never saved | `runGameTest` | 57.5 | 49.4 | yes |
+| one batch | `runGameTest` | 49.4 | 41.7 | yes |
 
-Runs after this step: 49.4, 56.3, 47.5 s. The baseline ran 70 tests, this run 71 (one GameTest added
-since). The test world is now 660 KB instead of 448 MB. Run-to-run spread is about 9 s, as large as
-the gain, so the saving is only roughly measured.
+### Notes
+
+- fresh world, never saved: Runs after this step: 49.4, 56.3, 47.5 s. The baseline ran 70 tests, this run 71 (one GameTest added
+  since). The test world is now 660 KB instead of 448 MB. Run-to-run spread is about 9 s, as large as
+  the gain, so the saving is only roughly measured.
+- one batch: runs after this step: 40.9, 41.7, 43.0 s, spread 2 s. The 71 tests now start at once
+  (`Running test environment 'minecraft:default' batch 0 (71 tests)`) instead of two batches, and
+  all six runs (three to check, three timed) passed. The tests themselves now take about 13 s of
+  each run, from "Running test environment" to "All 71 required tests passed".
