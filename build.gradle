@@ -34,6 +34,11 @@ fabricApi {
 	}
 }
 
+// Each GameTest's time, as JUnit XML, for docs/evaluations/faster-tests.md.
+loom.runs.named("gameTest") {
+	property("fabric-api.gametest.report-file", file("build/reports/gametest-all.xml").absolutePath)
+}
+
 configurations {
 	// Mods that must sit next to our jar in a player's mods folder.
 	deployMods {
