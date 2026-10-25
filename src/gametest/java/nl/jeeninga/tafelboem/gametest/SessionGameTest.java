@@ -4,15 +4,13 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.util.List;
+import java.util.UUID;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.animal.chicken.Chicken;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
@@ -22,7 +20,6 @@ import nl.jeeninga.tafelboem.config.TafelBoemConfig;
 import nl.jeeninga.tafelboem.core.AnswerRecord;
 import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.Outcome;
-import nl.jeeninga.tafelboem.game.BombEffects;
 import nl.jeeninga.tafelboem.game.QuizListener;
 import nl.jeeninga.tafelboem.game.QuizSession;
 import nl.jeeninga.tafelboem.game.SessionManager;
@@ -124,13 +121,12 @@ public class SessionGameTest {
 		Fixture f = new Fixture(helper);
 		QuizS2C question = f.ask();
 
-		f.manager.onClientAction(f.player, new QuizC2S(question.sessionId(), QuizC2S.CHICKEN_OUT, 0, QuizC2S.VIA_KEY));
+		List<UUID> chickens = new OwnChickens(helper).claimDuring(
+				() -> f.manager.onClientAction(f.player, new QuizC2S(question.sessionId(), QuizC2S.CHICKEN_OUT, 0, QuizC2S.VIA_KEY)),
+				Vec3.atCenterOf(helper.absolutePos(BOMB)), 3);
 
 		helper.assertValueEqual(f.client.last().mode(), QuizS2C.FEEDBACK, "ESC shows the fact on the HUD");
 		helper.assertValueEqual(f.client.last().reason(), QuizS2C.REASON_CHICKEN_OUT, "feedback reason");
-		AABB around = new AABB(helper.absolutePos(BOMB)).inflate(3);
-		List<Entity> chickens = helper.getLevel().getEntities((Entity) null, around,
-				entity -> entity instanceof Chicken && entity.entityTags().contains(BombEffects.SPECTACLE_TAG));
 		helper.assertFalse(chickens.isEmpty(), "a chicken should pop out");
 		helper.succeed();
 	}
