@@ -162,8 +162,9 @@ go of by hand, not `holdKeyFor`.
 (c) adds up to 185 ticks (9.3 s), below the 300 ticks (15 s) the spec asks for. The ticks in (c) are
 also not the saving: a `waitFor` still takes at least a tick, and (c) has 43 passes, so the most it
 can save is 142 ticks. Add the 7 releasable key holds (154 to 168 ticks, and only with a hand-made
-release) and the ceiling is about 296 to 310 ticks, 14.8 to 15.5 s: at best level with 15 s, and
-reachable only if every condition held at the first tick it was asked, which a `waitFor` never does.
+release) and the ceiling is about 296 to 310 ticks, 14.8 to 15.5 s: at most 15.5 s, an
+upper bound that no `waitFor` reaches, as it needs every condition to hold at the first tick it was
+asked. So the decision stands.
 The 404 + 120 ticks in (a) and (b) have no condition to wait for: (a) times a picture, (b) shows an
 absence. Not worth it: the client runs in real time, and its waits time screenshots or show that
 something doesn't happen; the saving is in running it less often (the working rules, AGENTS.md,
@@ -186,7 +187,13 @@ is the baseline's median.
   timed in "runGameTest on one server" 33.0 to 47.9 s (median 38.5 s), and the five runs in a row
   below took 32 to 41 s by Gradle's own clock. It sits at about 35 to 39 s, so the target is
   reached on some runs and not on others. What is left is mostly the server's start-up and the
-  slowest fight test, which sets the length of the one batch; no further step was tried.
+  slowest fight test, which probably sets the length of the one batch (unmeasured); no further step
+  was tried.
+- The release check's definition changed with the working rules: at 1.1.0 it was 2 × `build` + 2 ×
+  `runGameTest` + the client test (361.7 s); now `publishPack` runs every headless GameTest, so the
+  separate `runGameTest` runs before a release are no longer needed, and "now" is the client test
+  plus `build runFightGameTests`. Like for like it is 2 × 22.1 + 2 × 35.7 + 133.3 = 248.9 s, which
+  misses the 210 s target; "met" rests on the new working rules.
 - A release check is the client test plus `build runFightGameTests` (31.5 s: 30.7, 31.5, 34.0),
   which is what `publishPack` runs; the figure is the sum of the two medians, as the two were timed
   apart. The client test is 81% of it.
@@ -194,6 +201,8 @@ is the baseline's median.
   screenshots or show that something doesn't happen, and the saving is in running it less often.
 - The slow test three times took 14.4 to 15.0 s when Task 6 timed it and 21.1 to 22.5 s now, with the
   same command. Both are far under 45 s; I did not look for why the later runs are slower.
+- The slow-test repeat moved from about 14.7 s (Task 6) to 21.1 s (Task 9); the cause is not
+  investigated.
 - Every headless GameTest runs before every publish: `publishPack` runs `build` and
   `runFightGameTests`. The client test is run by hand before a release (AGENTS.md, Build and test).
 - All 69 TafelBoem GameTests stay with what they assert; only the counts are isolated

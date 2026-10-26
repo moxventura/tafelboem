@@ -180,7 +180,8 @@ git tag v1.0.2
 ```
 
 `publishPack` refuses uncommitted changes or an untagged commit within seconds, and names the next
-tag. It pushes the tag to GitHub, builds and runs all tests, publishes the jars to the pack repo,
+tag. It pushes the tag to GitHub, runs the unit tests and every headless GameTest (run `./gradlew runClientGameTest`
+before tagging), publishes the jars to the pack repo,
 and then waits until GitHub serves them: **wait for "Live after N s"** (usually 4–5 minutes, GitHub caches each file for up to
 5) and then press Play on any PC. Pressing Play earlier is harmless: packwiz notices the half-updated
 pack by its hashes, shows an error and keeps the installed version. For a quick look without

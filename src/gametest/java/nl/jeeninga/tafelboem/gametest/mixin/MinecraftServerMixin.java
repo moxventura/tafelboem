@@ -13,7 +13,9 @@ import nl.jeeninga.tafelboem.gametest.GameTestHarness;
 /**
  * The GameTest server stops without saving its world (8 of the 9 s its shutdown took): Gradle
  * deletes that world before the next run anyway. Any other server, like the client GameTest's,
- * stops as usual.
+ * stops as usual. Cancelling {@code stopServer} also skips Fabric's SERVER_STOPPING and
+ * SERVER_STOPPED events and the mod's own teardown; that is harmless, because the GameTest
+ * server's {@code onServerExit} then exits the JVM.
  */
 @Mixin(MinecraftServer.class)
 public abstract class MinecraftServerMixin {

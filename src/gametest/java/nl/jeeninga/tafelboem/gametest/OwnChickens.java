@@ -30,7 +30,7 @@ import nl.jeeninga.tafelboem.game.BombEffects;
 final class OwnChickens {
 	/** A new chicken is at most this far from where it came from on the first tick it is seen. */
 	static final double SPAWN_RADIUS = 2.5;
-	/** A chicken pops into its group on the tick it goes, or a tick later when something else took it. */
+	/** A chicken pops into its group within a few ticks of the tick it goes. */
 	private static final int POP_TICKS = 3;
 	/** Graaf Fout flies up to about 45 blocks, and chickens follow him. */
 	private static final double REACH = 64;
