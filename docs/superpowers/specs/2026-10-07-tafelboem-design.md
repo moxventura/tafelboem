@@ -690,7 +690,7 @@ cheap to check. Decided with Jesper on 2026-10-24.
 - All three directions: a faster harness, a quick group and a fights group, and the groups
   selectable on their own (`runGameTest` runs every test on one server).
 
-### Two groups on two servers
+### A quick group and a fights group
 - **Fights:** the tests that play Graaf Fout's fight and took 3 s or more at 1.1.0 (18 of them,
   3–9 s each), marked as such in the test code. **Quick:** all the others.
 - A small hook in the test mod (`src/gametest`, never the mod itself) keeps only the chosen group
@@ -736,7 +736,7 @@ often (below).
 | When | Run |
 |---|---|
 | after every change | `./gradlew build` (JUnit and the quick group) |
-| before committing a task that touches `boss/`, `game/` or `world/`, or a fight test | `./gradlew runGameTest` (both groups) |
+| before committing a task that touches `boss/`, `game/` or `world/`, or a fight test | `./gradlew runGameTest` (every GameTest, one server) |
 | a new or changed slow test | `./gradlew runFightGameTests -Ptests=<pattern> -Prepeat=3`, in place of three full runs |
 | client code, a world (re)load, a load-contract row or the screenshots changed; before every release | `./gradlew runClientGameTest` |
 
@@ -753,8 +753,9 @@ often (below).
 - Each step is measured over three runs against the 1.1.0 numbers above; the medians go in
   `docs/evaluations/faster-tests.md`. A step that doesn't save time is taken out again.
 - Order: the report and the baseline; the CI cache; isolation; the fresh unsaved world; one batch;
-  the two groups on two servers with pattern and repeat (and CI running both); less clearing; the
-  client test's waits; `AGENTS.md` and the evaluation.
+  the two groups with pattern and repeat (and CI running both); less clearing; `runGameTest` on one
+  server, measured against two side by side; the client test's waits; `AGENTS.md` and the
+  evaluation.
 
 ### Done when
 | Run | 1.1.0 | Target |
