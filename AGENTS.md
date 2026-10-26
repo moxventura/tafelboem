@@ -95,8 +95,9 @@ When to run what:
 `-Ptests` takes Minecraft's selector (`tafelboem-test:boss_fight_game_test_*`, with `*` and `?`).
 It works with `runGameTest` and with a group's own task (`runQuickGameTests`, `runFightGameTests`).
 A pattern that matches no test fails the run: with a group task the harness fails it (no test of
-that group is selected), with `runGameTest` Minecraft itself does. `-Prepeat=<n>` needs `-Ptests`. Both apply to every GameTest task in the invocation, and
-`publishPack` refuses them.
+that group is selected), with `runGameTest` Minecraft itself does. `-Prepeat=<n>` needs `-Ptests`.
+`-Ptests` and `-Prepeat` apply to every GameTest task in the invocation, and `publishPack` refuses
+them.
 Each run writes every test's time to `build/reports/gametest-<group>.xml` (`gametest-all.xml` for
 `runGameTest`).
 
