@@ -27,6 +27,8 @@ taken out again. Each GameTest's own time is in `build/reports/gametest-*.xml`; 
 | two groups, two servers | `build` | 55.5 | 26.9 | yes |
 | two groups, two servers | `runGameTest` | 41.7 | 44.3 | yes |
 | two groups, two servers | one slow test three times (`-Prepeat=3`) | 172.5 | 14.4 | yes |
+| skip clearing what is clear | `build` | 26.9 | 24.0 | yes |
+| skip clearing what is clear | `runGameTest` | 44.3 | 42.6 | yes |
 
 ### Notes
 
@@ -48,3 +50,16 @@ taken out again. Each GameTest's own time is in `build/reports/gametest-*.xml`; 
   server): 14.4, 15.0, 14.4 s; each copy takes about 2.4 s instead of 9.2 s in the baseline's full
   run. `build runFightGameTests`, `publishPack`'s own part of the release check: 39.2, 44.8,
   50.3 s, median 44.8 s.
+- skip clearing what is clear: the GameTest world is Minecraft's flat preset (bedrock, 2 dirt, 1 grass: ground up to y -61),
+  and a test's box starts at y -59, so everything in it is air except what the tests build; below the
+  box's lowest row `clearBlock` wants stone, which is a few blocks of the padding at most. The set-up
+  (from "tests are now running at position" to "Running test environment", `build/task6.log` against
+  `build/task7-1.log` to `-3.log`) took 15 s (quick group) and 7 s (fights group) before and 8, 7, 8 s
+  and 4, 4, 4 s after. Runs after this step: `build` 20.6, 24.0, 24.5 s; `runGameTest` 36.8, 42.6,
+  48.9 s (the spread, 12 s, is larger than the saving, so the medians drop only by what the set-up
+  gap says: about 7 s on one server and 3 s on the other, partly hidden when two servers start
+  together). All three checking runs of `runGameTest` passed (53 and 18 tests). Alone, on one
+  server: `runQuickGameTests` 27.1, 29.0, 26.4 s, median 27.1 s; `runFightGameTests` 31.6, 35.5,
+  22.1 s, median 31.6 s (the slow runs follow a task that had just run; the spread is 13 s). Their sum
+  (58.7 s) against `runGameTest` (42.6 s) says the two servers save about 16 s against one server
+  after the other, but the 71 tests together on one server were 41.7 s before this step.

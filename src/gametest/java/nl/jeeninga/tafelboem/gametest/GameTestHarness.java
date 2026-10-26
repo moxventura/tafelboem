@@ -9,6 +9,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestBatch;
@@ -18,6 +19,8 @@ import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.entrypoint.EntrypointContainer;
@@ -30,7 +33,7 @@ import org.slf4j.LoggerFactory;
  * in {@code gametest.mixin} call in here. The GameTest server never saves its world (Gradle deletes
  * it before every run), runs all its tests in one batch, and runs one group when Gradle names it
  * ({@value #GROUP}): the fights ({@link Fight}) or the quick tests, so the two can run on two
- * servers side by side.
+ * servers side by side, and skips clearing blocks that already are air or stone.
  */
 public final class GameTestHarness {
 	public static final Logger LOGGER = LoggerFactory.getLogger("tafelboem-test");
@@ -101,6 +104,15 @@ public final class GameTestHarness {
 		}
 		LOGGER.info("TafelBoem GameTests: the {} group, {} tests", group, count);
 		return kept;
+	}
+
+	/**
+	 * Before each test Minecraft sets every block of its padded box to stone (below the given height)
+	 * or air, with block updates. Whether this one already is: in a fresh world nearly all are.
+	 */
+	public static boolean alreadyClear(int airIfAboveThisY, BlockPos pos, ServerLevel level) {
+		BlockState cleared = pos.getY() < airIfAboveThisY ? Blocks.STONE.defaultBlockState() : Blocks.AIR.defaultBlockState();
+		return level.getBlockState(pos) == cleared;
 	}
 
 	/** Minecraft's repeat for the selected tests, which Fabric always sets to 0. */
