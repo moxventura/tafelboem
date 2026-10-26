@@ -16,7 +16,8 @@ import org.gradle.process.ExecOperations;
 
 /**
  * Lets only a clean commit tagged {@code vX.Y.Z} reach the kids' PCs, so every published version
- * can be rebuilt from its tag. Runs before compiling, so a forgotten tag fails in seconds.
+ * can be rebuilt from its tag. Runs before compiling, so a forgotten tag fails in seconds. It also
+ * refuses {@code -Ptests} and {@code -Prepeat}, which would filter the GameTests a publish depends on.
  */
 @UntrackedTask(because = "checks the current git state")
 public abstract class CheckRelease extends DefaultTask {
@@ -27,11 +28,24 @@ public abstract class CheckRelease extends DefaultTask {
 	@Input
 	public abstract Property<String> getModVersion();
 
+	/** The {@code -Ptests} pattern, if one is set: it filters every GameTest run in this invocation. */
+	@Input
+	@org.gradle.api.tasks.Optional
+	public abstract Property<String> getGameTestFilter();
+
+	/** The {@code -Prepeat} count, if one is set. */
+	@Input
+	@org.gradle.api.tasks.Optional
+	public abstract Property<String> getGameTestRepeat();
+
 	@Inject
 	protected abstract ExecOperations getExec();
 
 	@TaskAction
 	public void check() {
+		if (getGameTestFilter().isPresent() || getGameTestRepeat().isPresent()) {
+			throw new GradleException("A publish runs every GameTest: drop -Ptests and -Prepeat.");
+		}
 		Git git = new Git(getExec(), getSourceDir().get().getAsFile());
 		String changes = git.run("status", "--porcelain");
 		if (!changes.isEmpty()) {
