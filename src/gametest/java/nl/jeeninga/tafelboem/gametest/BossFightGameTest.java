@@ -561,7 +561,10 @@ public class BossFightGameTest {
 		});
 	}
 
-	/** The control: with the switch on, the chase plays as soon as the last landing wasn't it (the boomerang's own ending can come first). */
+	/**
+	 * The control: with the switch on, the chase plays as soon as the last landing wasn't it (the
+	 * boomerang's own ending can come first), and the chicken net of the off test sees its chickens.
+	 */
 	@GameTest(maxTicks = 1500, padding = 48)
 	@Fight
 	public void withKippenbomChickensOnTheChasePlaysWithinTwoLandings(GameTestHelper helper) {
@@ -569,6 +572,7 @@ public class BossFightGameTest {
 		helper.succeedWhen(() -> {
 			helper.assertTrue(watch.landings().size() >= 2, "wait for two landings, saw " + watch.landings());
 			helper.assertTrue(watch.landings().contains(LandingStyle.CHASED), "a chase within two landings: " + watch.landings());
+			helper.assertTrue(watch.mostChickens()[0] > 0, "the net sees the chase's chickens, saw " + watch.mostChickens()[0]);
 			watch.fights().endAll();
 		});
 	}
