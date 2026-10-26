@@ -141,7 +141,8 @@ GameTest pitfalls:
   `Z` counts its published builds. A pushed tag is never moved or reused; a mistake goes out as the
   next `Z`.
 - `git tag vX.Y.Z && ./gradlew publishPack`. It refuses an unclean or untagged commit, pushes the
-  tag, builds and runs every test, publishes to `../tafelboem-pack` (GitHub
+  tag, builds and runs JUnit and every headless GameTest (not the client GameTest: run
+  `./gradlew runClientGameTest` before tagging), publishes to `../tafelboem-pack` (GitHub
   `moxventura/tafelboem-pack`), and waits until GitHub serves it ("Live"). From a worktree, pass
   `-PpackDir=/home/jesper/claude-mc/tafelboem-pack`.
 - Jesper tests a release by publishing it and pressing Play in the Prism instance; the kids' PCs
