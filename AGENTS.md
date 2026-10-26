@@ -18,7 +18,9 @@ human or agent.
     landing in `boss/landing/`), `game/` (questions, bombs, explosions), `world/` (the TafelBoem
     world: hub, arenas, doors), `block/`, `item/`, `registry/`, `command/`, `log/` (answer and
     fights logs), `config/`; client code in `src/client/java/`.
-- **Tests:** `src/test/java/` (JUnit), `src/gametest/java/` (GameTests and client GameTests).
+- **Tests:** `src/test/java/` (JUnit), `src/gametest/java/` (GameTests and client GameTests). The
+  test mod's hooks into Minecraft's GameTest runner are in `gametest/mixin/`; they call
+  `GameTestHarness`.
 
 ## Rules for the game
 
@@ -76,24 +78,50 @@ when unsure of a signature, check the jar in the Loom cache:
 | Command | What | Time |
 |---|---|---|
 | `./gradlew test` | JUnit | seconds |
-| `./gradlew runGameTest` | all GameTests, headless; look for "All N required tests passed" | ~40 s |
-| `./gradlew build` | both | ~1 min |
-| `./gradlew runClientGameTest` | a real client (needs a display; WSLg works); screenshots in `build/run/clientGameTest/screenshots/` | ~2 min |
+| `./gradlew build` | JUnit and the quick GameTests (every one without `@Fight`) | ~22 s |
+| `./gradlew runGameTest` | every GameTest, on one server; look for "All N required tests passed" | ~36 s |
+| `./gradlew runFightGameTests -Ptests=<id or pattern> -Prepeat=3` | one or a few fight tests, three times in one server | ~21 s |
+| `./gradlew runClientGameTest` | a real client (needs a display; WSLg works); screenshots in `build/run/clientGameTest/screenshots/` | ~2 min 15 s |
+
+When to run what:
+
+| When | Run |
+|---|---|
+| after every change | `./gradlew build` |
+| before committing a task that touches `boss/`, `game/` or `world/`, or a fight test | `./gradlew runGameTest` |
+| a new or changed slow test | `./gradlew runFightGameTests -Ptests=<pattern> -Prepeat=3`, in place of three full runs |
+| client code, a world (re)load, a load-contract row or the screenshots changed; before every release | `./gradlew runClientGameTest` |
+
+`-Ptests` takes Minecraft's selector (`tafelboem-test:boss_fight_game_test_*`, with `*` and `?`).
+It works with `runGameTest` and with a group's own task (`runQuickGameTests`, `runFightGameTests`).
+A pattern that matches no test fails the run: with a group task the harness fails it (no test of
+that group is selected), with `runGameTest` Minecraft itself does. `-Prepeat=<n>` needs `-Ptests`.
+Each run writes every test's time to `build/reports/gametest-<group>.xml` (`gametest-all.xml` for
+`runGameTest`).
 
 GameTest pitfalls:
-- Keep `padding` small: before each test the runner clears the test's whole padded box, which grows
-  with the cube of the padding (128 cost a minute per run). It must also be at most 128, or the
-  client GameTests fail ("Timeout loading world").
+- `padding` is also a test's distance to the next one: Minecraft places each test's padded box 5
+  blocks from the next, so a test that yeets Graaf Fout keeps its 48. Before a test the runner
+  clears its whole padded box (a cube); the test mod skips the blocks that already are air or stone,
+  which in the fresh test world is nearly all. It must be at most 128, or the client GameTests fail
+  ("Timeout loading world").
 - An entity spawned in a chunk that isn't loaded yet can't be found; when a test spawns something
   outside its own chunks at tick 0, look for it a few ticks later (`TestWorld.whenLoaded`).
-- GameTests run in parallel in one shared level: never change global state (game rules without
-  restoring them, `ProtectedAreas.clear()`, static hooks). TafelBoem-world tests use `TestWorld`.
+- GameTests run in parallel in one shared level, all of a server's tests in one batch: never change
+  global state (game rules without restoring them, `ProtectedAreas.clear()`, static hooks).
+  TafelBoem-world tests use `TestWorld`. Count only your own entities: `OwnChickens` for spectacle
+  chickens.
+- A test's `onEachTick` actions run in no fixed order (Minecraft keeps them in a hash map): put
+  actions whose order matters, such as `sessions.tick()` and a count, in one `onEachTick`.
 - Mock players from `makeMockServerPlayerInLevel()` are in creative; use
   `makeMockServerPlayer(GameType.…)` for another game mode.
 - Mock players keep no chunks simulated: an entity that leaves the chunks the test has tickets for
   freezes mid-air. `TestWorld` and `OpenField` keep the chunks around Graaf Fout ticking.
-- Run a new slow GameTest (a whole fight) three times before trusting it: a 1-in-20 flake hid in
-  one for a whole release.
+- A test that plays a fight for 3 s or more gets `@Fight`, so `build` stays quick. Run a new or
+  changed one three times before trusting it (`runFightGameTests -Ptests=<its id> -Prepeat=3`): a
+  1-in-20 flake hid in one for a whole release.
+- The GameTest server never saves its world, and Gradle deletes that world before every run. A
+  check that needs a saved world goes in `WorldClientGameTest`.
 - GameTests can't load a world twice. Check anything that happens on a second load (blocks placed
   again, entities loaded from disk) in `WorldClientGameTest`, which closes its world and opens it
   again (`getWorldSave().open()`).
@@ -113,8 +141,8 @@ GameTest pitfalls:
   `Z` counts its published builds. A pushed tag is never moved or reused; a mistake goes out as the
   next `Z`.
 - `git tag vX.Y.Z && ./gradlew publishPack`. It refuses an unclean or untagged commit, pushes the
-  tag, builds and tests, publishes to `../tafelboem-pack` (GitHub `moxventura/tafelboem-pack`), and
-  waits until GitHub serves it ("Live"). From a worktree, pass
+  tag, builds and runs every test, publishes to `../tafelboem-pack` (GitHub
+  `moxventura/tafelboem-pack`), and waits until GitHub serves it ("Live"). From a worktree, pass
   `-PpackDir=/home/jesper/claude-mc/tafelboem-pack`.
 - Jesper tests a release by publishing it and pressing Play in the Prism instance; the kids' PCs
   update on their next Play too. Keep `main` equal to what is published.
