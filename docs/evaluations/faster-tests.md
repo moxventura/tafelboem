@@ -194,7 +194,8 @@ is the baseline's median.
   screenshots or show that something doesn't happen, and the saving is in running it less often.
 - The slow test three times took 14.4 to 15.0 s when Task 6 timed it and 21.1 to 22.5 s now, with the
   same command. Both are far under 45 s; I did not look for why the later runs are slower.
-- Every GameTest runs before every publish: `publishPack` runs `build` and `runFightGameTests`.
+- Every headless GameTest runs before every publish: `publishPack` runs `build` and
+  `runFightGameTests`. The client test is run by hand before a release (AGENTS.md, Build and test).
 - All 69 TafelBoem GameTests stay with what they assert; only the counts are isolated
   (`OwnChickens`), and one test of that helper was added (71 with Minecraft's `always_pass`).
 - Five full runs in a row (`./gradlew runGameTest`, one server, all 71 tests) passed on 2026-10-26.
