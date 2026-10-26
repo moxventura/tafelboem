@@ -70,7 +70,7 @@ multiplayer sessions and a one-step deploy to every PC are part of R0.
 | **R0.1 "Beter mikken"** (patch) | see the R0.1 scope below | With the playtest-1 blockers fixed, the kids see every consequence of their answers, "?" is only pressed on purpose, and a correction on the HUD sticks as well as the retype did | see the R0.1 evaluation below |
 | **R1 "Kies je level"** | see the R1 scope below: the TafelBoem world with a hub and a door per level; levels 1–3 (easy, medium, hard) with their own tables, bombs and hits; arenas built from code or from structure templates, picked at random per level; stars | With a world of their own, a hub and three levels to choose from, the kids keep asking to play, and over time they pick harder levels and collect stars | see the R1 evaluation below |
 | **R1.1 "Meer yeets"** | see the R1.1 scope below: a flight plus a landing per hit (wall splat, head-first, pancake, frantic running, bomb signatures), the full yeet-o-meter (fast answers and streaks yeet further, a personal best), the counting Kippenbom; the kids' own arenas as they come | More variety keeps them coming back | see the R1.1 evaluation below |
-| *Faster tests, right after R1.1* | nothing new for the kids (see the faster-tests scope below): the same tests, quicker; a quick and a fights group on two servers side by side; tests that count entities count only their own | A suite that is quicker to run keeps releases small and cheap to check | see the faster-tests targets below; no test loses what it proves |
+| *Faster tests, right after R1.1* | nothing new for the kids (see the faster-tests scope below): the same tests, quicker; a quick and a fights group (`runGameTest` runs every test on one server); tests that count entities count only their own | A suite that is quicker to run keeps releases small and cheap to check | see the faster-tests targets below; no test loses what it proves |
 | R1.2 *(after R1.1)* | experiments behind toggles: dodgeable bombs and "Graaf Fout eats your mistake" | Dodging and healing don't cut answers per minute or add frustration | answers per minute vs R1, frustration tally |
 | **R2 "Leren dat blijft"** | fact states and spaced picker, a Tafelkaart screen (GUI), parent report, the daily limit, "Kies je bom", the full leg kick in third person | The practice spreads out and facts move toward Fluent | 2 weeks of logs: % Accurate/Fluent up, median time down, sessions spread over days, kids still asking |
 | **R3 "Meer boem"** | bombs 4–9, levels 4–9, particle choreographies, craters, escape aids, lethal tiers with 3 lives, inventory stash, signature reactions for bombs 4–9, co-op rescue sums, the lobby extras in the hub (Tafelkaart wall, trophy wall, animal pen) | Escalation keeps them climbing without frustration | level reached per week, favourite bombs, no tears at levels 7–9, FPS OK on the woonkamer PC |
@@ -687,8 +687,8 @@ cheap to check. Decided with Jesper on 2026-10-24.
   release check.
 - Whole-fight tests stay real: they keep playing a real fight to the win. Only the harness around
   them gets faster.
-- All three directions: a faster harness, a quick group and a fights group, and the two groups on
-  two servers side by side.
+- All three directions: a faster harness, a quick group and a fights group, and the groups
+  selectable on their own (`runGameTest` runs every test on one server).
 
 ### Two groups on two servers
 - **Fights:** the tests that play Graaf Fout's fight and took 3 s or more at 1.1.0 (18 of them,
@@ -701,7 +701,9 @@ cheap to check. Decided with Jesper on 2026-10-24.
 - Gradle tasks, each with its own run folder so they can run at once:
   - `runQuickGameTests`: the quick group; `./gradlew build` runs it.
   - `runFightGameTests`: the fights group.
-  - `runGameTest`: both groups side by side.
+  - `runGameTest`: every GameTest on one server (measured quicker than two side by side; see
+    `docs/evaluations/faster-tests.md`). The groups stay: `build` runs the quick group,
+    `publishPack` and CI the fights group too.
   - `-Ptests=<pattern>` runs only matching tests; `-Prepeat=<n>` runs each of them n times in one
     server (Minecraft's own repeat).
   - `publishPack` runs `build` and the fights group: nothing is published without every GameTest.
