@@ -29,6 +29,7 @@ taken out again. Each GameTest's own time is in `build/reports/gametest-*.xml`; 
 | two groups, two servers | one slow test three times (`-Prepeat=3`) | 172.5 | 14.4 | yes |
 | skip clearing what is clear | `build` | 26.9 | 24.0 | yes |
 | skip clearing what is clear | `runGameTest` | 44.3 | 42.6 | yes |
+| runGameTest on one server | `runGameTest` | 43.1 | 38.5 | yes |
 
 ### Notes
 
@@ -60,6 +61,16 @@ taken out again. Each GameTest's own time is in `build/reports/gametest-*.xml`; 
   gap says: about 7 s on one server and 3 s on the other, partly hidden when two servers start
   together). All three checking runs of `runGameTest` passed (53 and 18 tests). Alone, on one
   server: `runQuickGameTests` 27.1, 29.0, 26.4 s, median 27.1 s; `runFightGameTests` 31.6, 35.5,
-  22.1 s, median 31.6 s (the slow runs follow a task that had just run; the spread is 13 s). Their sum
-  (58.7 s) against `runGameTest` (42.6 s) says the two servers save about 16 s against one server
-  after the other, but the 71 tests together on one server were 41.7 s before this step.
+  22.1 s, median 31.6 s (the slow runs follow a task that had just run; the spread is 13 s). These
+  alone-runs include Gradle start-up and noise, so they don't settle one server against two; the
+  next step does.
+- runGameTest on one server: `runGameTest` ran the quick and the fights group on two servers side
+  by side. Timed again as it was (five runs, the daemon warm): 29.8, 33.9, 43.1, 48.3, 52.2 s,
+  median 43.1 s. Then `runGameTest` became a third Loom run, `gameTest`, with every test on one
+  server (no `tafelboem.gametest.group`, so `keepChosenGroup` returns the batches unchanged; its
+  own run folder `build/run/gameTest-all`, report `build/reports/gametest-all.xml`). One run showed
+  one server, no group line and `All 71 required tests passed`; `runQuickGameTests` still ran 53.
+  Five timed runs: 33.0, 36.5, 38.5, 42.3, 47.9 s, median 38.5 s, all passing 71 tests. The
+  median is 4.6 s lower, with a spread of 15 to 22 s, so one server is no worse and likely
+  somewhat quicker; kept. `check` stays on `runQuickGameTests`; `publishPack` and CI stay on
+  `build runFightGameTests`.

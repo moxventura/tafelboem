@@ -37,7 +37,8 @@ fabricApi {
 
 // --- GameTests: a quick group and a fights group ----------------------------------------------
 // A GameTest marked @Fight plays a whole fight and runs in the fights group; all others run in the
-// quick group. `build` runs the quick group, `runGameTest` both, on two servers side by side.
+// quick group. `build` runs the quick group, `publishPack` the fights group too; `runGameTest` runs
+// every test on one server, which measured quicker than the two groups on two servers.
 // -Ptests=<pattern> runs only the matching tests of the group (Minecraft's selector: * and ?), and
 // -Prepeat=<n> runs each of them n times in one server. Every run starts in a fresh world that the
 // test mod never saves, and writes each test's time to build/reports/gametest-<group>.xml.
@@ -46,7 +47,8 @@ def gameTestRepeat = providers.gradleProperty("repeat")
 if (gameTestRepeat.isPresent() && !gameTestPattern.isPresent()) {
 	throw new GradleException("-Prepeat needs -Ptests=<pattern>: Minecraft repeats only selected tests")
 }
-[quick: "QuickGameTests", fights: "FightGameTests"].each { groupName, runName ->
+[quick: "QuickGameTests", fights: "FightGameTests", all: "GameTest"].each { groupName, runName ->
+	def isAll = groupName == "all"
 	def dir = "build/run/gameTest-${groupName}"
 	def deleteWorld = tasks.register("delete${runName}World", Delete) {
 		delete layout.projectDirectory.dir("${dir}/world")
@@ -57,7 +59,9 @@ if (gameTestRepeat.isPresent() && !gameTestPattern.isPresent()) {
 		runDir(dir)
 		property("fabric-api.gametest")
 		property("fabric-api.gametest.report-file", file("build/reports/gametest-${groupName}.xml").absolutePath)
-		property("tafelboem.gametest.group", groupName)
+		if (!isAll) {
+			property("tafelboem.gametest.group", groupName)
+		}
 		if (gameTestPattern.isPresent()) {
 			property("fabric-api.gametest.filter", gameTestPattern.get())
 		}
@@ -67,14 +71,9 @@ if (gameTestRepeat.isPresent() && !gameTestPattern.isPresent()) {
 	}
 	tasks.named("run${runName}") {
 		group = "tafelboem"
-		description = "Runs the ${groupName} GameTests on a headless server."
+		description = isAll ? "Runs every GameTest on one headless server." : "Runs the ${groupName} GameTests on a headless server."
 		dependsOn(deleteWorld)
 	}
-}
-tasks.register("runGameTest") {
-	group = "tafelboem"
-	description = "Runs every GameTest: the quick and the fights group, on two servers side by side."
-	dependsOn("runQuickGameTests", "runFightGameTests")
 }
 tasks.named("check") { dependsOn("runQuickGameTests") }
 
