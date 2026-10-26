@@ -154,16 +154,47 @@ One more fixed wait is not a `waitTicks`: `W:230`, `holdKeyFor(keyUp, 30)` in `w
 2 blocks in front and walks 0.22 blocks a tick, so he is through in about 6 to 8 ticks and walks on
 for the rest. For the 3 arena entries the walk-on sets where he stands in the arena shot (a). For
 the other 7 (5 exits, 2 re-entries) it only costs time, and a release on the door's firing would save
-at most about 22 ticks each, 150 in all. That needs a held key that the test lets go of by hand, not
-`holdKeyFor`.
+22 to 24 ticks each (30 less 6 to 8), 154 to 168 in all. That needs a held key that the test lets
+go of by hand, not `holdKeyFor`.
 
 ### Decision: not worth it
 
 (c) adds up to 185 ticks (9.3 s), below the 300 ticks (15 s) the spec asks for. The ticks in (c) are
 also not the saving: a `waitFor` still takes at least a tick, and (c) has 43 passes, so the most it
-can save is 142 ticks. Add the 7 releasable key holds (150 ticks at most, and only with a hand-made
-release) and the ceiling is about 290 ticks, 14.6 s: still under 15 s, and reachable only if every
-condition held at the first tick it was asked, which a `waitFor` never does. The 404 + 120 ticks in (a)
-and (b) have no condition to wait for: (a) times a picture, (b) shows an absence. Not worth it: the
-client runs in real time, and its waits time screenshots or show that something doesn't happen; the
-saving is in running it less often (the working rules). No test changed.
+can save is 142 ticks. Add the 7 releasable key holds (154 to 168 ticks, and only with a hand-made
+release) and the ceiling is about 296 to 310 ticks, 14.8 to 15.5 s: at best level with 15 s, and
+reachable only if every condition held at the first tick it was asked, which a `waitFor` never does.
+The 404 + 120 ticks in (a) and (b) have no condition to wait for: (a) times a picture, (b) shows an
+absence. Not worth it: the client runs in real time, and its waits time screenshots or show that
+something doesn't happen; the saving is in running it less often (the working rules, AGENTS.md,
+Build and test). No test changed.
+
+## Done when
+
+Timed on 2026-10-26, each command warmed once, then three runs; the median counts. The 1.1.0 column
+is the baseline's median.
+
+| Run | 1.1.0 | Target | Now | Met |
+|---|---|---|---|---|
+| `./gradlew build` | 55.5 s | 30 s or less | 22.1 s (31.2, 22.1, 21.7) | yes |
+| `./gradlew runGameTest` (all) | 57.5 s | 35 s or less | 35.7 s (35.2, 35.7, 39.2) | no, 0.7 s over |
+| one slow test three times | 172.5 s | 45 s or less | 21.1 s (21.1, 21.1, 22.5) | yes |
+| a release check | 361.7 s | 3½ min or less | 164.8 s (133.3 + 31.5) | yes |
+| `./gradlew runClientGameTest` | 135.7 s | 2 min or less, or not worth it | 133.3 s (129.5, 141.0, 133.3) | yes, as not worth it |
+
+- `runGameTest` misses by 0.7 s on the median. The runs are noisy: these three span 4 s, the five
+  timed in "runGameTest on one server" 33.0 to 47.9 s (median 38.5 s), and the five runs in a row
+  below took 32 to 41 s by Gradle's own clock. It sits at about 35 to 39 s, so the target is
+  reached on some runs and not on others. What is left is mostly the server's start-up and the
+  slowest fight test, which sets the length of the one batch; no further step was tried.
+- A release check is the client test plus `build runFightGameTests` (31.5 s: 30.7, 31.5, 34.0),
+  which is what `publishPack` runs; the figure is the sum of the two medians, as the two were timed
+  apart. The client test is 81% of it.
+- The client test stays at about 2 min 13 s, as the section above decided: its waits time
+  screenshots or show that something doesn't happen, and the saving is in running it less often.
+- The slow test three times took 14.4 to 15.0 s when Task 6 timed it and 21.1 to 22.5 s now, with the
+  same command. Both are far under 45 s; I did not look for why the later runs are slower.
+- Every GameTest runs before every publish: `publishPack` runs `build` and `runFightGameTests`.
+- All 69 TafelBoem GameTests stay with what they assert; only the counts are isolated
+  (`OwnChickens`), and one test of that helper was added (71 with Minecraft's `always_pass`).
+- Five full runs in a row (`./gradlew runGameTest`, one server, all 71 tests) passed on 2026-10-26.

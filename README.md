@@ -141,11 +141,12 @@ placed again every time the world loads.
 Requirements: JDK 25 (`sudo apt install openjdk-25-jdk`).
 
 ```bash
-./gradlew build          # compile, unit tests, GameTests
-./gradlew test           # unit tests only (core learning logic)
-./gradlew runGameTest    # headless in-game tests
-./gradlew runClientGameTest   # plays through in a real client and takes screenshots
-                              # (build/run/clientGameTest/screenshots; needs a display, e.g. WSLg)
+./gradlew build                # compile, unit tests, the quick GameTests
+./gradlew test                 # unit tests only (core learning logic)
+./gradlew runGameTest          # every GameTest: the quick and the fights group, on one server
+./gradlew runFightGameTests    # only the GameTests that play a whole fight
+./gradlew runClientGameTest    # plays through in a real client and takes screenshots
+                               # (build/run/clientGameTest/screenshots; needs a display, e.g. WSLg)
 ```
 
 ## Playing on the kids' PCs (Prism Launcher)
