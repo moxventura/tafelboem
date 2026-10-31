@@ -163,6 +163,10 @@ public final class TafelBoemWorld {
 		}
 		doorCooldown.put(player.getUUID(), ticks + DOOR_COOLDOWN_TICKS);
 		if (door == 0) {
+			if (!fighting.isReturning() && TafelBoem.config().stars) {
+				// Playtest 3 (P28): the kids didn't know that leaving gives no stars.
+				client.chat(player, Component.translatable("tafelboem.message.left_no_stars"));
+			}
 			leave(player, fighting, FightRecord.LEFT);
 			teleport(player, hub.standAt(), hub.yaw());
 			return;

@@ -36,6 +36,11 @@ public interface QuizClient {
 		}
 
 		@Override
+		public void chat(ServerPlayer player, Component message) {
+			player.sendSystemMessage(message);
+		}
+
+		@Override
 		public void track(ServerPlayer player, Entity target, int ticksAfterScreen, boolean kick) {
 			if (ServerPlayNetworking.canSend(player, CameraS2C.TYPE)) {
 				ServerPlayNetworking.send(player, new CameraS2C(target.getId(), ticksAfterScreen, kick));
@@ -55,6 +60,9 @@ public interface QuizClient {
 	void send(ServerPlayer player, QuizS2C payload);
 
 	void actionBar(ServerPlayer player, Component message);
+
+	/** A line in this player's chat, which stays readable after they have moved on. */
+	void chat(ServerPlayer player, Component message);
 
 	/** Turn the player's view towards {@code target}; see {@link CameraS2C}. */
 	void track(ServerPlayer player, Entity target, int ticksAfterScreen, boolean kick);

@@ -33,6 +33,7 @@ final class RecordingQuizClient implements QuizClient {
 	final List<Track> tracks = new ArrayList<>();
 	final List<Bar> actionBarsTo = new ArrayList<>();
 	final List<Sound> sounds = new ArrayList<>();
+	final List<Bar> chatsTo = new ArrayList<>();
 
 	@Override
 	public boolean canReceive(ServerPlayer player) {
@@ -49,6 +50,11 @@ final class RecordingQuizClient implements QuizClient {
 	public void actionBar(ServerPlayer player, Component message) {
 		actionBars.add(message);
 		actionBarsTo.add(new Bar(player, message));
+	}
+
+	@Override
+	public void chat(ServerPlayer player, Component message) {
+		chatsTo.add(new Bar(player, message));
 	}
 
 	@Override

@@ -120,6 +120,9 @@ public class TafelBoemWorldGameTest {
 			helper.assertTrue(test.world.hub().bounds().containsColumn(kid.getX(), kid.getZ()), "the kid is in the hub");
 			List<FightRecord> fights = test.log.read(kid.getPlainTextName());
 			helper.assertTrue(fights.size() == 1 && fights.getFirst().result().equals(FightRecord.LEFT), "logged as left: " + fights);
+			helper.assertTrue(test.client.chatsTo.stream().anyMatch(chat -> chat.player() == kid
+					&& chat.message().getContents() instanceof TranslatableContents contents
+					&& contents.getKey().equals("tafelboem.message.left_no_stars")), "the kid hears that leaving gives no stars");
 			test.close();
 		});
 	}
