@@ -673,6 +673,36 @@ couldn't look where they wanted while Graaf Fout flew. Decided with the parent o
 and still see the yeet and the landing. Checked at the next playtest by asking, and in
 `R1.1.md` (P29).
 
+### 1.1.2: a ready-made TafelBoem world (P26)
+Playtest 3: the kids needed a parent to make a TafelBoem world (World Type sits on the World tab and
+the screen starts on Default). Decided with the parent on 2026-10-31, over making TafelBoem the
+starting world type (a client mixin) or a new button (not vanilla):
+- The pack ships two files in `saves/TafelBoem/`: `level.dat` (named TafelBoem, survival, cheats
+  off; in 26.2 the player is in `players/`, so none travels along) and
+  `data/minecraft/world_gen_settings.dat` (World Type TafelBoem; without it Minecraft falls back to
+  the default world). Minecraft and the mod build the rest on the first load, as for a world made by
+  hand.
+- The index marks them `preserve` (packwiz-installer 0.5.14 then installs it only when it is missing),
+  so it is the kids' own from the first Play: records, answers and their arenas stay. Deleting it
+  brings a fresh one back.
+- A preserved file never leaves the index (packwiz would delete it on the PCs); `Packwiz.write`
+  refuses.
+- Building arenas in-game without cheats is for later (P27).
+
+In the same patch:
+- **No stars after leaving (P28).** A kid who leaves through the exit door before Graaf Fout is
+  beaten reads in chat that there are no stars this time (only with `stars` on). A neutral fact,
+  never about the kid.
+- **No dizzy spell twice in a row (P24).** The boomerang and the wall splat end dizzy, so right
+  after a dizzy spell (the last landing, or flying out) the next flight is one of the others. Only
+  with the catalogue on: without it every landing is dizzy and the boomerang still comes. A fly-out
+  right after a dizzy spell can still show it twice.
+
+These two are fixes to R1 and R1.1 behaviour, so they get no switch of their own.
+
+**Hypothesis:** a kid can start a TafelBoem game without help, knows that leaving costs the stars,
+and sees more different landings. Checked at the next playtest (P26, P28, P24).
+
 ## Faster tests (detailed scope)
 
 Nothing changes for the kids: the same tests, quicker to run, so every change and every release is
