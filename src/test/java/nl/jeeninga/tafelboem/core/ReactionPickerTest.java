@@ -1,5 +1,6 @@
 package nl.jeeninga.tafelboem.core;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -160,5 +161,41 @@ class ReactionPickerTest {
 		ReactionPicker picker = new ReactionPicker(new Random(8));
 		picker.played(LandingStyle.DIZZY);
 		assertNotEquals(LandingStyle.DIZZY, picker.nextLanding(BombTier.KNALLETJE, YeetStyle.CLASSIC, true, false));
+	}
+
+	@ParameterizedTest
+	@ValueSource(longs = {1, 2, 3, 42})
+	void neverTheDizzySpellTwiceInARowEvenAfterABoomerangOrAWallSplat(long seed) {
+		// Playtest 3 (P24): the own endings and flying out all end dizzy, and came twice in a row 25 times in 86 kicks.
+		ReactionPicker picker = new ReactionPicker(new Random(seed));
+		Random bombs = new Random(seed);
+		LandingStyle previous = null;
+		for (int i = 0; i < 500; i++) {
+			BombTier bomb = BombTier.values()[bombs.nextInt(BombTier.values().length)];
+			LandingStyle landing = picker.nextLanding(bomb, picker.nextFlight(true, true), true, true);
+			assertFalse(landing == LandingStyle.DIZZY && previous == LandingStyle.DIZZY, "dizzy twice in a row at yeet " + i);
+			previous = landing;
+		}
+	}
+
+	@Test
+	void afterFlyingOutNoFlightThatEndsDizzy() {
+		ReactionPicker picker = new ReactionPicker(new Random(5));
+		for (int i = 0; i < 200; i++) {
+			picker.played(LandingStyle.DIZZY);
+			assertFalse(picker.nextFlight(true, true).hasOwnEnding(), "an own ending right after a dizzy spell, at " + i);
+		}
+	}
+
+	@Test
+	void withoutTheCatalogueTheBoomerangStillComesAfterADizzySpell() {
+		// The R1 yeets always end dizzy; keeping the boomerang out then would drop it for good.
+		ReactionPicker picker = new ReactionPicker(new Random(5));
+		Set<YeetStyle> seen = EnumSet.noneOf(YeetStyle.class);
+		for (int i = 0; i < 50; i++) {
+			picker.played(LandingStyle.DIZZY);
+			seen.add(picker.nextFlight(true, false));
+		}
+		assertTrue(seen.contains(YeetStyle.BOOMERANG), "seen: " + seen);
 	}
 }

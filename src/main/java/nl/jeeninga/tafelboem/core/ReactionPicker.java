@@ -25,14 +25,19 @@ public final class ReactionPicker {
 	}
 
 	/**
-	 * How he flies off: every flight once before any comes again, never the same twice in a row.
+	 * How he flies off: every flight once before any comes again, never the same twice in a row, and
+	 * no flight with its own dizzy ending right after a dizzy spell.
 	 *
 	 * @param inArena   only an arena has walls for the wall splat
 	 * @param catalogue false: only the R1 flights
 	 */
 	public YeetStyle nextFlight(boolean inArena, boolean catalogue) {
 		YeetStyle last = lastFlight;
-		lastFlight = flights.next(style -> style != last && (inArena || !style.needsWalls()) && (catalogue || !style.isCatalogue()));
+		// The boomerang and the wall splat end dizzy; right after a dizzy spell they would show it twice (P24).
+		// Without the catalogue every landing is dizzy anyway, and the boomerang must still come.
+		boolean afterDizzy = catalogue && lastLanding == LandingStyle.DIZZY;
+		lastFlight = flights.next(style -> style != last && (inArena || !style.needsWalls()) && (catalogue || !style.isCatalogue())
+				&& !(afterDizzy && style.hasOwnEnding()));
 		return lastFlight;
 	}
 
