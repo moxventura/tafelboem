@@ -149,6 +149,12 @@ GameTest pitfalls:
   `-PpackDir=~/claude-mc/tafelboem-pack`.
 - The parent tests a release by publishing it and pressing Play in the Prism instance; the kids' PCs
   update on their next Play too. Keep `main` equal to what is published.
+- The pack ships a ready-made world: `pack/saves/TafelBoem/` (`level.dat` and
+  `data/minecraft/world_gen_settings.dat`, which holds the World Type), each marked `preserve` in the
+  index, so packwiz installs it only when missing and never overwrites the kids' world. **Never
+  take a preserved file out of the pack:** packwiz deletes a file that leaves the index, on every
+  PC. `Packwiz.write` refuses to. Make the file anew (after a Minecraft update, say) with
+  `./gradlew runClientGameTest -PwriteShippedWorld`; only new PCs get the new one.
 
 ## Playtests
 

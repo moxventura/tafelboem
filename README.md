@@ -38,9 +38,15 @@ Evaluations are recorded in [`docs/evaluations/`](docs/evaluations/).
 
 ## The TafelBoem world
 
-Create a new world and set **World Type** to **TafelBoem**. It is an empty void world with no
-monsters, and it starts with always day, no weather and keep inventory on. Game mode is not forced,
-so the kids can also build there in creative.
+From 1.1.2 the pack ships a ready-made world called **TafelBoem** (survival, cheats off): pick it
+under **Singleplayer** and press Play. You can still make more yourself: create a new world and set
+**World Type** to **TafelBoem**. It is an empty void world with no monsters, and it starts with
+always day, no weather and keep inventory on. Game mode is not forced, so the kids can also build
+there in creative.
+
+The pack installs the ready-made world only when it isn't there yet, and never overwrites it: from
+then on it is the kids' own, with their records, answers and arenas. Deleting it brings a fresh one
+back on the next Play.
 
 | The hub | An arena (level 2) | Graaf Fout gets yeeted |
 |---|---|---|
@@ -162,8 +168,7 @@ downloads the newest published TafelBoem from the public pack repo
    `https://raw.githubusercontent.com/moxventura/tafelboem-pack/main/TafelBoem.zip` and
    press OK.
 3. Press **Play**: a small packwiz window installs TafelBoem and Fabric API, then Minecraft starts.
-4. **Create New World** and set **World Type** to **TafelBoem** (see "The TafelBoem world" above).
-   Play it in survival to get the hearts.
+4. Under **Singleplayer**, pick the world **TafelBoem** (see "The TafelBoem world" above).
 5. In any other world, `/tafelboem arena` (with cheats on) still sets up a fight spot: always day,
    no weather, no monsters, and an arena floor under your feet. For a world that has cheats off,
    use **Esc → Instellingen → Wereldinstellingen** and set **Cheats** to on. The cheat and

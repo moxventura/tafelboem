@@ -18,7 +18,8 @@
 		],
 		"fabric-client-gametest": [
 			"nl.jeeninga.tafelboem.gametest.PlaythroughClientGameTest",
-			"nl.jeeninga.tafelboem.gametest.WorldClientGameTest"
+			"nl.jeeninga.tafelboem.gametest.WorldClientGameTest",
+			"nl.jeeninga.tafelboem.gametest.ShippedWorldClientGameTest"
 		]
 	},
 	"mixins": [

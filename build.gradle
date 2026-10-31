@@ -35,6 +35,17 @@ fabricApi {
 	}
 }
 
+// The ready-made world the pack ships (P26). The client test loads it as a new PC would;
+// `./gradlew runClientGameTest -PwriteShippedWorld` makes it anew first (after a Minecraft update, say).
+def shippedWorld = file("pack/saves/TafelBoem")
+def writeShippedWorld = providers.gradleProperty("writeShippedWorld").isPresent()
+loom.runs.matching { it.name == "clientGameTest" }.configureEach {
+	property("tafelboem.shippedWorld", shippedWorld.absolutePath)
+	if (writeShippedWorld) {
+		property("tafelboem.writeShippedWorld", "true")
+	}
+}
+
 // --- GameTests: a quick group and a fights group ----------------------------------------------
 // A GameTest marked @Fight plays a whole fight and runs in the fights group; all others run in the
 // quick group. `build` runs the quick group, `publishPack` the fights group too; `runGameTest` runs
@@ -179,6 +190,7 @@ tasks.register("publishPack", nl.jeeninga.tafelboem.build.PublishPack) {
 	modJar = tasks.named("jar", Jar).flatMap { it.archiveFile }
 	fabricApi.from(configurations.deployMods)
 	instanceZip = prismInstance.flatMap { it.zip }
+	shippedSaves = layout.projectDirectory.dir("pack/saves")
 	packDir = layout.projectDirectory.dir(providers.gradleProperty("packDir").orElse("../tafelboem-pack"))
 	sourceDir = layout.projectDirectory
 	packName = "TafelBoem"

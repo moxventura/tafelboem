@@ -13,6 +13,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +54,13 @@ public abstract class PublishPack extends DefaultTask {
 
 	@InputFiles
 	public abstract ConfigurableFileCollection getFabricApi();
+
+	/**
+	 * The ready-made world ({@code saves/TafelBoem/level.dat}). packwiz installs it once and never
+	 * overwrites it: from then on it is the kids' own world, custom arenas and all.
+	 */
+	@InputFiles
+	public abstract DirectoryProperty getShippedSaves();
 
 	/** The Prism instance new PCs import; published next to the pack, not in its index. */
 	@InputFile
@@ -109,10 +117,11 @@ public abstract class PublishPack extends DefaultTask {
 		Path packDir = packClone.toPath();
 		Path mods = packDir.resolve("mods");
 		replaceMods(mods);
+		replaceSaves(packDir.resolve(Packwiz.SAVES));
 		Packwiz.write(packDir, getPackName().get(), getModVersion().get(), getMinecraft().get(), getFabric().get());
 		Files.copy(getInstanceZip().get().getAsFile().toPath(), packDir.resolve(INSTANCE_ZIP), StandardCopyOption.REPLACE_EXISTING);
 
-		pack.run("add", "-A", Packwiz.PACK, Packwiz.INDEX, "mods", INSTANCE_ZIP);
+		pack.run("add", "-A", Packwiz.PACK, Packwiz.INDEX, "mods", Packwiz.SAVES, INSTANCE_ZIP);
 		if (pack.run("status", "--porcelain").isEmpty()) {
 			getLogger().lifecycle("Nothing to publish: {} {} is already in the pack ({}).", getPackName().get(), getModVersion().get(), branch);
 			return;
@@ -141,6 +150,25 @@ public abstract class PublishPack extends DefaultTask {
 		Files.copy(api.getFirst().toPath(), mods.resolve("fabric-api.jar"), StandardCopyOption.REPLACE_EXISTING);
 	}
 
+	/** The pack's saves/ is exactly the repo's; a file gone from the repo makes Packwiz.write refuse. */
+	private void replaceSaves(Path saves) throws IOException {
+		if (Files.isDirectory(saves)) {
+			try (Stream<Path> old = Files.walk(saves)) {
+				for (Path file : old.sorted(Comparator.reverseOrder()).toList()) {
+					Files.delete(file);
+				}
+			}
+		}
+		Path source = getShippedSaves().get().getAsFile().toPath();
+		try (Stream<Path> files = Files.walk(source)) {
+			for (Path file : files.filter(Files::isRegularFile).toList()) {
+				Path target = saves.resolve(source.relativize(file).toString());
+				Files.createDirectories(target.getParent());
+				Files.copy(file, target);
+			}
+		}
+	}
+
 	/**
 	 * Polls the same URLs the PCs use until every file matches what was pushed. Each URL is cached
 	 * separately, so checking only pack.toml could report "live" while an old jar is still served.
@@ -153,6 +181,11 @@ public abstract class PublishPack extends DefaultTask {
 		try (Stream<Path> mods = Files.list(packDir.resolve("mods"))) {
 			for (Path jar : mods.toList()) {
 				expected.put("mods/" + jar.getFileName(), Packwiz.sha256(jar));
+			}
+		}
+		try (Stream<Path> saves = Files.walk(packDir.resolve(Packwiz.SAVES))) {
+			for (Path file : saves.filter(Files::isRegularFile).toList()) {
+				expected.put(packDir.relativize(file).toString().replace('\\', '/'), Packwiz.sha256(file));
 			}
 		}
 
