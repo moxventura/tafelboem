@@ -2,13 +2,13 @@
 
 ## Context
 
-Jesper wants a Minecraft Java Edition mod that helps his kids learn the multiplication tables
-(1–10) playfully, rewarded by increasingly ridiculous TNT. `/home/jesper/claude-mc` is empty (not a
-git repo). The project will live in its own subfolder, `/home/jesper/claude-mc/tafelboem/`, as a
+The parent wants a Minecraft Java Edition mod that helps his kids learn the multiplication tables
+(1–10) playfully, rewarded by increasingly ridiculous TNT. `~/claude-mc` is empty (not a
+git repo). The project will live in its own subfolder, `~/claude-mc/tafelboem/`, as a
 git repo pushed to a **private GitHub repo `tafelboem`**. Minecraft Java up to 26.2 is installed on Windows (Microsoft Store launcher,
 `C:\Users\jeejes\AppData\Roaming\.minecraft`, no mod loader). WSL is Debian 13 with no JDK.
 
-The design was shaped with Jesper and then reviewed from three angles: a kid's playthrough, a
+The design was shaped with the parent and then reviewed from three angles: a kid's playthrough, a
 teacher's view and gamification theory. It was revised after R0 playtest 1 on 2026-10-11 and after
 R0.1 playtest 2 on 2026-10-14; see [`docs/evaluations/`](../../evaluations/). Decisions:
 - **Delivered in small releases, each evaluated with the kids.**
@@ -287,7 +287,7 @@ A patch on R0 that fixes what playtest 1 found (P-numbers refer to `docs/evaluat
 
 ## R1 "Kies je level" (detailed scope)
 
-Decided with Jesper on 2026-10-14, after R0.1 playtest 2 (P-numbers refer to
+Decided with the parent on 2026-10-14, after R0.1 playtest 2 (P-numbers refer to
 `docs/evaluations/R0.1.md`). R1 combines the level choice with the TafelBoem world, its hub and its
 arenas, because that is what the kids asked for: an easy way to choose the difficulty (P4) and a
 "server-style" world instead of creative superflat (P11). The yeet catalogue, the full yeet-o-meter
@@ -446,7 +446,7 @@ players that names it; another template or the plain arena is used instead. **Ru
 the three level doors. The kids spawn in its middle.
 
 ### R1 patch 1.0.2 (before playtest 3)
-Jesper played 1.0.1 through once himself; findings P18–P21 are in `docs/evaluations/R1.md`.
+The parent played 1.0.1 through once himself; findings P18–P21 are in `docs/evaluations/R1.md`.
 - **Walls on obsidian (P18).** The plain arenas have obsidian under their walls, down to the
   bedrock, so a crater beside a wall never opens a way out. Kid-built arenas follow the same rule.
 - **No leftovers (P19).** Anything but a player that loads from disk in an arena slot is a leftover
@@ -518,7 +518,7 @@ is not needed:
 7. After `./gradlew publishPack` says "Live", Play installs 1.0.0 on both PCs.
 
 **R1 evaluation (playtest 3).** Record it in `docs/evaluations/R1.md`, in two parts. The numbers
-come from `/tafelboem stats` and the fights log (share `latest.log`, as with playtest 2). Jesper
+come from `/tafelboem stats` and the fights log (share `latest.log`, as with playtest 2). The parent
 types the rest: who played, laughter, confusion and frustration as noticed, the three questions, and
 whether they asked to play again. There is no video session.
 
@@ -531,8 +531,8 @@ whether they asked to play again. There is no video session.
 
 ## R1.1 "Meer yeets" (detailed scope)
 
-Decided with Jesper on 2026-10-24, before the R1 evaluation (playtest 3 hasn't been played yet;
-Jesper chose to build R1.1 first). The plan was then reviewed from a developer's, an architect's and
+Decided with the parent on 2026-10-24, before the R1 evaluation (playtest 3 hasn't been played yet;
+The parent chose to build R1.1 first). The plan was then reviewed from a developer's, an architect's and
 a tester's view. R1.1 is the yeet catalogue, the full yeet-o-meter and the counting Kippenbom. The
 meteor, P20 (a reaction to a sword hit) and the kids' own arenas wait.
 
@@ -657,10 +657,26 @@ The action bar never reaches `latest.log`, so the host's log gets:
 - the counting chickens were seen as groups
 - the yeet lines show the fast bonus on a minority of kicks, not on half
 
+### 1.1.1: the camera nudges instead of following (P29)
+Playtest 3: the kids complained that the camera turned on its own after a right answer, so they
+couldn't look where they wanted while Graaf Fout flew. Decided with the parent on 2026-10-31:
+- While the question is open, the view still turns to Graaf Fout, as before.
+- After a right answer it only gets a **nudge**: it turns towards him until he is centred (within
+  5°) or for half a second at most, then the view is the kid's (`CameraNudge`).
+- When he lands (or comes back after flying out, or at the finale) there is one more nudge, only if
+  he is more than 35° out of view.
+- No check on whether the kid is fighting the camera: with a nudge only once or twice that may not
+  be needed. Ask at the next playtest.
+- Switch `cameraNudge`, default on; off follows him until he has landed, as in 1.1.0.
+
+**Hypothesis:** with a nudge in place of the follow, the kids stop complaining about the camera
+and still see the yeet and the landing. Checked at the next playtest by asking, and in
+`R1.1.md` (P29).
+
 ## Faster tests (detailed scope)
 
 Nothing changes for the kids: the same tests, quicker to run, so every change and every release is
-cheap to check. Decided with Jesper on 2026-10-24.
+cheap to check. Decided with the parent on 2026-10-24.
 
 ### Where the time goes (measured at 1.1.0)
 | Run | Time | Of which |
@@ -1259,15 +1275,15 @@ These API names still need verifying for 26.2 at the start of the phase that use
 
 The steps:
 1. **Project and repository setup** (the first thing done after approval).
-   - Create the project folder **`/home/jesper/claude-mc/tafelboem/`**. All source and docs live
+   - Create the project folder **`~/claude-mc/tafelboem/`**. All source and docs live
      there.
    - Save this plan in it as `docs/superpowers/specs/2026-10-07-tafelboem-design.md`, plus a short
      `README.md` (what it is, how to build and deploy, the release roadmap).
-   - `git init` with a **repo-local personal identity**. I'll ask Jesper for the name and email
+   - `git init` with a **repo-local personal identity**. I'll ask the parent for the name and email
      first, then run `git config user.name/user.email` in this repo only. Add a `.gitignore`
      covering Gradle, build, run, IDE files and `.minecraft-*`.
    - Initial commit: the plan, README and .gitignore.
-   - Jesper installs the tools with `! sudo apt install openjdk-25-jdk gh`, then runs
+   - The parent installs the tools with `! sudo apt install openjdk-25-jdk gh`, then runs
      `! gh auth login`.
    - `gh repo create tafelboem --private --source . --remote origin --push`.
 2. **Mod skeleton.**
@@ -1293,15 +1309,15 @@ The steps:
    - Run the manual acceptance checklist on both PCs, tag `r0`, and publish. (R0 was never tagged;
      from R0.1 every publish is tagged `vX.Y.Z`.)
 7. **Evaluation session with the kids.** Write it up in `docs/evaluations/R0.md`, then hold a
-   backlog review with Jesper.
+   backlog review with the parent.
 
 ### Original full build order (kept as reference for planning R1+)
 0. **Setup.**
-   - Install JDK 25. This needs sudo, so Jesper runs `! sudo apt install openjdk-25-jdk`.
+   - Install JDK 25. This needs sudo, so the parent runs `! sudo apt install openjdk-25-jdk`.
    - Run `git init`, pull in the template, and save this design as
      `docs/superpowers/specs/2026-10-07-tafelboem-design.md`.
    - Get an empty mod to build, with `runGameTest` green.
-   - Jesper installs Fabric 26.2 with the Windows installer and creates a launcher profile with
+   - The parent installs Fabric 26.2 with the Windows installer and creates a launcher profile with
      its own game dir `.minecraft-tafelboem`. The Gradle task `deployToWindows` syncs our jar and
      Fabric API into that profile's `mods`. (R0.1 moved to Prism Launcher and `publishPack`.)
    - Check that the mod loads in game.

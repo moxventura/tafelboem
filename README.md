@@ -228,6 +228,7 @@ version, and the mod warns when they don't match, even when two builds are only 
 |---|---|---|
 | `correctionRetype` | `false` | `true` brings back the R0 screen where the child retypes the correct fact after a miss |
 | `cameraAssist` | `true` | Turns the view to Graaf Fout during a fight question and while he gets yeeted |
+| `cameraNudge` | `true` | With `cameraAssist`: after a right answer the view only gets a short nudge towards Graaf Fout at the kick, and one when he lands out of view; in between the kid looks where they like. `false` follows him until he has landed, as in 1.1.0 |
 | `stars` | `true` | Shows stars at the doors, after a win and in the stats. `false` hides them; the fights log still has them |
 | `arenaCraters` | `true` | In an arena, the kicked bomb that hits Graaf Fout breaks blocks (never bedrock, obsidian or the floor near a kid). `false` makes it a show only. Bombs the kids place themselves blow craters either way |
 | `wrongAnswerDamage` | `true` | In survival, a typed wrong answer costs 1 heart on level 2 and 2 on level 3, never the last half heart |

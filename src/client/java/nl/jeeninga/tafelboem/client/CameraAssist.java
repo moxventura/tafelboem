@@ -7,12 +7,17 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 
 import nl.jeeninga.tafelboem.TafelBoem;
+import nl.jeeninga.tafelboem.core.CameraNudge;
 import nl.jeeninga.tafelboem.net.CameraS2C;
 
 /**
  * Playtest 1: after being hit, kids sometimes looked the other way and missed the yeet they had
  * earned. While a fight question is open the view turns smoothly to Graaf Fout, and after a correct
  * answer it keeps following him for a moment. The kick also gives the camera a small bump.
+ *
+ * <p>Playtest 3 (P29): following him all the way took the view away from the kids. With
+ * {@code cameraNudge} on, the view only gets a short nudge after the question closes (see
+ * {@link CameraNudge}), and a landing that asks for the view only nudges when he is out of view.
  */
 public final class CameraAssist {
 	private static final float TURN = 0.25F;
@@ -23,6 +28,10 @@ public final class CameraAssist {
 	private static int ticksAfterScreen;
 	private static boolean kickPending;
 	private static int bumpTick = -1;
+	/** Ticks this nudge has turned the view so far. */
+	private static int nudgeTicks;
+	/** A request after he landed: nudge only if he is out of view, which the first tick checks. */
+	private static boolean landingCheck;
 
 	private CameraAssist() {
 	}
@@ -31,6 +40,8 @@ public final class CameraAssist {
 		entityId = request.entityId();
 		ticksAfterScreen = request.ticksAfterScreen();
 		kickPending |= request.kick();
+		nudgeTicks = 0;
+		landingCheck = !request.kick() && request.ticksAfterScreen() > 0;
 	}
 
 	static void tick(Minecraft client) {
@@ -64,14 +75,40 @@ public final class CameraAssist {
 			entityId = -1;
 			return;
 		}
-		turnTowards(player, target.position().add(0, target.getBbHeight() * 0.6, 0));
+		Vec3 point = target.position().add(0, target.getBbHeight() * 0.6, 0);
+		if (!questionOpen && TafelBoem.config().cameraNudge && !keepNudging(player, point)) {
+			entityId = -1;
+			return;
+		}
+		turnTowards(player, point);
+	}
+
+	/** Whether the nudge towards {@code point} goes on this tick; counts the tick when it does. */
+	private static boolean keepNudging(LocalPlayer player, Vec3 point) {
+		float offBy = CameraNudge.offBy(player.getYRot(), player.getXRot(), yawTo(player, point), pitchTo(player, point));
+		if (landingCheck) {
+			landingCheck = false;
+			if (!CameraNudge.landingNeedsNudge(offBy)) {
+				return false;
+			}
+		}
+		return !CameraNudge.done(nudgeTicks++, offBy);
+	}
+
+	private static float yawTo(LocalPlayer player, Vec3 point) {
+		Vec3 to = point.subtract(player.getEyePosition());
+		return (float) (Mth.atan2(to.z, to.x) * Mth.RAD_TO_DEG) - 90F;
+	}
+
+	private static float pitchTo(LocalPlayer player, Vec3 point) {
+		Vec3 to = point.subtract(player.getEyePosition());
+		double horizontal = Math.sqrt(to.x * to.x + to.z * to.z);
+		return (float) -(Mth.atan2(to.y, horizontal) * Mth.RAD_TO_DEG);
 	}
 
 	private static void turnTowards(LocalPlayer player, Vec3 point) {
-		Vec3 to = point.subtract(player.getEyePosition());
-		double horizontal = Math.sqrt(to.x * to.x + to.z * to.z);
-		float yaw = (float) (Mth.atan2(to.z, to.x) * Mth.RAD_TO_DEG) - 90F;
-		float pitch = (float) -(Mth.atan2(to.y, horizontal) * Mth.RAD_TO_DEG);
+		float yaw = yawTo(player, point);
+		float pitch = pitchTo(player, point);
 
 		float newYaw = player.getYRot() + Mth.wrapDegrees(yaw - player.getYRot()) * TURN;
 		player.setYRot(newYaw);

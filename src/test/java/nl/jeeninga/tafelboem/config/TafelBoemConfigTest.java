@@ -23,6 +23,7 @@ class TafelBoemConfigTest {
 
 		assertFalse(config.correctionRetype);
 		assertTrue(config.cameraAssist);
+		assertTrue(config.cameraNudge);
 		assertTrue(config.stars);
 		assertTrue(config.arenaCraters);
 		assertTrue(config.wrongAnswerDamage);

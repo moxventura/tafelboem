@@ -23,6 +23,12 @@ public final class TafelBoemConfig {
 	/** Turn the view towards Graaf Fout during a fight question and while he gets yeeted. */
 	public boolean cameraAssist = true;
 
+	/**
+	 * With {@link #cameraAssist}: after a right answer the view gets a short nudge towards Graaf Fout at the kick, and
+	 * one when he lands out of view, and is the kid's again in between. Off, it follows him until he has landed (1.1.0).
+	 */
+	public boolean cameraNudge = true;
+
 	/** Stars at the doors, after a win and in the stats. When off they are still in the fights log. */
 	public boolean stars = true;
 

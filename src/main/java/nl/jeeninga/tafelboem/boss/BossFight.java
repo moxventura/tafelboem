@@ -72,7 +72,8 @@ public final class BossFight implements QuizListener {
 	static final double SAFE_FLOOR_RADIUS = 3;
 	/**
 	 * After the kick the view follows Graaf Fout until he has landed; this is only the safety net
-	 * for a kick that never arrives. Landing then shortens it to the time he lies dizzy.
+	 * for a kick that never arrives. Landing then shortens it to the time he lies dizzy. With
+	 * {@code cameraNudge} on, the client lets go much sooner (after half a second at most).
 	 */
 	public static final int KICK_CAM_MAX_TICKS = 140;
 	/**
