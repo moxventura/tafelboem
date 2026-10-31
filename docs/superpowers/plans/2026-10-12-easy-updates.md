@@ -32,7 +32,7 @@ publishes, and waits until GitHub's raw CDN serves every file.
 ### Task 1: Pack repo
 - [x] `gh repo create moxventura/tafelboem-pack --public`, README with usage and licence notices
       (TafelBoem all rights reserved, Fabric API Apache-2.0, packwiz MIT).
-- [x] Clone to `/home/jesper/claude-mc/tafelboem-pack` with the repo-local git identity.
+- [x] Clone to `~/claude-mc/tafelboem-pack` with the repo-local git identity.
 
 ### Task 2: Publishing from the build
 - [x] `buildSrc` holds `Packwiz`, which hashes files and writes `index.toml` and `pack.toml` with
@@ -79,7 +79,7 @@ This PC doesn't play, so it gets no Prism. The kids play on the woonkamer PC and
   - The instance is named after the zip, so the zip is called `TafelBoem.zip`.
   - Not covered: launching, which needs a Microsoft account. The packwiz side was tested in Task 3.
 
-### Task 5: The two play PCs (Jesper does the clicks)
+### Task 5: The two play PCs (the parent does the clicks)
 - [ ] Woonkamer PC (wake it with `ssh nas "~/wake_pc.sh"`):
   - `winget install PrismLauncher.PrismLauncher`, then log in.
   - Add Instance → Import →

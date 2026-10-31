@@ -176,7 +176,7 @@ Create `docs/evaluations/faster-tests.md`, with the measured numbers in place of
 
 What each step of the spec's *Faster tests (detailed scope)* did to the time the tests take.
 
-**How:** Jesper's PC (WSL2, 20 cores, 15 GB). The command runs once to warm the Gradle daemon, then
+**How:** The parent's PC (WSL2, 20 cores, 15 GB). The command runs once to warm the Gradle daemon, then
 `tools/time-gradle.sh <task>` times three runs and the median counts. A step that saves no time is
 taken out again. Each GameTest's own time is in `build/reports/gametest-*.xml`; the slowest:
 
@@ -241,7 +241,7 @@ Keep the `validate gradle wrapper` step.
 
 Run: `python3 -c "import yaml,sys; yaml.safe_load(open('.github/workflows/build.yml')); print('ok')"`
 Expected: `ok`. If PyYAML is missing, compare the indentation with the `setup jdk` step by eye.
-GitHub runs the workflow on the next push, which needs Jesper's go. Say so in the report; don't
+GitHub runs the workflow on the next push, which needs the parent's go. Say so in the report; don't
 push.
 
 - [ ] **Step 3: Commit**
@@ -1829,6 +1829,6 @@ Co-Authored-By: <model> <noreply@anthropic.com>"
 ## After the plan
 
 - The branch has no game code changes, so it merges into `main` without a publish (spec,
-  *Shipping*). The next published build carries it. Merging and pushing need Jesper's go.
+  *Shipping*). The next published build carries it. Merging and pushing need the parent's go.
 - The CI change is proved on the first push: the run should show `setup gradle` restoring a cache
   from the second run on, and both `All N required tests passed` lines.

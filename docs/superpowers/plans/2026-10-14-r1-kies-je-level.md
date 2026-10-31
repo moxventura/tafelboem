@@ -44,7 +44,7 @@ only, never merge it).
 - Commits use the repo-local identity and end with
   `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - Versions come from git tags. The first R1 publish is `v1.0.0`; tagging and `publishPack` only
-  after Jesper says go.
+  after the parent says go.
 - Test commands: `./gradlew test` (JUnit), `./gradlew runGameTest` (all GameTests, headless),
   `./gradlew runClientGameTest` (real client; needs the WSLg display).
 
@@ -3824,11 +3824,11 @@ public class WorldClientGameTest implements FabricClientGameTest {
   hypothesis; date, version, who, PCs, world; section 1 the spec's 7 acceptance criteria as a
   checklist with "Woonkamer PC | Second PC | Notes" columns; section 2 the numbers from the logs per
   kid (levels picked in order, fights won/left, stars per level, answers per minute, % correct,
-  re-ask accuracy, "?" and ESC); section 3 Jesper's typed notes (laughter, confusion, frustration
+  re-ask accuracy, "?" and ESC); section 3 the parent's typed notes (laughter, confusion, frustration
   with what about, saw the penalty, saw the yeet, the reward arrived) and the three questions;
   section 4 findings (P18 onwards); section 5 the go criteria from the spec; section 6 backlog
   changes. Add a line under the title: "No video: the numbers come from `latest.log` and the logs,
-  the rest is typed by Jesper."
+  the rest is typed by the parent."
 
 - [ ] **Step 5: Commit**
 
@@ -3847,7 +3847,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   the diff of the whole release (`git log --oneline main@{u}..main`) once more for leftover debug
   code.
 - [ ] **Step 2: Delete the spike branch:** `git branch -D spike/r1-world` (never pushed).
-- [ ] **Step 3: Ask Jesper** whether to publish. With his go: `git tag v1.0.0`,
+- [ ] **Step 3: Ask the parent** whether to publish. With his go: `git tag v1.0.0`,
   `./gradlew publishPack`, wait for "Live", then `git push origin main`. Without it, stop here.
-- [ ] **Step 4: Manual checklist (Jesper)** on the woonkamer PC and a second PC over LAN, recorded
+- [ ] **Step 4: Manual checklist (the parent)** on the woonkamer PC and a second PC over LAN, recorded
   in `docs/evaluations/R1.md` section 1.

@@ -2,7 +2,7 @@
 
 What each step of the spec's *Faster tests (detailed scope)* did to the time the tests take.
 
-**How:** Jesper's PC (WSL2, 20 cores, 15 GB). The command runs once to warm the Gradle daemon, then
+**How:** The parent's PC (WSL2, 20 cores, 15 GB). The command runs once to warm the Gradle daemon, then
 `tools/time-gradle.sh <task>` times three runs and the median counts. A step that saves no time is
 taken out again. Each GameTest's own time is in `build/reports/gametest-*.xml`; the slowest:
 

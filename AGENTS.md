@@ -1,6 +1,6 @@
 # Working on TafelBoem
 
-TafelBoem is a Fabric mod (Minecraft 26.2, Java 25) that teaches Jesper's kids the times tables 1–10
+TafelBoem is a Fabric mod (Minecraft 26.2, Java 25) that teaches two kids the times tables 1–10
 with TNT. They play on Windows PCs in a Prism Launcher instance that updates itself, often two PCs
 over LAN. The README has the player and builder side; this file is for anyone changing the mod,
 human or agent.
@@ -134,7 +134,7 @@ GameTest pitfalls:
 - Subject: a sentence saying what changes for the kids or the parent, in the imperative; the body
   says why. End with a `Co-Authored-By:` trailer naming the model that wrote the commit.
 - Stage only the paths you changed; never a bare `git add -A`.
-- Don't push, tag or publish without Jesper's go.
+- Don't push, tag or publish without the parent's go.
 - Bigger work goes on a branch in a worktree under `.worktrees/` (ignored).
 
 ## Releases
@@ -146,13 +146,13 @@ GameTest pitfalls:
   tag, builds and runs JUnit and every headless GameTest (not the client GameTest: run
   `./gradlew runClientGameTest` before tagging), publishes to `../tafelboem-pack` (GitHub
   `moxventura/tafelboem-pack`), and waits until GitHub serves it ("Live"). From a worktree, pass
-  `-PpackDir=/home/jesper/claude-mc/tafelboem-pack`.
-- Jesper tests a release by publishing it and pressing Play in the Prism instance; the kids' PCs
+  `-PpackDir=~/claude-mc/tafelboem-pack`.
+- The parent tests a release by publishing it and pressing Play in the Prism instance; the kids' PCs
   update on their next Play too. Keep `main` equal to what is published.
 
 ## Playtests
 
-- Jesper shares the game's `latest.log`, sometimes as a `https://logshare.in/#<room>` link. That is a
+- The parent shares the game's `latest.log`, sometimes as a `https://logshare.in/#<room>` link. That is a
   live editor room, not a static page: read it over socket.io polling
   (`/socket.io/?EIO=4&transport=polling`: handshake, `40`, then
   `42["join-room",{"roomId":"<room>","token":null}]`; the log is the `code` field of the
