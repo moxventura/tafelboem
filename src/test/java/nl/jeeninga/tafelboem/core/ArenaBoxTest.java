@@ -31,6 +31,22 @@ class ArenaBoxTest {
 	}
 
 	@Test
+	void grownReachesTheGivenBlocksFurtherOnEverySide() {
+		ArenaBox grown = box.grown(8);
+		assertEquals(2, grown.minX());
+		assertEquals(52, grown.minY());
+		assertEquals(-13, grown.minZ());
+		assertEquals(64, grown.maxX());
+		assertEquals(74, grown.maxY());
+		assertEquals(49, grown.maxZ());
+		assertFalse(box.containsColumn(9.5, 10), "just past the edge of the box itself");
+		assertTrue(grown.containsColumn(9.5, 10));
+		assertTrue(grown.containsColumn(64.9, 10));
+		assertFalse(grown.containsColumn(65, 10));
+		assertEquals(box.middleX(), grown.middleX(), "growing keeps the middle");
+	}
+
+	@Test
 	void theMiddleOfTheFootprint() {
 		assertEquals(33.5, box.middleX());
 		assertEquals(18.5, box.middleZ());

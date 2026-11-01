@@ -20,12 +20,14 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gamerules.GameRules;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.storage.LevelData;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
@@ -35,6 +37,7 @@ import nl.jeeninga.tafelboem.boss.BossFight;
 import nl.jeeninga.tafelboem.boss.BossFights;
 import nl.jeeninga.tafelboem.boss.YeetRecords;
 import nl.jeeninga.tafelboem.command.ArenaSetup;
+import nl.jeeninga.tafelboem.core.ArenaBox;
 import nl.jeeninga.tafelboem.core.BuildCountdown;
 import nl.jeeninga.tafelboem.core.BuildPhase;
 import nl.jeeninga.tafelboem.core.BuildRecord;
@@ -56,6 +59,8 @@ public final class TafelBoemWorld {
 	static final int RETURN_DELAY_TICKS = 100;
 	static final int DOOR_COOLDOWN_TICKS = 40;
 	static final double STARS_DISTANCE = 3;
+	/** While building, a kid who climbed or bridged over the wall stays in the run this far from the arena. */
+	static final int BUILD_MARGIN = 8;
 
 	private record QueuedDoor(ServerPlayer player, int door) {
 	}
@@ -250,15 +255,20 @@ public final class TafelBoemWorld {
 		if (run.fight() == null && !run.kids().isEmpty()) {
 			int call = run.countdown().tick();
 			Building building = run.building();
+			// Taken before he comes: from then on a kid beyond the wall is out, but what they built still counts.
+			List<ServerPlayer> builders = building == null ? List.of() : kidsIn(run);
 			if (building != null) {
-				building.show(kidsIn(run), run.countdown());
+				building.show(builders, run.countdown());
 				if (call > 0) {
 					tellRun(run, call == 1 ? Component.translatable("tafelboem.build.one_second")
 							: Component.translatable("tafelboem.build.seconds", call));
 				}
 			}
 			if (run.countdown().isOver()) {
-				Vec3 spot = run.arena().middle().add(0, 1.5, 0);
+				// On top of whatever the kids built in the middle, the way he hovers (GraafFout.hover).
+				Vec3 middle = run.arena().middle();
+				int top = level.getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(middle.x), Mth.floor(middle.z));
+				Vec3 spot = new Vec3(middle.x, Math.max(middle.y + 1.5, top + 1.5), middle.z);
 				BossFight fight = fights.summon(level, spot, run.level(), run.arena().bounds());
 				if (fight != null) {
 					fight.useYeetRecords(yeetRecords);
@@ -266,7 +276,7 @@ public final class TafelBoemWorld {
 				run.start(fight, clock.getAsLong());
 				if (building != null && fight != null) {
 					building.hide();
-					endBuild(run, building.rangBy() != null ? BuildRecord.BELL : BuildRecord.TIME);
+					endBuild(run, building.rangBy() != null ? BuildRecord.BELL : BuildRecord.TIME, builders);
 				}
 			}
 		}
@@ -274,7 +284,7 @@ public final class TafelBoemWorld {
 		// A kid who is somewhere else now (a command, another dimension) has left the fight.
 		for (UUID id : run.kids()) {
 			ServerPlayer kid = level.getServer().getPlayerList().getPlayer(id);
-			if (kid != null && (kid.level() != level || !run.arena().bounds().containsColumn(kid.getX(), kid.getZ()))) {
+			if (kid != null && !stillIn(run, kid)) {
 				leave(kid, run, FightRecord.LEFT);
 			}
 		}
@@ -315,9 +325,12 @@ public final class TafelBoemWorld {
 	 * block placed against the bell or a click on its top must not end the build.
 	 */
 	public void onUseBlock(Player player, InteractionHand hand, BlockHitResult hit) {
+		if (!(player instanceof ServerPlayer kid) || kid.level() != level || kid.isSpectator()) {
+			return;
+		}
 		BlockPos pos = hit.getBlockPos();
 		BlockState state = level.getBlockState(pos);
-		if (!(player instanceof ServerPlayer kid) || kid.level() != level || kid.isSpectator() || !state.is(Blocks.BELL)) {
+		if (!state.is(Blocks.BELL)) {
 			return;
 		}
 		// Vanilla (ServerPlayerGameMode.useItemOn): a sneaking kid with something in a hand places or uses
@@ -350,18 +363,18 @@ public final class TafelBoemWorld {
 		if (run.building() != null) {
 			run.building().hide();
 			// Everyone left before he came: the build line still goes to the log.
-			endBuild(run, BuildRecord.EVERYONE_LEFT);
+			endBuild(run, BuildRecord.EVERYONE_LEFT, kidsIn(run));
 		}
 	}
 
 	/** Once per run: how long they built, how it ended, and what each kid placed. */
-	private void endBuild(ArenaRun run, String ending) {
+	private void endBuild(ArenaRun run, String ending, List<ServerPlayer> builders) {
 		Building building = run.building();
 		if (building == null || !building.finish()) {
 			return;
 		}
 		BuildRecord record = new BuildRecord(run.level().number(), run.buildSeconds(clock.getAsLong()), ending,
-				BuildRecord.BELL.equals(ending) ? building.rangBy() : null, run.everyone().size(), building.placed(kidsIn(run)));
+				BuildRecord.BELL.equals(ending) ? building.rangBy() : null, run.everyone().size(), building.placed(builders));
 		buildListeners.forEach(listener -> listener.accept(record));
 	}
 
@@ -393,7 +406,14 @@ public final class TafelBoemWorld {
 	}
 
 	public void onDisconnect(ServerPlayer player) {
-		runOf(player).ifPresent(run -> leave(player, run, FightRecord.DISCONNECTED));
+		runOf(player).ifPresent(run -> {
+			leave(player, run, FightRecord.DISCONNECTED);
+			// Closing the world disconnects everyone and never ticks again, so a build nobody is left in ends here
+			// or its build line is lost. A fight that is running still ends through the tick, with his fight line.
+			if (run.kids().isEmpty() && run.fight() == null) {
+				removeRun(run);
+			}
+		});
 	}
 
 	/** A kid who logs in inside an arena without a running fight goes to the hub. */
@@ -458,8 +478,24 @@ public final class TafelBoemWorld {
 	private List<ServerPlayer> kidsIn(ArenaRun run) {
 		return run.kids().stream()
 				.map(id -> level.getServer().getPlayerList().getPlayer(id))
-				.filter(kid -> kid != null && kid.level() == level && run.arena().bounds().containsColumn(kid.getX(), kid.getZ()))
+				.filter(kid -> kid != null && stillIn(run, kid))
 				.toList();
+	}
+
+	/**
+	 * Over the arena's footprint, in this world. During the build, also within {@link #BUILD_MARGIN}
+	 * blocks of it: a kid who climbed or bridged over the wall is still building, and the void catch
+	 * brings them back; once he has come, the footprint is the arena.
+	 */
+	private boolean stillIn(ArenaRun run, ServerPlayer kid) {
+		if (kid.level() != level) {
+			return false;
+		}
+		ArenaBox box = run.arena().bounds();
+		if (run.building() != null && run.fight() == null) {
+			box = box.grown(BUILD_MARGIN);
+		}
+		return box.containsColumn(kid.getX(), kid.getZ());
 	}
 
 	private Optional<ArenaRun> runOf(ServerPlayer player) {

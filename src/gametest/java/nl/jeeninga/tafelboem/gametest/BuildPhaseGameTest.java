@@ -23,6 +23,7 @@ import net.minecraft.world.phys.Vec3;
 
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 
+import nl.jeeninga.tafelboem.core.ArenaBox;
 import nl.jeeninga.tafelboem.core.BuildKit;
 import nl.jeeninga.tafelboem.core.BuildPhase;
 import nl.jeeninga.tafelboem.core.BuildRecord;
@@ -215,6 +216,112 @@ public class BuildPhaseGameTest {
 		helper.succeedWhen(() -> {
 			helper.assertTrue(test.world.run(FightLevel.GEMIDDELD).isPresent(), "wait until the kid is back in");
 			helper.assertTrue(test.level.getBlockState(tower[0]).isAir(), "the last build is gone, also high above the walls");
+			test.close();
+		});
+	}
+
+	@GameTest(maxTicks = 100, padding = TestWorld.PADDING)
+	public void closingTheWorldMidBuildStillWritesTheBuildLine(GameTestHelper helper) {
+		TestWorld test = new TestWorld(helper).withBuildPhase(BuildPhase.STANDARD).running();
+		ServerPlayer kid = test.kidInTheHub();
+		test.whenLoaded(() -> test.world.enterDoor(kid, 1));
+		helper.runAfterDelay(15, () -> {
+			// Closing the world disconnects everyone and never ticks again: look in the same tick.
+			test.world.onDisconnect(kid);
+			helper.assertTrue(test.builds.size() == 1 && test.builds.getFirst().ending().equals(BuildRecord.EVERYONE_LEFT),
+					"one build line, everyone left: " + test.builds);
+			helper.assertTrue(test.world.run(FightLevel.MAKKELIJK).isEmpty(), "the run is gone");
+			List<FightRecord> fights = test.log.read(kid.getPlainTextName());
+			helper.assertTrue(fights.size() == 1 && fights.getFirst().result().equals(FightRecord.DISCONNECTED), "the kid's line: " + fights);
+			test.close();
+			helper.succeed();
+		});
+	}
+
+	@GameTest(maxTicks = 200, padding = TestWorld.PADDING)
+	public void heAppearsOnTopOfWhatTheKidsBuiltInTheMiddle(GameTestHelper helper) {
+		TestWorld test = new TestWorld(helper).withBuildPhase(BuildPhase.everyLevel(1)).running();
+		ServerPlayer kid = test.kidInTheHub();
+		int[] pillarTop = {0};
+		double[] appearedY = {Double.NaN};
+		boolean[] free = {false};
+		test.whenLoaded(() -> {
+			test.world.enterDoor(kid, 1);
+			BlockPos base = BlockPos.containing(test.world.run(FightLevel.MAKKELIJK).orElseThrow().arena().middle());
+			for (int i = 0; i < 6; i++) {
+				test.level.setBlockAndUpdate(base.above(i), Blocks.STONE.defaultBlockState());
+			}
+			pillarTop[0] = base.above(5).getY();
+		});
+		helper.onEachTick(() -> test.world.run(FightLevel.MAKKELIJK).map(ArenaRun::fight).ifPresent(fight -> {
+			if (Double.isNaN(appearedY[0])) {
+				appearedY[0] = fight.boss().getY();
+				free[0] = test.level.noCollision(fight.boss());
+			}
+		}));
+
+		helper.succeedWhen(() -> {
+			helper.assertFalse(Double.isNaN(appearedY[0]), "wait for Graaf Fout");
+			helper.assertTrue(free[0], "he isn't inside a block");
+			helper.assertTrue(appearedY[0] >= pillarTop[0] + 1, "he is above the pillar's top at " + pillarTop[0] + ", not at " + appearedY[0]);
+			test.close();
+		});
+	}
+
+	@GameTest(maxTicks = 100, padding = TestWorld.PADDING)
+	public void aKidJustBeyondTheWallStaysInTheRunWhileBuildingAndOneFarOutLeaves(GameTestHelper helper) {
+		TestWorld test = new TestWorld(helper).withBuildPhase(BuildPhase.STANDARD).running();
+		ServerPlayer builder = test.kidInTheHub();
+		ServerPlayer near = test.kidInTheHub();
+		ServerPlayer far = test.kidInTheHub();
+		test.whenLoaded(() -> {
+			for (ServerPlayer kid : List.of(builder, near, far)) {
+				test.world.enterDoor(kid, 1);
+			}
+			ArenaBox bounds = test.world.run(FightLevel.MAKKELIJK).orElseThrow().arena().bounds();
+			double y = test.world.run(FightLevel.MAKKELIJK).orElseThrow().arena().standAt().getY();
+			// Over the wall and down the other side, or bridged out: 3 and 20 blocks past the north edge.
+			near.teleportTo(bounds.middleX(), y, bounds.minZ() - 3.5);
+			far.teleportTo(bounds.middleX(), y, bounds.minZ() - 20.5);
+		});
+		helper.runAfterDelay(15, () -> {
+			ArenaRun run = test.world.run(FightLevel.MAKKELIJK).orElseThrow();
+			helper.assertTrue(run.kids().contains(near.getUUID()), "3 blocks beyond the wall is still in the run");
+			helper.assertTrue(run.building().isShownTo(near), "and still sees the countdown");
+			helper.assertTrue(run.kids().contains(builder.getUUID()) && run.building().isShownTo(builder), "the kid inside builds on");
+			helper.assertFalse(run.kids().contains(far.getUUID()), "20 blocks out has left");
+			// Mock players all share one name: a single line in all means the near kid has none.
+			List<FightRecord> fights = test.log.read(far.getPlainTextName());
+			helper.assertTrue(fights.size() == 1 && fights.getFirst().result().equals(FightRecord.LEFT), "only the far kid's line: " + fights);
+			test.close();
+			helper.succeed();
+		});
+	}
+
+	@GameTest(maxTicks = 200, padding = TestWorld.PADDING)
+	public void onceHeHasComeAKidBeyondTheWallHasLeftButWhatTheyPlacedStillCounts(GameTestHelper helper) {
+		TestWorld test = new TestWorld(helper).withBuildPhase(BuildPhase.everyLevel(2)).running();
+		ServerPlayer builder = test.kidInTheHub();
+		ServerPlayer near = test.kidInTheHub();
+		test.whenLoaded(() -> {
+			test.world.enterDoor(builder, 1);
+			test.world.enterDoor(near, 1);
+			ArenaBox bounds = test.world.run(FightLevel.MAKKELIJK).orElseThrow().arena().bounds();
+			near.teleportTo(bounds.middleX(), test.world.run(FightLevel.MAKKELIJK).orElseThrow().arena().standAt().getY(), bounds.minZ() - 3.5);
+			near.awardStat(Stats.ITEM_USED.get(Items.OAK_PLANKS), 3);
+		});
+		helper.runAfterDelay(15, () -> helper.assertTrue(test.world.run(FightLevel.MAKKELIJK).orElseThrow().kids().contains(near.getUUID()),
+				"still in the run while building"));
+
+		helper.succeedWhen(() -> {
+			helper.assertTrue(test.world.run(FightLevel.MAKKELIJK).map(ArenaRun::fight).isPresent(), "wait for Graaf Fout");
+			ArenaRun run = test.world.run(FightLevel.MAKKELIJK).orElseThrow();
+			helper.assertFalse(run.kids().contains(near.getUUID()), "once he has come, beyond the wall is out");
+			helper.assertTrue(run.kids().contains(builder.getUUID()), "the kid inside stays");
+			List<FightRecord> fights = test.log.read(near.getPlainTextName());
+			helper.assertTrue(fights.size() == 1 && fights.getFirst().result().equals(FightRecord.LEFT), "the near kid's line: " + fights);
+			helper.assertTrue(test.builds.size() == 1 && test.builds.getFirst().placed().get(near.getPlainTextName()).equals(Map.of("oak_planks", 3)),
+					"the build line still counts the blocks of the kid beyond the wall: " + test.builds);
 			test.close();
 		});
 	}

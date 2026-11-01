@@ -13,6 +13,11 @@ public record ArenaBox(int minX, int minY, int minZ, int maxX, int maxY, int max
 		return x >= minX && x <= maxX && y >= minY && y <= maxY && z >= minZ && z <= maxZ;
 	}
 
+	/** The same box reaching {@code blocks} further on every side. */
+	public ArenaBox grown(int blocks) {
+		return new ArenaBox(minX - blocks, minY - blocks, minZ - blocks, maxX + blocks, maxY + blocks, maxZ + blocks);
+	}
+
 	/** Above the footprint, at any height: the open sky over an arena still belongs to it. */
 	public boolean containsColumn(double x, double z) {
 		return x >= minX && x < maxX + 1 && z >= minZ && z < maxZ + 1;

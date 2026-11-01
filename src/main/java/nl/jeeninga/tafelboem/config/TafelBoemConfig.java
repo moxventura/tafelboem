@@ -69,7 +69,7 @@ public final class TafelBoemConfig {
 	/**
 	 * Through a level door the kids first build in the plain arena, with a chest of blocks and a bell, until a
 	 * countdown (5, 4 or 3 minutes by level) or the bell brings Graaf Fout. Off, as 1.1.2: a random arena, he
-	 * comes 3 s after the first kid. Applies from the next arena entered.
+	 * comes 3 s after the first kid. Applies from the next world load.
 	 */
 	public boolean buildPhase = true;
 
