@@ -28,6 +28,8 @@ human or agent.
 - No timer on answering a sum; the build phase has a countdown (R1.2, the parent's choice). A wrong
   answer is always shorter and less fun than a right one.
 - Our booms never hurt players (`PlayerSafeExplosion`); a correct answer never hurts the kid.
+- In an arena on Peaceful and Easy nothing takes a kid below half a heart (`arenaSafety`, R1.3); on
+  Normal and Hard damage is vanilla, and dying counts as leaving (`died`).
 - A typed wrong answer costs hearts on Gemiddeld and Moeilijk (`FightLevel.wrongAnswerDamage`), never
   the last half heart; "?" and ESC never do.
 - A boost only ever adds: a fast answer or a streak yeets Graaf Fout further, a slow answer still
@@ -66,6 +68,7 @@ and a check. Put new world work on arena entry rather than on world load.
 | reload mid-build | the build and the run | the kid goes to the hub (the login row); the slots are cleared on load | `TafelBoemWorldGameTest`, `HubAndArenasGameTest` |
 | close mid-build | the build line | written when the last kid disconnects (closing the world never ticks again) | `BuildPhaseGameTest` |
 | build phase | a kid near the walls | still in the run within 8 blocks of the arena (`BUILD_MARGIN`); further out, or once he has come, = left | `BuildPhaseGameTest` |
+| fight ends | lying bombs | all poof | `DodgeGameTest` |
 | any time | the void | everyone who falls is caught, never fatally | `TafelBoemWorldGameTest` |
 
 Spectacle animals that appear after the boom (the counting Kippenbom's groups, the chase) get their
@@ -180,5 +183,8 @@ GameTest pitfalls:
 - From 1.2.0 on, a `TafelBoem build:` line per arena run (level, seconds built, the bell and who
   rang it or time ran out or everyone left, kids, what each kid placed), and the fight line's
   seconds count from his arrival, with the build time apart ("… s after … s of building").
+- From 1.3.0 on, the fight line counts per kid the bombs `dodged`, the lying bombs `picked up` and
+  the trap landings after their kicks (`trapped`, by kind); the yeet line has `trap=<kind>` after the
+  distance when a trap pulled him in; `died` stands next to `left` in the fight and session lines.
 - Record each playtest in `docs/evaluations/R<x>.md`: findings with their cause checked in the
   code, then the go/no-go and backlog changes.
