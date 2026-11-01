@@ -146,7 +146,7 @@ public class TafelBoem implements ModInitializer {
 		// The build phase's bell: right-clicking it rings it as in vanilla, and brings Graaf Fout within 10 s.
 		UseBlockCallback.EVENT.register((player, level, hand, hit) -> {
 			if (world != null && !level.isClientSide()) {
-				world.onUseBlock(player, hit.getBlockPos());
+				world.onUseBlock(player, hand, hit);
 			}
 			return InteractionResult.PASS;
 		});

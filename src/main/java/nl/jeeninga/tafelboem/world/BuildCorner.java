@@ -16,6 +16,7 @@ import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BellAttachType;
 import net.minecraft.world.level.block.state.properties.ChestType;
+import net.minecraft.world.phys.BlockHitResult;
 
 import nl.jeeninga.tafelboem.core.BuildKit;
 
@@ -37,6 +38,27 @@ public final class BuildCorner {
 
 	public static BlockPos bellAt(PlacedArea arena) {
 		return chestAt(arena).relative(front(arena).getCounterClockWise(), 2);
+	}
+
+	/**
+	 * Whether this click on a bell is one that rings it in vanilla: not on the top or bottom, not above
+	 * 0.8124 of the block's height, and then by attachment: a floor bell on a side along its facing axis, a
+	 * wall bell on a side across it, a hanging bell on any side. It mirrors Minecraft 26.2's private
+	 * {@code BellBlock.isProperHit}, because our click callback runs before Minecraft's and only sees the hit:
+	 * check it again after a Minecraft update.
+	 */
+	public static boolean ringsBell(BlockState bell, BlockHitResult hit) {
+		Direction clicked = hit.getDirection();
+		double clickY = hit.getLocation().y - hit.getBlockPos().getY();
+		if (clicked.getAxis() == Direction.Axis.Y || clickY > 0.8124F) {
+			return false;
+		}
+		Direction facing = bell.getValue(BellBlock.FACING);
+		return switch (bell.getValue(BellBlock.ATTACHMENT)) {
+			case FLOOR -> facing.getAxis() == clicked.getAxis();
+			case SINGLE_WALL, DOUBLE_WALL -> facing.getAxis() != clicked.getAxis();
+			case CEILING -> true;
+		};
 	}
 
 	/** Places the chest, fills it, and places the bell; whatever stood there goes. */

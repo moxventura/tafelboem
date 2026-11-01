@@ -17,11 +17,14 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.storage.LevelData;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
 import nl.jeeninga.tafelboem.TafelBoem;
@@ -290,10 +293,20 @@ public final class TafelBoemWorld {
 
 	/**
 	 * A kid used a block. A bell in their own arena, before he came, brings him within 10 s, for
-	 * everyone in that arena; any bell there counts, so one the kids moved still rings.
+	 * everyone in that arena; any bell there counts, so one the kids moved still rings. Only a click
+	 * that rings the bell in vanilla counts: this runs before Minecraft's own use of the block, so a
+	 * block placed against the bell or a click on its top must not end the build.
 	 */
-	public void onUseBlock(Player player, BlockPos pos) {
-		if (!(player instanceof ServerPlayer kid) || kid.level() != level || !level.getBlockState(pos).is(Blocks.BELL)) {
+	public void onUseBlock(Player player, InteractionHand hand, BlockHitResult hit) {
+		BlockPos pos = hit.getBlockPos();
+		BlockState state = level.getBlockState(pos);
+		if (!(player instanceof ServerPlayer kid) || kid.level() != level || kid.isSpectator() || !state.is(Blocks.BELL)) {
+			return;
+		}
+		// Vanilla (ServerPlayerGameMode.useItemOn): a sneaking kid with something in a hand places or uses
+		// the item instead of the block, and only the main hand's click uses the block without an item.
+		boolean somethingInHand = !kid.getMainHandItem().isEmpty() || !kid.getOffhandItem().isEmpty();
+		if (hand != InteractionHand.MAIN_HAND || kid.isSecondaryUseActive() && somethingInHand || !BuildCorner.ringsBell(state, hit)) {
 			return;
 		}
 		ArenaRun run = runOf(kid).orElse(null);

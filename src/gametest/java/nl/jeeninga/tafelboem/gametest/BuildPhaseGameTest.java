@@ -4,14 +4,20 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.BellBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 
@@ -68,6 +74,54 @@ public class BuildPhaseGameTest {
 		});
 	}
 
+	@GameTest(maxTicks = 100, padding = TestWorld.PADDING)
+	public void aClickVanillaWouldNotRingLeavesTheCountdownAlone(GameTestHelper helper) {
+		TestWorld test = new TestWorld(helper).withBuildPhase(BuildPhase.STANDARD).running();
+		ServerPlayer kid = test.kidInTheHub();
+		test.whenLoaded(() -> test.world.enterDoor(kid, 1));
+		helper.runAfterDelay(15, () -> {
+			ArenaRun run = test.world.run(FightLevel.MAKKELIJK).orElseThrow();
+			BlockPos bell = BuildCorner.bellAt(run.arena());
+			BlockHitResult front = frontOf(test, bell);
+			Direction across = front.getDirection().getClockWise();
+
+			BlockHitResult top = new BlockHitResult(new Vec3(bell.getX() + 0.5, bell.getY() + 1.0, bell.getZ() + 0.5), Direction.UP, bell, false);
+			test.world.onUseBlock(kid, InteractionHand.MAIN_HAND, top);
+			assertNotRung(helper, test, kid, "a click on the top");
+
+			test.world.onUseBlock(kid, InteractionHand.MAIN_HAND, new BlockHitResult(Vec3.atCenterOf(bell), across, bell, false));
+			assertNotRung(helper, test, kid, "a click on a side across the way the bell faces");
+
+			test.world.onUseBlock(kid, InteractionHand.OFF_HAND, front);
+			assertNotRung(helper, test, kid, "a click with the off hand, which vanilla never uses a block with");
+
+			// Sneaking with a block in hand places the block against the bell instead of using the bell.
+			kid.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.OAK_PLANKS));
+			kid.setShiftKeyDown(true);
+			helper.assertTrue(kid.isSecondaryUseActive(), "the kid is sneaking");
+			test.world.onUseBlock(kid, InteractionHand.MAIN_HAND, front);
+			assertNotRung(helper, test, kid, "a sneak-click with a block in hand");
+
+			kid.setShiftKeyDown(false);
+			kid.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+			test.world.onUseBlock(kid, InteractionHand.MAIN_HAND, front);
+			helper.assertTrue(run.countdown().secondsLeft() == 10, "a click on the front with an empty hand rings: " + run.countdown().secondsLeft());
+			helper.assertTrue(keys(test, kid).stream().filter("tafelboem.build.bell"::equals).count() == 1, "and says so: " + keys(test, kid));
+			test.close();
+			helper.succeed();
+		});
+	}
+
+	private static void assertNotRung(GameTestHelper helper, TestWorld test, ServerPlayer kid, String click) {
+		helper.assertTrue(test.world.run(FightLevel.MAKKELIJK).orElseThrow().countdown().secondsLeft() > 10, click + " leaves the countdown alone");
+		helper.assertTrue(!keys(test, kid).contains("tafelboem.build.bell"), click + " says nothing about a bell: " + keys(test, kid));
+	}
+
+	/** A click halfway up the face of the bell that the kids see from the arrival spot, the way the bell faces. */
+	private static BlockHitResult frontOf(TestWorld test, BlockPos bell) {
+		return new BlockHitResult(Vec3.atCenterOf(bell), test.level.getBlockState(bell).getValue(BellBlock.FACING), bell, false);
+	}
+
 	@GameTest(maxTicks = 600, padding = TestWorld.PADDING)
 	@Fight
 	public void theBellBringsHimTenSecondsLaterAndOnlyThatArenaHearsIt(GameTestHelper helper) {
@@ -84,10 +138,10 @@ public class BuildPhaseGameTest {
 		});
 		helper.runAfterDelay(20, () -> {
 			BlockPos bell = BuildCorner.bellAt(test.world.run(FightLevel.MAKKELIJK).orElseThrow().arena());
-			test.world.onUseBlock(ringer, bell);
+			test.world.onUseBlock(ringer, InteractionHand.MAIN_HAND, frontOf(test, bell));
 			rangAt[0] = helper.getTick();
 			helper.assertTrue(test.world.run(FightLevel.MAKKELIJK).orElseThrow().countdown().secondsLeft() == 10, "10 s left after the bell");
-			test.world.onUseBlock(friend, bell);
+			test.world.onUseBlock(friend, InteractionHand.MAIN_HAND, frontOf(test, bell));
 		});
 		helper.onEachTick(() -> {
 			if (cameAt[0] < 0 && test.world.run(FightLevel.MAKKELIJK).map(ArenaRun::fight).isPresent()) {
