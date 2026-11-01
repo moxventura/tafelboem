@@ -51,10 +51,16 @@ public class BossFightGameTest {
 	/** The chase chickens appear 2 blocks behind him, all at one spot, on the tick the landing begins. */
 	private static final int CHASE_SPAWN_RADIUS = 4;
 
-	@GameTest(maxTicks = 600)
+	/**
+	 * Outside an arena every player within 32 blocks joins a fight, so a test with no padding fought over the
+	 * mock players of the tests beside it (copies of itself, under -Prepeat): he teleported next to them,
+	 * where nothing ticks (a bomb froze mid-air) or where a finished test's cleanup discarded him.
+	 */
+	@GameTest(maxTicks = 600, padding = 48)
 	@Fight
 	@SuppressWarnings("removal") // mock players are still the only way to test without a client
 	public void aCorrectAnswerKicksTheBombBackAndHitsGraafFout(GameTestHelper helper) {
+		OpenField.open(helper);
 		RecordingQuizClient client = new RecordingQuizClient();
 		SessionManager sessions = new SessionManager(helper.getLevel().getServer(), new Learners(new AnswerLog(tempDir())), client);
 		BossFights fights = new BossFights(sessions);
@@ -80,6 +86,8 @@ public class BossFightGameTest {
 		});
 
 		helper.succeedWhen(() -> {
+			helper.assertTrue(fight.participants().equals(List.of(player.getUUID())),
+					"his own kid is the only one in this fight, not another test's mock player: " + fight.participants());
 			helper.assertTrue(fight.hitsRemaining() < startHits, "a kicked-back bomb should hit Graaf Fout");
 			int boss = fight.boss().getId();
 			helper.assertTrue(client.tracks.stream().anyMatch(t -> t.entityId() == boss && t.ticksAfterScreen() == 0 && !t.kick()),
