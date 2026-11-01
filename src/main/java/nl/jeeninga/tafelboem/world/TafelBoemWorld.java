@@ -172,7 +172,7 @@ public final class TafelBoemWorld {
 			return true;
 		}
 		if (allowed > 0F) {
-			// This smaller hit comes back through here and passes.
+			// This smaller hit comes back through ALLOW_DAMAGE and passes (in a GameTest nothing hooks it in, so it lands at once).
 			kid.hurtServer(level, source, allowed);
 		}
 		return false;
@@ -228,10 +228,7 @@ public final class TafelBoemWorld {
 		}
 		doorCooldown.put(player.getUUID(), ticks + DOOR_COOLDOWN_TICKS);
 		if (door == 0) {
-			if (!fighting.isReturning() && TafelBoem.config().stars) {
-				// Playtest 3 (P28): the kids didn't know that leaving gives no stars.
-				client.chat(player, Component.translatable("tafelboem.message.left_no_stars"));
-			}
+			tellNoStars(player, fighting);
 			leave(player, fighting, FightRecord.LEFT);
 			teleport(player, hub.standAt(), hub.yaw());
 			return;
@@ -444,10 +441,15 @@ public final class TafelBoemWorld {
 
 	/** Dying in an arena counts as leaving: no stars, the same line as the exit door (P28), "died" in the fights log. */
 	private void died(ServerPlayer kid, ArenaRun run) {
+		tellNoStars(kid, run);
+		leave(kid, run, FightRecord.DIED);
+	}
+
+	/** Playtest 3 (P28): the kids didn't know that leaving gives no stars. After a win they have them already. */
+	private void tellNoStars(ServerPlayer kid, ArenaRun run) {
 		if (!run.isReturning() && TafelBoem.config().stars) {
 			client.chat(kid, Component.translatable("tafelboem.message.left_no_stars"));
 		}
-		leave(kid, run, FightRecord.DIED);
 	}
 
 	public void onDisconnect(ServerPlayer player) {
