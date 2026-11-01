@@ -1,5 +1,6 @@
 package nl.jeeninga.tafelboem.core;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
@@ -17,10 +18,12 @@ import java.util.stream.Collectors;
  * @param dodged   bombs thrown at this kid that missed (R1.3); 0 in lines from before 1.3
  * @param pickedUp lying bombs this kid walked into (R1.3); 0 in lines from before 1.3
  * @param trapped  trap landings after this kid's kicks, by {@link TrapKind#id()} (R1.3); empty in lines from before 1.3
+ * @param difficulty Minecraft's difficulty when the fight ended, lowercase (peaceful, easy, normal or hard; R1.3); empty in lines
+ *                   from before 1.3, as the arena's safety depends on it
  */
 public record FightRecord(long timestamp, String player, int level, String arena, String result, int answers, int wrong,
 		int dontKnow, int chickenOut, int stars, long seconds, int kids, String version, int farthestYeet, long buildSeconds,
-		int dodged, int pickedUp, Map<String, Integer> trapped) {
+		int dodged, int pickedUp, Map<String, Integer> trapped, String difficulty) {
 	public static final String WON = "won";
 	public static final String LEFT = "left";
 	public static final String DISCONNECTED = "disconnected";
@@ -28,8 +31,9 @@ public record FightRecord(long timestamp, String player, int level, String arena
 	public static final String DIED = "died";
 
 	public FightRecord {
-		// A line from before 1.3 has no traps: the log reads it as null.
-		trapped = trapped == null ? Map.of() : Map.copyOf(trapped);
+		// A line from before 1.3 has no traps and no difficulty: the log reads them as null. The traps are sorted, so the line is always the same.
+		trapped = trapped == null ? Map.of() : Collections.unmodifiableMap(new TreeMap<>(trapped));
+		difficulty = difficulty == null ? "" : difficulty;
 	}
 
 	/** A fight without a farthest yeet or build time, as every line before 1.1. */
@@ -44,11 +48,19 @@ public record FightRecord(long timestamp, String player, int level, String arena
 		this(timestamp, player, level, arena, result, answers, wrong, dontKnow, chickenOut, stars, seconds, kids, version, farthestYeet, 0);
 	}
 
-	/** A fight without dodges, pick-ups or traps, as every line before 1.3. */
+	/** A fight without dodges, pick-ups, traps or a difficulty, as every line before 1.3. */
 	public FightRecord(long timestamp, String player, int level, String arena, String result, int answers, int wrong, int dontKnow,
 			int chickenOut, int stars, long seconds, int kids, String version, int farthestYeet, long buildSeconds) {
 		this(timestamp, player, level, arena, result, answers, wrong, dontKnow, chickenOut, stars, seconds, kids, version, farthestYeet,
 				buildSeconds, 0, 0, Map.of());
+	}
+
+	/** A fight without a difficulty, as every line before 1.3. */
+	public FightRecord(long timestamp, String player, int level, String arena, String result, int answers, int wrong, int dontKnow,
+			int chickenOut, int stars, long seconds, int kids, String version, int farthestYeet, long buildSeconds, int dodged,
+			int pickedUp, Map<String, Integer> trapped) {
+		this(timestamp, player, level, arena, result, answers, wrong, dontKnow, chickenOut, stars, seconds, kids, version, farthestYeet,
+				buildSeconds, dodged, pickedUp, trapped, "");
 	}
 
 	public boolean won() {
@@ -60,7 +72,8 @@ public record FightRecord(long timestamp, String player, int level, String arena
 		return player + ": level " + level + " in arena " + arena + ", " + result + (won() ? " " + "★".repeat(stars) : "")
 				+ " (" + answers + (answers == 1 ? " answer, " : " answers, ") + wrong + " wrong, " + dontKnow + " \"?\", " + chickenOut + " ESC, " + seconds + " s"
 				+ (buildSeconds > 0 ? " after " + buildSeconds + " s of building" : "") + ", "
-				+ kids + (kids == 1 ? " kid" : " kids") + (farthestYeet > 0 ? ", farthest yeet " + farthestYeet + " blocks" : "")
+				+ kids + (kids == 1 ? " kid" : " kids") + (difficulty.isEmpty() ? "" : ", difficulty " + difficulty)
+				+ (farthestYeet > 0 ? ", farthest yeet " + farthestYeet + " blocks" : "")
 				+ (dodged > 0 ? ", dodged " + dodged : "") + (pickedUp > 0 ? ", picked up " + pickedUp : "")
 				+ (trapped.isEmpty() ? "" : ", trapped " + trappedLine()) + ")";
 	}

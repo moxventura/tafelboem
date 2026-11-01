@@ -114,7 +114,10 @@ class FightLogTest {
 		assertEquals(0, old.dodged());
 		assertEquals(0, old.pickedUp());
 		assertEquals(Map.of(), old.trapped(), "empty, never null");
+		assertEquals("", old.difficulty(), "empty, never null");
 		assertEquals(240, old.buildSeconds());
+		assertEquals("Sanne: level 2 in arena default, won ★★ (12 answers, 1 wrong, 0 \"?\", 0 ESC, 120 s after 240 s of building, 1 kid, "
+				+ "farthest yeet 25 blocks)", old.describe(), "an old line shows no difficulty");
 	}
 
 	@Test
@@ -127,5 +130,20 @@ class FightLogTest {
 		assertEquals(fight, log.read("Sanne").getFirst());
 		assertEquals("Sanne: level 1 in arena default, won ★★★ (12 answers, 0 wrong, 0 \"?\", 0 ESC, 100 s after 300 s of building, 1 kid, "
 				+ "farthest yeet 31 blocks, dodged 4, picked up 2, trapped 3 (cactus 2, cobweb 1))", fight.describe());
+	}
+
+	@Test
+	void theDifficultyIsWrittenReadBackAndShownInTheLine() throws IOException {
+		FightLog log = new FightLog(dir);
+		FightRecord fight = new FightRecord(0L, "Sanne", 1, "default", FightRecord.DIED, 12, 0, 0, 0, 0, 100, 2, "1.3.0", 31, 300, 4, 2,
+				Map.of("cobweb", 1, "cactus", 2), "normal");
+		log.append(fight);
+
+		assertEquals(fight, log.read("Sanne").getFirst());
+		assertEquals("normal", log.read("Sanne").getFirst().difficulty());
+		assertEquals("Sanne: level 1 in arena default, died (12 answers, 0 wrong, 0 \"?\", 0 ESC, 100 s after 300 s of building, 2 kids, "
+				+ "difficulty normal, farthest yeet 31 blocks, dodged 4, picked up 2, trapped 3 (cactus 2, cobweb 1))", fight.describe());
+		assertTrue(Files.readString(dir.resolve("fights-Sanne.jsonl")).contains("\"trapped\":{\"cactus\":2,\"cobweb\":1}"),
+				"the traps are written in the same order every time");
 	}
 }

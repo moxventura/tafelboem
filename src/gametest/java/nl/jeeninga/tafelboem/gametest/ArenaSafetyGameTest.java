@@ -45,7 +45,7 @@ public class ArenaSafetyGameTest {
 	public void onNormalAFallInAnArenaKillsAndCountsAsDied(GameTestHelper helper) {
 		TestWorld test = new TestWorld(helper).running();
 		test.world.useDifficulty(() -> Difficulty.NORMAL);
-		diesAndCountsAsDied(helper, test);
+		diesAndCountsAsDied(helper, test, "normal");
 	}
 
 	@GameTest(maxTicks = 300, padding = TestWorld.PADDING)
@@ -55,10 +55,10 @@ public class ArenaSafetyGameTest {
 		config.arenaSafety = false;
 		TestWorld test = new TestWorld(helper).withConfig(config).running();
 		test.world.useDifficulty(() -> Difficulty.EASY);
-		diesAndCountsAsDied(helper, test);
+		diesAndCountsAsDied(helper, test, "easy");
 	}
 
-	private static void diesAndCountsAsDied(GameTestHelper helper, TestWorld test) {
+	private static void diesAndCountsAsDied(GameTestHelper helper, TestWorld test, String difficulty) {
 		ServerPlayer kid = survivalKid(test);
 		ServerPlayer sibling = test.kidInTheHub();
 		test.whenLoaded(() -> {
@@ -72,6 +72,7 @@ public class ArenaSafetyGameTest {
 			helper.assertTrue(kid.isDeadOrDying(), "wait for the fall: it kills");
 			List<FightRecord> lines = test.log.read(kid.getPlainTextName());
 			helper.assertTrue(lines.size() == 1 && lines.getFirst().result().equals(FightRecord.DIED), "logged as died: " + lines);
+			helper.assertTrue(lines.getFirst().difficulty().equals(difficulty), "with the world's difficulty: " + lines.getFirst().difficulty());
 			helper.assertTrue(test.client.chatsTo.stream().anyMatch(chat -> chat.player() == kid
 					&& chat.message().getContents() instanceof TranslatableContents contents
 					&& contents.getKey().equals("tafelboem.message.left_no_stars")), "the leaving line: no stars");

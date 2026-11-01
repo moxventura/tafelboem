@@ -476,7 +476,8 @@ public final class TafelBoemWorld {
 		// The record's timestamp is a date, not a duration: always wall time.
 		fightLog.append(new FightRecord(System.currentTimeMillis(), kid.getPlainTextName(), run.level().number(), run.arena().name(), result,
 				tally.answers(), tally.wrong(), tally.dontKnow(), tally.chickenOut(), stars, run.fightSeconds(now), run.everyone().size(),
-				TafelBoem.version(), tally.farthestYeet(), run.buildSeconds(now), tally.dodged(), tally.pickedUp(), tally.trapped()));
+				TafelBoem.version(), tally.farthestYeet(), run.buildSeconds(now), tally.dodged(), tally.pickedUp(), tally.trapped(),
+				difficulty.get().getSerializedName()));
 	}
 
 	/** Falling is never fatal: back to the arena's arrival spot in a fight, otherwise to the hub. */

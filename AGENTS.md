@@ -185,6 +185,8 @@ GameTest pitfalls:
   seconds count from his arrival, with the build time apart ("… s after … s of building").
 - From 1.3.0 on, the fight line counts per kid the bombs `dodged`, the lying bombs `picked up` and
   the trap landings after their kicks (`trapped`, by kind); the yeet line has `trap=<kind>` after the
-  distance when a trap pulled him in; `died` stands next to `left` in the fight and session lines.
+  distance when a trap pulled him in; `died` stands next to `left` in the fight and session lines;
+  the fight line also names Minecraft's difficulty (`difficulty easy`), which the arena safety
+  depends on.
 - Record each playtest in `docs/evaluations/R<x>.md`: findings with their cause checked in the
   code, then the go/no-go and backlog changes.
