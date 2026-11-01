@@ -80,4 +80,26 @@ class FightLogTest {
 
 		assertEquals(31, log.read("Sanne").getFirst().farthestYeet());
 	}
+
+	@Test
+	void aLineFromBefore12HasNoBuildTime() throws IOException {
+		Files.writeString(dir.resolve("fights-Sanne.jsonl"), "{\"timestamp\":0,\"player\":\"Sanne\",\"level\":2,\"arena\":\"default\","
+				+ "\"result\":\"won\",\"answers\":12,\"wrong\":1,\"dontKnow\":0,\"chickenOut\":0,\"stars\":2,\"seconds\":120,\"kids\":1,"
+				+ "\"version\":\"1.1.2\",\"farthestYeet\":25}\n");
+
+		FightRecord old = new FightLog(dir).read("Sanne").getFirst();
+		assertEquals(0, old.buildSeconds());
+		assertEquals(25, old.farthestYeet());
+	}
+
+	@Test
+	void theBuildTimeIsWrittenAndReadBackAndShownInTheLine() {
+		FightLog log = new FightLog(dir);
+		FightRecord fight = new FightRecord(0L, "Sanne", 1, "default", FightRecord.WON, 12, 0, 0, 0, 3, 100, 1, "1.2.0", 31, 300);
+		log.append(fight);
+
+		assertEquals(300, log.read("Sanne").getFirst().buildSeconds());
+		assertEquals("Sanne: level 1 in arena default, won ★★★ (12 answers, 0 wrong, 0 \"?\", 0 ESC, 100 s after 300 s of building, 1 kid, "
+				+ "farthest yeet 31 blocks)", fight.describe());
+	}
 }
