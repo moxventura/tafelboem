@@ -143,6 +143,16 @@ public class WorldClientGameTest implements FabricClientGameTest {
 					leftOver[0] = leaveItem(world, level);
 				}
 				if (level == FightLevel.GEMIDDELD) {
+					// R1.3: a thrown bomb roots a kid only within 2 blocks of where it lands, and a kid who stands still is
+					// missed as often as not. So a bomb lies next to him, as one he dodged would, and he picks it up.
+					world.getServer().runOnServer(server -> {
+						ServerPlayer kid = server.getPlayerList().getPlayers().getFirst();
+						BlockPos next = Direction.Plane.HORIZONTAL.stream()
+								.map(direction -> kid.blockPosition().relative(direction))
+								.filter(pos -> server.overworld().getBlockState(pos).isAir())
+								.findFirst().orElseThrow();
+						tafelBoem().run(level).orElseThrow().fight().placeLyingBomb(next, BombTier.GEWONE_TNT);
+					});
 					context.waitForScreen(QuestionScreen.class);
 					answerQuestion(context);
 					context.waitTicks(24);
