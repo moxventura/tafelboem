@@ -40,6 +40,8 @@ import nl.jeeninga.tafelboem.core.ArenaBox;
 import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.game.BombEffects;
 import nl.jeeninga.tafelboem.world.ArenaRun;
+import nl.jeeninga.tafelboem.world.BuildCorner;
+import nl.jeeninga.tafelboem.world.PlacedArea;
 import nl.jeeninga.tafelboem.world.TafelBoemWorld;
 import nl.jeeninga.tafelboem.world.TafelBoemWorlds;
 
@@ -79,7 +81,21 @@ public class WorldClientGameTest implements FabricClientGameTest {
 				waitUntil(context, () -> world.getServer().computeOnServer(server -> tafelBoem().run(level).isPresent()), "into arena " + level);
 				world.getConnection().waitForChunksRender();
 				if (level == FightLevel.MAKKELIJK) {
-					// R1.2: first the build phase, the countdown in the boss bar, the chest and the bell ahead.
+					// R1.2: first the build phase, the countdown in the boss bar, the chest and the bell ahead. The key
+					// walkInto held carried the kid on towards the chest: put him back where he arrived, looking at
+					// the gap between the chest and the bell, as a kid sees the arena first.
+					BlockPos between = world.getServer().computeOnServer(server -> {
+						PlacedArea arena = tafelBoem().run(level).orElseThrow().arena();
+						BlockPos stand = arena.standAt();
+						server.getPlayerList().getPlayers().getFirst()
+								.teleportTo(server.overworld(), stand.getX() + 0.5, stand.getY(), stand.getZ() + 0.5, Set.of(), arena.yaw(), 0F, true);
+						BlockPos chest = BuildCorner.chestAt(arena);
+						BlockPos bell = BuildCorner.bellAt(arena);
+						return new BlockPos((chest.getX() + bell.getX()) / 2, chest.getY(), (chest.getZ() + bell.getZ()) / 2);
+					});
+					context.waitTicks(3);
+					context.getInput().lookAt(between);
+					context.waitTicks(5);
 					check(world.getServer().computeOnServer(server -> {
 						ArenaRun run = tafelBoem().run(level).orElseThrow();
 						return run.building() != null && run.fight() == null && run.building().isShownTo(server.getPlayerList().getPlayers().getFirst());
