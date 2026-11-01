@@ -25,7 +25,8 @@ human or agent.
 ## Rules for the game
 
 - The villain never states a wrong fact and never comments on a kid's ability.
-- No timers in normal play. A wrong answer is always shorter and less fun than a right one.
+- No timer on answering a sum; the build phase has a countdown (R1.2, the parent's choice). A wrong
+  answer is always shorter and less fun than a right one.
 - Our booms never hurt players (`PlayerSafeExplosion`); a correct answer never hurts the kid.
 - A typed wrong answer costs hearts on Gemiddeld and Moeilijk (`FightLevel.wrongAnswerDamage`), never
   the last half heart; "?" and ESC never do.
@@ -59,7 +60,10 @@ and a check. Put new world work on arena entry rather than on world load.
 | arena entry | the arena | cleared where the last one stood, placed fresh; plain arenas have obsidian under the walls | `HubAndArenasGameTest`, `ArenaShapeTest` |
 | arena entry | arrival | 3 blocks from the exit door, inside the arena | `HubAndArenasGameTest` |
 | arena entry | music | the slot gets its level's biome (`ArenaBiomes`) | `WorldClientGameTest` |
+| arena entry, build phase | the arena | always the plain one; the whole slot cleared first, so the last build goes, above the walls too; blocks a kid places outside the 48³ slot (above it, or over the outer wall's edge) are never cleared | `BuildPhaseGameTest` |
+| arena entry, build phase | chest and bell | 3 blocks ahead of the arrival spot (the exit door behind the kids), the chest filled with the kit | `BuildPhaseGameTest` |
 | login | a kid inside an arena without a fight | to the hub | `TafelBoemWorldGameTest` |
+| reload mid-build | the build and the run | the kid goes to the hub (the login row); the slots are cleared on load | `TafelBoemWorldGameTest`, `HubAndArenasGameTest` |
 | any time | the void | everyone who falls is caught, never fatally | `TafelBoemWorldGameTest` |
 
 Spectacle animals that appear after the boom (the counting Kippenbom's groups, the chase) get their
@@ -122,6 +126,8 @@ GameTest pitfalls:
 - A test that plays a fight for 3 s or more gets `@Fight`, so `build` stays quick. Run a new or
   changed one three times before trusting it (`runFightGameTests -Ptests=<its id> -Prepeat=3`): a
   1-in-20 flake hid in one for a whole release.
+- The GameTest server runs faster than 20 ticks a second: anything measured in wall time is near 0
+  in a test. `TestWorld` gives `TafelBoemWorld` a tick clock (`useClock`).
 - The GameTest server never saves its world, and Gradle deletes that world before every run. A
   check that needs a saved world goes in `WorldClientGameTest`.
 - GameTests can't load a world twice. Check anything that happens on a second load (blocks placed
@@ -169,5 +175,8 @@ GameTest pitfalls:
   `TafelBoem yeet:` line per kick (answer time, boost, flight, landing, record), a
   `TafelBoem chickens:` line per counting Kippenbom and, if he ever froze mid-yeet and the fight
   brought him back, a `TafelBoem stuck:` line.
+- From 1.2.0 on, a `TafelBoem build:` line per arena run (level, seconds built, the bell and who
+  rang it or time ran out or everyone left, kids, what each kid placed), and the fight line's
+  seconds count from his arrival, with the build time apart ("… s after … s of building").
 - Record each playtest in `docs/evaluations/R<x>.md`: findings with their cause checked in the
   code, then the go/no-go and backlog changes.

@@ -63,6 +63,13 @@ back on the next Play.
   level 2 adds 3, 4 and 9, and level 3 asks all ten. About three seconds after you arrive, Graaf
   Fout appears and the fight starts. Anyone who walks through the same door while the fight runs
   joins it.
+- **Building first (1.2).** Behind a level door the arena is empty at first: a double chest full of
+  blocks (wood, stone, glass, wool, slime, redstone, lanterns and more) and a bell stand in front of
+  you. Build what you like. Graaf Fout comes when the countdown in the boss bar runs out (5 minutes on
+  Makkelijk, 4 on Gemiddeld, 3 on Moeilijk), or 10 seconds after someone rings the bell. The bell
+  counts only when Minecraft itself rings it: right-click its front or back, not its top, and not
+  while sneaking with something in your hand. His bombs can blow holes in what you built. The next
+  time, the arena is empty again.
 - **Stars.** A win is ★, a win with at most 2 wrong answers is ★★ and a win without a wrong answer
   is ★★★. Only typed wrong answers count: "?" and ESC don't. The best result per level counts. Stand
   within 3 blocks of a door in the hub to see your own stars for that level. Set `stars` to `false`
