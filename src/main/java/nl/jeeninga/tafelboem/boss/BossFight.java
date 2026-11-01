@@ -1,6 +1,7 @@
 package nl.jeeninga.tafelboem.boss;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -34,6 +35,7 @@ import net.minecraft.world.phys.Vec3;
 import nl.jeeninga.tafelboem.TafelBoem;
 import nl.jeeninga.tafelboem.block.BombBlock;
 import nl.jeeninga.tafelboem.boss.landing.Landing;
+import nl.jeeninga.tafelboem.boss.yeet.Traps;
 import nl.jeeninga.tafelboem.boss.yeet.Yeet;
 import nl.jeeninga.tafelboem.config.TafelBoemConfig;
 import nl.jeeninga.tafelboem.core.ArenaBox;
@@ -46,6 +48,10 @@ import nl.jeeninga.tafelboem.core.LandingStyle;
 import nl.jeeninga.tafelboem.core.Outcome;
 import nl.jeeninga.tafelboem.core.Pacing;
 import nl.jeeninga.tafelboem.core.ReactionPicker;
+import nl.jeeninga.tafelboem.core.TrapKind;
+import nl.jeeninga.tafelboem.core.TrapPick;
+import nl.jeeninga.tafelboem.core.YeetPose;
+import nl.jeeninga.tafelboem.core.YeetReport;
 import nl.jeeninga.tafelboem.game.BombEffects;
 import nl.jeeninga.tafelboem.game.PlayerSafeExplosion;
 import nl.jeeninga.tafelboem.game.QuizListener;
@@ -195,6 +201,58 @@ public final class BossFight implements QuizListener {
 
 	boolean hasLyingBomb(BlockPos pos) {
 		return lying.containsKey(pos);
+	}
+
+	/**
+	 * The traps a yeet in this fight may land in (R1.3): none with the switch off, and none outside an arena, where
+	 * 1.2.0's yeets stay. Public for the GameTests' yeets on cue.
+	 */
+	public Traps traps() {
+		return config.traps && arena != null ? this::trapsAround : Traps.NONE;
+	}
+
+	/** Trap blocks with room above them, around this spot, in this fight's arena. */
+	private List<TrapPick.Candidate> trapsAround(Vec3 at) {
+		List<TrapPick.Candidate> found = new ArrayList<>();
+		BlockPos centre = BlockPos.containing(at);
+		int reach = (int) Math.ceil(TrapPick.REACH);
+		for (BlockPos pos : BlockPos.betweenClosed(centre.offset(-reach, -3, -reach), centre.offset(reach, 1, reach))) {
+			if (!arena.containsColumn(pos.getX() + 0.5, pos.getZ() + 0.5)) {
+				continue;
+			}
+			TrapKind kind = trapAt(pos);
+			// Only the top of a stack: he has to fit on or in it.
+			if (kind != null && level.getBlockState(pos.above()).getCollisionShape(level, pos.above()).isEmpty()) {
+				found.add(new TrapPick.Candidate(pos.getX(), pos.getY(), pos.getZ(), kind));
+			}
+		}
+		return found;
+	}
+
+	private @Nullable TrapKind trapAt(BlockPos pos) {
+		BlockState state = level.getBlockState(pos);
+		if (state.is(Blocks.CACTUS)) {
+			return TrapKind.CACTUS;
+		}
+		if (state.is(Blocks.SWEET_BERRY_BUSH)) {
+			return TrapKind.BERRY_BUSH;
+		}
+		if (state.is(Blocks.MAGMA_BLOCK)) {
+			return TrapKind.MAGMA;
+		}
+		if (state.is(Blocks.COBWEB)) {
+			return TrapKind.COBWEB;
+		}
+		if (state.is(Blocks.SLIME_BLOCK)) {
+			return TrapKind.SLIME;
+		}
+		// A bomb someone is answering is no trap; only a lying one is.
+		return state.getBlock() instanceof BombBlock && lying.containsKey(pos) ? TrapKind.LYING_BOMB : null;
+	}
+
+	/** The last "TafelBoem yeet:" line this fight wrote, or null before the first; for the GameTests. */
+	public @Nullable YeetReport lastYeet() {
+		return meter.lastReport();
 	}
 
 	/**
@@ -498,12 +556,7 @@ public final class BossFight implements QuizListener {
 			return;
 		}
 		// The bigger the bomb, the bigger the bang and the further he flies.
-		boolean craters = arena != null && config.arenaCraters;
-		ExplosionDamageCalculator boom = craters
-				? PlayerSafeExplosion.sparing(participants.players().stream().map(ServerPlayer::position).toList(), SAFE_FLOOR_RADIUS)
-				: PlayerSafeExplosion.SHOW;
-		level.explode(null, null, boom, boss.getX(), boss.getY() + 1, boss.getZ(), tier.blastRadius(), false,
-				craters ? Level.ExplosionInteraction.TNT : Level.ExplosionInteraction.NONE);
+		boom(new Vec3(boss.getX(), boss.getY() + 1, boss.getZ()), tier);
 		if (tier == BombTier.KIPPENBOM && config.kippenbomChickens) {
 			if (config.countingKippenbom && kick != null) {
 				sessions.countChickens(level, boss.position(), kick.fact(), "fight");
@@ -512,17 +565,7 @@ public final class BossFight implements QuizListener {
 				sessions.collectSpectacles(level, boss.blockPosition());
 			}
 		}
-		fight.registerHit();
-		participants.showHealth(fight.healthFraction());
-
-		if (fight.isDefeated()) {
-			boss.finalYeet();
-			level.sendParticles(ParticleTypes.FIREWORK, boss.getX(), boss.getY() + 1, boss.getZ(), 200, 1.5, 1.5, 1.5, 0.3);
-			level.playSound(null, boss.getX(), boss.getY(), boss.getZ(), SoundEvents.FIREWORK_ROCKET_LARGE_BLAST, SoundSource.HOSTILE, 3.0F, 1.0F);
-			participants.say(Component.translatable("tafelboem.boss.graaf_fout.defeated"));
-			followKickerFor(FINALE_CAM_TICKS);
-			phase = Phase.FINALE;
-			phaseTicks = FINALE_TICKS;
+		if (hit()) {
 			return;
 		}
 
@@ -531,18 +574,55 @@ public final class BossFight implements QuizListener {
 		kickFactor = kick == null ? 1.0 : kick.factor(config.yeetBoost);
 		double power = (0.9 + level.getRandom().nextDouble() * 0.5) * tier.yeetPower() * kickFactor;
 		reactionCooldown = COOLDOWN_TICKS;
-		boss.yeet(where, power, reactions.nextFlight(arena != null, config.yeetCatalogue), kickedFrom);
+		boss.yeet(where, power, reactions.nextFlight(arena != null, config.yeetCatalogue), kickedFrom, traps());
 		phase = Phase.REACTING;
 		phaseTicks = REACTION_MIN_TICKS;
 	}
 
-	/** He is down: pick how he lands, keep the view on him for that long, and show the yeet-o-meter. */
+	/** Our safe boom: never hurts a kid; in an arena with craters on, it breaks blocks, never the floor by a kid. */
+	private void boom(Vec3 at, BombTier tier) {
+		boolean craters = arena != null && config.arenaCraters;
+		ExplosionDamageCalculator calculator = craters
+				? PlayerSafeExplosion.sparing(participants.players().stream().map(ServerPlayer::position).toList(), SAFE_FLOOR_RADIUS)
+				: PlayerSafeExplosion.SHOW;
+		level.explode(null, null, calculator, at.x, at.y, at.z, tier.blastRadius(), false,
+				craters ? Level.ExplosionInteraction.TNT : Level.ExplosionInteraction.NONE);
+	}
+
+	/**
+	 * One hit, from a kick or a trap: the health bar goes down, and the last one starts the finale.
+	 *
+	 * @return whether that beat him
+	 */
+	private boolean hit() {
+		fight.registerHit();
+		participants.showHealth(fight.healthFraction());
+		if (!fight.isDefeated()) {
+			return false;
+		}
+		// One last enormous yeet into the sky, and the reward after the finale.
+		boss.finalYeet();
+		level.sendParticles(ParticleTypes.FIREWORK, boss.getX(), boss.getY() + 1, boss.getZ(), 200, 1.5, 1.5, 1.5, 0.3);
+		level.playSound(null, boss.getX(), boss.getY(), boss.getZ(), SoundEvents.FIREWORK_ROCKET_LARGE_BLAST, SoundSource.HOSTILE, 3.0F, 1.0F);
+		participants.say(Component.translatable("tafelboem.boss.graaf_fout.defeated"));
+		followKickerFor(FINALE_CAM_TICKS);
+		phase = Phase.FINALE;
+		phaseTicks = FINALE_TICKS;
+		return true;
+	}
+
+	/** He is down: pick how he lands (a trap decides for itself), keep the view on him for that long, and show the yeet-o-meter. */
 	void onYeetLanded(Yeet yeet) {
 		if (decided()) {
 			return;
 		}
-		LandingStyle landing = queuedLandings.poll();
-		if (landing == null) {
+		TrapPick.Candidate trap = yeet.caught();
+		LandingStyle landing = trap != null ? trap.kind().reaction() : queuedLandings.poll();
+		if (trap != null) {
+			// A boomerang's faceplant mustn't carry on into the trap's reaction.
+			boss.setYeetPose(YeetPose.NONE);
+			reactions.played(landing);
+		} else if (landing == null) {
 			landing = reactions.nextLanding(kick == null ? BombTier.KNALLETJE : kick.tier(), yeet.style(), config.yeetCatalogue,
 					kick != null && config.bombSignatures && (kick.tier() != BombTier.KIPPENBOM || config.kippenbomChickens));
 		} else {
@@ -552,7 +632,35 @@ public final class BossFight implements QuizListener {
 		reactionCooldown = Pacing.cooldownAfter(landing);
 		followKickerFor(landing.ticks());
 		farthest(yeet);
-		meter.landed(yeet, false, kick, landing.id(), landing.isSignature(), kickFactor, null);
+		// A trap's landing is the trap's, never a signature: a lying bomb's soot included.
+		meter.landed(yeet, false, kick, landing.id(), trap == null && landing.isSignature(), kickFactor,
+				trap == null ? null : trap.kind().id());
+		if (trap != null) {
+			caught(trap);
+		}
+	}
+
+	/** He landed in a trap the kids built: the trap goes, so it counts once, and the kick that sent him gets one more hit. */
+	private void caught(TrapPick.Candidate trap) {
+		BlockPos pos = new BlockPos(trap.x(), trap.y(), trap.z());
+		if (trap.kind() == TrapKind.LYING_BOMB) {
+			// A kid may have picked it up during the hop: then it is their question's bomb, and stays.
+			BombTier tier = lying.remove(pos);
+			if (tier != null) {
+				level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+				boom(Vec3.atCenterOf(pos), tier);
+			}
+		} else {
+			level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+			BombEffects.poof(level, Vec3.atCenterOf(pos));
+		}
+		if (trap.kind().isPrickly()) {
+			participants.say(Component.translatable("tafelboem.boss.graaf_fout.trap.prickly"));
+		}
+		if (kick != null) {
+			tally(kick.kicker()).trap(trap.kind());
+		}
+		hit();
 	}
 
 	/** Out of the arena and into the void: say how far he got, then he comes straight back. */

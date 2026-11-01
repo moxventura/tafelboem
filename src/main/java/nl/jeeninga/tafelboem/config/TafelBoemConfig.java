@@ -80,6 +80,13 @@ public final class TafelBoemConfig {
 	 */
 	public boolean dodging = true;
 
+	/**
+	 * R1.3: after a right answer Graaf Fout lands in the nearest trap within 4 blocks of where he would land
+	 * (cactus, sweet berry bush, magma block, cobweb, slime block, a lying bomb) for one more hit, and the trap
+	 * goes. Off: no pull and no bonus; the trap blocks stay in the chest.
+	 */
+	public boolean traps = true;
+
 	public static TafelBoemConfig load(Path file) {
 		if (!Files.exists(file)) {
 			TafelBoemConfig defaults = new TafelBoemConfig();

@@ -48,4 +48,10 @@ final class BounceYeet extends Yeet {
 		level.sendParticles(ParticleTypes.CLOUD, boss.getX(), boss.getY() + 0.1, boss.getZ(), 8, 0.4, 0.05, 0.4, 0.02);
 		return false;
 	}
+
+	/** Only his last bounce comes down for good. */
+	@Override
+	protected boolean mayBePulled() {
+		return bounces >= MAX_BOUNCES;
+	}
 }

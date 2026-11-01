@@ -26,12 +26,18 @@ final class YeetMeter {
 	private final QuizClient client;
 	private final TafelBoemConfig config;
 	private @Nullable YeetRecords records;
+	private @Nullable YeetReport lastReport;
 
 	YeetMeter(GraafFout boss, Participants participants, QuizClient client, TafelBoemConfig config) {
 		this.boss = boss;
 		this.participants = participants;
 		this.client = client;
 		this.config = config;
+	}
+
+	/** The last line written to the game log, or null before the first; the GameTests read it. */
+	@Nullable YeetReport lastReport() {
+		return lastReport;
 	}
 
 	void useRecords(@Nullable YeetRecords records) {
@@ -76,9 +82,9 @@ final class YeetMeter {
 		}
 		if (kick != null) {
 			String name = kicker != null ? kicker.getPlainTextName() : kick.kicker().toString();
-			TafelBoem.LOGGER.info("TafelBoem yeet: {}", new YeetReport(name, kick.tier(), kick.fact(), kick.millis(), kick.usual(),
-					kick.fast(), kick.streak(), factor, yeet.style(), landing, signature, blocks, yeet.measuresHeight(), flewOut,
-					record, previousBest, trap).describe());
+			lastReport = new YeetReport(name, kick.tier(), kick.fact(), kick.millis(), kick.usual(), kick.fast(), kick.streak(), factor,
+					yeet.style(), landing, signature, blocks, yeet.measuresHeight(), flewOut, record, previousBest, trap);
+			TafelBoem.LOGGER.info("TafelBoem yeet: {}", lastReport.describe());
 		}
 	}
 

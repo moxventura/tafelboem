@@ -53,6 +53,7 @@
   "tafelboem.stats.misclicks": "Probably pressed ? by accident: %s times",
   "tafelboem.boss.graaf_fout.throws": "Look out: a %s!",
   "tafelboem.boss.graaf_fout.dodged": "Missed! It's still lying there, you know…",
+  "tafelboem.boss.graaf_fout.trap.prickly": "Ow ow ow!",
   "tafelboem.message.yeet_distance": "%s flew %s blocks!",
   "tafelboem.message.yeet_height": "%s flew %s blocks high!",
   "tafelboem.message.yeet_out": "%s flew %s blocks, right out of the arena!",

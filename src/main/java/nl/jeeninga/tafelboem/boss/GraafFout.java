@@ -22,6 +22,7 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 
 import nl.jeeninga.tafelboem.boss.landing.Landing;
+import nl.jeeninga.tafelboem.boss.yeet.Traps;
 import nl.jeeninga.tafelboem.boss.yeet.Yeet;
 import nl.jeeninga.tafelboem.core.ArenaBox;
 import nl.jeeninga.tafelboem.core.LandingStyle;
@@ -167,20 +168,25 @@ public class GraafFout extends Evoker {
 		}
 	}
 
+	/** A yeet with no traps to land in: GameTests and the client test send him off on cue. */
+	public void yeet(Vec3 from, double power, YeetStyle style, Vec3 kicker) {
+		yeet(from, power, style, kicker, Traps.NONE);
+	}
+
 	/**
 	 * A kid kicked a bomb back: launch him away from the explosion, spinning and flailing. How he
-	 * flies is up to the style's {@link Yeet}.
+	 * flies is up to the style's {@link Yeet}; at its end he may land in one of {@code traps}.
 	 *
 	 * @param kicker where the kid who kicked stands; the boomerang comes back to them
 	 */
-	public void yeet(Vec3 from, double power, YeetStyle style, Vec3 kicker) {
+	public void yeet(Vec3 from, double power, YeetStyle style, Vec3 kicker, Traps traps) {
 		// Before the flight starts: ending a landing puts him upright with gravity off.
 		endLanding();
 		Vec3 direction = position().subtract(from).multiply(1, 0, 1);
 		if (direction.lengthSqr() < 1.0E-4) {
 			direction = new Vec3(random.nextDouble() - 0.5, 0, random.nextDouble() - 0.5);
 		}
-		yeet = Yeet.start(style, this, direction.normalize(), power, kicker);
+		yeet = Yeet.start(style, this, direction.normalize(), power, kicker, traps);
 		setYeetPose(yeet.startPose());
 		needsSync = true;
 		armsUp(true);
