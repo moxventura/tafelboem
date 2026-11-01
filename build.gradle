@@ -40,6 +40,8 @@ fabricApi {
 def shippedWorld = file("pack/saves/TafelBoem")
 def writeShippedWorld = providers.gradleProperty("writeShippedWorld").isPresent()
 loom.runs.matching { it.name == "clientGameTest" }.configureEach {
+	// The real world plays the build phase; 5 s instead of minutes, with time for a screenshot of the countdown.
+	property("tafelboem.buildSeconds", "5")
 	property("tafelboem.shippedWorld", shippedWorld.absolutePath)
 	if (writeShippedWorld) {
 		property("tafelboem.writeShippedWorld", "true")

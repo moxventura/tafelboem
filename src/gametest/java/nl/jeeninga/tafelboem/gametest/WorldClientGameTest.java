@@ -39,6 +39,7 @@ import nl.jeeninga.tafelboem.client.QuestionScreen;
 import nl.jeeninga.tafelboem.core.ArenaBox;
 import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.game.BombEffects;
+import nl.jeeninga.tafelboem.world.ArenaRun;
 import nl.jeeninga.tafelboem.world.TafelBoemWorld;
 import nl.jeeninga.tafelboem.world.TafelBoemWorlds;
 
@@ -77,7 +78,15 @@ public class WorldClientGameTest implements FabricClientGameTest {
 				walkInto(context, world, door(world, level.number()));
 				waitUntil(context, () -> world.getServer().computeOnServer(server -> tafelBoem().run(level).isPresent()), "into arena " + level);
 				world.getConnection().waitForChunksRender();
-				// He appears 3 s after the kid arrives, and throws his first bomb 3 s after that.
+				if (level == FightLevel.MAKKELIJK) {
+					// R1.2: first the build phase, the countdown in the boss bar, the chest and the bell ahead.
+					check(world.getServer().computeOnServer(server -> {
+						ArenaRun run = tafelBoem().run(level).orElseThrow();
+						return run.building() != null && run.fight() == null && run.building().isShownTo(server.getPlayerList().getPlayers().getFirst());
+					}), "a build phase with its countdown in arena 1");
+					context.takeScreenshot("r1.2-01-build-countdown");
+				}
+				// He appears when the build time (5 s here) runs out, and throws his first bomb 3 s after that.
 				waitUntil(context, () -> world.getServer().computeOnServer(server -> tafelBoem().run(level).orElseThrow().fight() != null),
 						"Graaf Fout in arena " + level);
 				context.waitTicks(10);
