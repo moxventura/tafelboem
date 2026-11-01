@@ -73,7 +73,7 @@ multiplayer sessions and a one-step deploy to every PC are part of R0.
 | **R1.1 "Meer yeets"** | see the R1.1 scope below: a flight plus a landing per hit (wall splat, head-first, pancake, frantic running, bomb signatures), the full yeet-o-meter (fast answers and streaks yeet further, a personal best), the counting Kippenbom; the kids' own arenas as they come | More variety keeps them coming back | see the R1.1 evaluation below |
 | *Faster tests, right after R1.1* | nothing new for the kids (see the faster-tests scope below): the same tests, quicker; a quick and a fights group (`runGameTest` runs every test on one server); tests that count entities count only their own | A suite that is quicker to run keeps releases small and cheap to check | see the faster-tests targets below; no test loses what it proves |
 | **R1.2 "Bouwen"** | see the R1.2 scope below: a build phase before every fight: the plain arena, a double chest with a building kit and a bell, a countdown in the boss bar (5, 4 or 3 minutes by level), ring the bell and he comes in 10 s; then the fight as today, craters in the build included | Building first makes a round more fun, without cutting answers per minute in the fight below playtest 3 | see the R1.2 evaluation below: the `TafelBoem build:` lines (time built, bell or not, what they placed), answers per minute from his arrival, and asking whether building was fun |
-| R1.3 "Dekking" *(after R1.2)* | terrain in the fight: a built block between Graaf Fout and the kid stops a bomb, and running away dodges too; a dodged bomb lies still until a kid walks into it; after a yeet he can land in a trap the kids built (magma, cactus, berry bush, fire, slime, cobweb, a dodged bomb) for +1 hit | Dodging and traps make the build count in the fight, without cutting answers per minute or adding frustration | answers per minute vs R1.2, dodges and trap landings per fight, frustration tally |
+| **R1.3 "Dekking"** | see the R1.3 scope below: terrain in the fight: a built block between Graaf Fout and the kid stops a bomb, and running away dodges too; a dodged bomb lies still until a kid walks into it (no cap); after a yeet he is pulled into a trap the kids built within 4 blocks (cactus, berry bush, magma, cobweb, slime, a lying bomb) for +1 hit, once per trap; arena safety by Minecraft difficulty | Dodging and traps make the build count in the fight, without cutting answers per minute or adding frustration | answers per minute vs R1.2, dodges and trap landings per fight, frustration tally |
 | **R2 "Leren dat blijft"** | fact states and spaced picker, a Tafelkaart screen (GUI), parent report, the daily limit, "Kies je bom", the full leg kick in third person | The practice spreads out and facts move toward Fluent | 2 weeks of logs: % Accurate/Fluent up, median time down, sessions spread over days, kids still asking |
 | **R3 "Meer boem"** | bombs 4–9, levels 4–9, particle choreographies, craters, escape aids, lethal tiers with 3 lives, inventory stash, signature reactions for bombs 4–9, co-op rescue sums, the lobby extras in the hub (Tafelkaart wall, trophy wall, animal pen) | Escalation keeps them climbing without frustration | level reached per week, favourite bombs, no tears at levels 7–9, FPS OK on the woonkamer PC |
 | R4 new villains *(when they ask for it)* | Tante Toverfout, then Robo-Rekenaar 3000 | Pulled by the kids beating Graaf Fout | |
@@ -842,6 +842,122 @@ P28 and P24 from 1.1.1 and 1.1.2 in the same session, knowing they can't be told
 - the build lines show they built, and the bell or the time ran out without frustration
 - the kids still ask to play
 
+## R1.3 "Dekking" (detailed scope)
+
+Decided with the parent on 2026-11-01, right after 1.2.0 was published. R1.2 lets the kids build the
+arena; R1.3 makes the build count in the fight: cover and running away dodge his bombs (P20), and
+traps they build give an extra hit when he lands in one after a yeet.
+
+**Built before playtest 4, on purpose.** `AGENTS.md` says not to build ahead of an evaluation. The
+parent chose to build R1.3 straight after 1.2.0, before playtest 4 has judged the build phase. If
+playtest 4 says building isn't fun, R1.3 is reconsidered before it is published; until then it
+waits on `main` behind its switches or on its branch.
+
+**All three in one release, on purpose.** Dodging, lying bombs and traps ship together (the
+parent's choice). A drop in answers per minute can't be pinned on one of them; the log counts each
+separately (dodges, pick-ups, trap landings) to help.
+
+**Hypothesis:** dodging and traps make the build count in the fight, without cutting answers per
+minute or adding frustration.
+
+### Dodging and cover
+1. **The throw stays.** He aims 1.2 blocks in front of where the kid stands when he throws
+   (`BossFight.throwNextBomb`), on a clean arc of 0.75–2 s that stops at the first block it touches.
+2. **A hit, as today:** the bomb lands within 2 blocks (horizontally) of the kid it was thrown at,
+   measured where that kid stands when it lands. The kid is rooted and the question comes. A kid
+   who has gone (left, or answering another bomb) can't be hit: the bomb lies still as in 3.
+3. **Dodged:** it lands further away, because the kid ran or because it hit the build on the way.
+   Cover and running away are one rule; there is no line-of-sight check. A dodged bomb lies there as
+   a bomb block: no fuse, no question. A small poof, and he taunts the kid it missed: *"Mis! Die
+   ligt daar nog, hoor…"*.
+4. **Walking into it.** A kid who touches a lying bomb (stands in or next to its block) and isn't
+   answering gets its question: the same rooted flow with that bomb's tier; the fact comes from
+   that kid's own progress. On LAN either sibling can pick it up.
+5. **No cap.** He keeps throwing at his normal pace, however many bombs lie around (the parent's
+   choice). Answers per minute shows whether dodging starves the sums. He never throws at a kid
+   who is answering, as today.
+6. **No chain reactions.** A kicked bomb's crater never sets off or breaks a lying bomb.
+7. **When the fight ends,** won, lost or everyone gone, every lying bomb poofs.
+8. **Bunkers are allowed.** A kid under a roof is hard to hit; only the bombs they walk into get
+   answered. The log shows it as many dodges and few pick-ups.
+9. **Switch `dodging`, default on.** Off is 1.2.0's behaviour: wherever the bomb lands, its kid is
+   rooted.
+
+### Traps
+1. **Trap blocks:** cactus, sweet berry bush, magma block, cobweb, slime block, and a lying bomb
+   (from dodging). Honey is not a trap.
+2. **The chest** gets cactus, sand (cactus only grows on sand), sweet berries, dirt (berries only
+   grow on dirt or grass), magma blocks and cobweb, 16 each. To stay at 54 slots, wool goes from 6
+   colours to 3 (red, yellow, light blue). `BuildKit.LEFT_OUT` keeps the rest out: TNT, lava,
+   water, flint and steel, fire charges, dispensers, beds, spawn eggs. No fire: it spreads through
+   planks and wool.
+3. **The pull.** When a yeet after a correct answer is about to end, the nearest trap within
+   4 blocks (horizontally) of where he would land bends the last part of the flight so he lands in
+   it. At most one trap per yeet. Traps only come after a correct answer, so they reward sums and
+   never replace them.
+4. **+1 hit** for the kid who kicked, with the trap's own reaction:
+
+   | Trap | Reaction |
+   |---|---|
+   | cactus, sweet berry bush | hops around, *"Au au au!"* |
+   | magma block | a hot-feet dance (the frantic-run landing) |
+   | cobweb | stuck, struggling, for 2 s |
+   | slime block | one more bounce |
+   | lying bomb | it goes off under him: our usual safe boom |
+
+   The bonus can be the last hit; the fight then ends as usual.
+5. **A trap counts once.** After it caught him, the trap block poofs away, so one cactus by the
+   middle doesn't double every hit. Building many traps pays off.
+6. **Switch `traps`, default on.** Off: no pull, no bonus (the trap blocks stay in the chest).
+
+### Safety by Minecraft's difficulty
+1. **Peaceful and Easy:** in an arena (build phase and fight) no damage takes a kid below half a
+   heart: falls, cactus, berries, magma, anything.
+2. **Normal and Hard:** vanilla damage; a kid can die. Dying in an arena counts as leaving: the
+   kid respawns in the hub, no stars, the 1.1.2 chat line (P28); the fights log says `died` instead
+   of `left`. A sibling's fight goes on.
+3. **These stay, whatever the difficulty:** our booms never hurt (`PlayerSafeExplosion`); a typed
+   wrong answer never takes the last half heart.
+4. **Switch `arenaSafety`, default on.** Off: vanilla damage everywhere, on every difficulty.
+
+### Logs for the evaluation
+- The fight line (`FightRecord`) gets per kid: `dodged` (bombs thrown at them that missed),
+  `pickedUp` (lying bombs they walked into), `trapped` (trap landings after their kicks, by kind).
+  Older lines without them still read.
+- The yeet line gets `trap=<kind>` when a trap pulled him in.
+- `died` is an outcome next to `left` in the fight and session lines.
+- Answers per minute keeps counting from his arrival, comparable with playtest 4.
+
+### Load contract
+No new reload rule: lying bombs and traps are blocks in the slot, cleared on load and on entry. One
+new row in `AGENTS.md`:
+
+| When | What | Rule |
+|---|---|---|
+| fight ends | lying bombs | all poof |
+
+### R1.3 tests
+- **Unit tests (`core/`):** the dodge rule (more than 2 blocks = dodged); the trap pick (nearest
+  within 4 blocks, none beyond, at most one per yeet); the safety floor by difficulty; the kit
+  fits 54 slots and holds the trap blocks; an old fight line without the new counts reads.
+- **Game tests:** a bomb stopped by a wall lies still and roots nobody; a kid who touches a lying
+  bomb gets its question; several lying bombs at once; a crater never sets off a lying bomb; lying
+  bombs poof when the fight ends; a yeet bends into a cactus 3 blocks off, +1 hit, the cactus is
+  gone; a cactus 6 blocks off is ignored; a fall on Easy stops at half a heart; a fall on Normal
+  kills and counts as `died`; each switch off gives 1.2.0's behaviour.
+- **Client game test:** a screenshot of a lying bomb behind a wall.
+
+**R1.3 evaluation (playtest 5).** Record it in `docs/evaluations/R1.3.md`.
+
+**Go when:**
+- answers per minute in the fight are no lower than playtest 4's, and % right and "?" are no worse
+- the kids dodge and build traps without being told
+- no tears from deaths or from bombs piling up
+- the kids still ask to play
+
+**Watch:** bunker play (many dodges, few pick-ups); bombs piling up (no cap); whether traps change
+what they build; how many arena deaths, and on which difficulty they play.
+
 ## Faster tests (detailed scope)
 
 Nothing changes for the kids: the same tests, quicker to run, so every change and every release is
@@ -1040,11 +1156,12 @@ test and build changes only.
     starts as before. Dodging never costs a sum, and damage only comes from answered kicks, so
     dodging never replaces sums. Watch answers per minute.
   - Traps as a landing bonus: only after a yeet (so only after a right answer) can he land in a
-    trap: magma, cactus, a berry bush, fire (these hurt kids too, as in vanilla; the kids choose
-    whether to build them), slime (he bounces), cobweb (he sticks); a dodged bomb he lands on goes
-    off. +1 extra hit, at most one bonus per yeet. No lava.
-  - Proposed safety rule, to settle in R1.3's design: in the arena a kid never drops below half a
-    heart (as for wrong answers), because dying in the arena isn't designed.
+    trap: magma, cactus, a berry bush (these hurt kids too, as in vanilla; the kids choose whether
+    to build them), slime (he bounces), cobweb (he sticks); a dodged bomb he lands on goes off.
+    +1 extra hit, at most one bonus per yeet, and a trap counts once. No lava, no fire.
+  - Safety, settled in R1.3's scope: by Minecraft's difficulty (Peaceful and Easy: never below
+    half a heart in an arena; Normal and Hard: vanilla, a death counts as leaving). No fire in the
+    kit. The R1.3 scope section has the details.
 - **"Kies je bom" (R2).** Several bombs lie on the ground and the kid picks which one to run into.
   - A big bomb asks a fact the kid is still learning, deals more damage and gives a bigger yeet.
   - A small bomb asks a fact they know and deals 1 hit.
