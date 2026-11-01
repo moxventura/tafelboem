@@ -52,6 +52,8 @@
   "tafelboem.stats.reasks": "Opnieuw gevraagd na een fout: %s van %s goed (%s%%)",
   "tafelboem.stats.misclicks": "Waarschijnlijk per ongeluk op ? gedrukt: %s keer",
   "tafelboem.boss.graaf_fout.throws": "Pas op: een %s!",
+  "tafelboem.boss.graaf_fout.dodged": "Mis! Die ligt daar nog, hoor…",
+  "tafelboem.boss.graaf_fout.trap.prickly": "Au au au!",
   "tafelboem.message.yeet_distance": "%s vloog %s blokken!",
   "tafelboem.message.yeet_height": "%s vloog %s blokken hoog!",
   "tafelboem.message.yeet_out": "%s vloog %s blokken, de arena uit!",

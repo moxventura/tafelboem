@@ -132,6 +132,12 @@ final class Participants {
 		}
 	}
 
+	/** Graaf Fout says something to one kid only, in that kid's chat. */
+	void sayTo(ServerPlayer kid, Component message) {
+		sessions.client().chat(kid, Component.translatable("tafelboem.boss.says", boss.getDisplayName(), message)
+				.withStyle(ChatFormatting.LIGHT_PURPLE));
+	}
+
 	void showHealth(float fraction) {
 		bossBar.setProgress(fraction);
 	}

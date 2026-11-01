@@ -10,6 +10,7 @@ import org.lwjgl.glfw.GLFW;
 
 import net.minecraft.client.gui.screens.worldselection.WorldCreationUiState;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
@@ -37,6 +38,7 @@ import nl.jeeninga.tafelboem.TafelBoem;
 import nl.jeeninga.tafelboem.block.LevelDoorBlock;
 import nl.jeeninga.tafelboem.client.QuestionScreen;
 import nl.jeeninga.tafelboem.core.ArenaBox;
+import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.game.BombEffects;
 import nl.jeeninga.tafelboem.world.ArenaRun;
@@ -107,16 +109,62 @@ public class WorldClientGameTest implements FabricClientGameTest {
 						"Graaf Fout in arena " + level);
 				context.waitTicks(10);
 				context.takeScreenshot("r1-0" + (level.number() + 1) + "-arena-" + level.number());
+				if (level == FightLevel.MAKKELIJK) {
+					// R1.3: a bomb the build stopped lies behind the wall until a kid walks into it. The kid looks from
+					// beside the wall, so both show; Graaf Fout's own throws may add more.
+					BlockPos bomb = world.getServer().computeOnServer(server -> {
+						ArenaRun run = tafelBoem().run(level).orElseThrow();
+						PlacedArea arena = run.arena();
+						Direction ahead = Direction.fromYRot(arena.yaw());
+						Direction side = ahead.getClockWise();
+						BlockPos wall = arena.standAt().relative(ahead, 6);
+						for (int across = -2; across <= 2; across++) {
+							for (int up = 0; up < 2; up++) {
+								server.overworld().setBlockAndUpdate(wall.relative(side, across).above(up), Blocks.STONE_BRICKS.defaultBlockState());
+							}
+						}
+						BlockPos behind = wall.relative(ahead);
+						run.fight().placeLyingBomb(behind, BombTier.GEWONE_TNT);
+						BlockPos look = behind.relative(side, 4);
+						server.getPlayerList().getPlayers().getFirst()
+								.teleportTo(server.overworld(), look.getX() + 0.5, look.getY(), look.getZ() + 0.5, Set.of(), arena.yaw(), 0F, true);
+						return behind;
+					});
+					context.waitTicks(3);
+					context.getInput().lookAt(bomb);
+					context.waitTicks(5);
+					check(world.getServer().computeOnServer(server -> tafelBoem().run(level).orElseThrow().fight().lyingBombs().contains(bomb)),
+							"the bomb lies behind the wall");
+					context.takeScreenshot("r1.3-01-lying-bomb");
+				}
 				check(music(context).equals(TRACKS.get(level)), "arena " + level + " plays " + TRACKS.get(level) + ", not " + music(context));
 
 				if (level == FightLevel.MAKKELIJK) {
 					leftOver[0] = leaveItem(world, level);
 				}
 				if (level == FightLevel.GEMIDDELD) {
+					// The walk in carried the kid up against the build corner's chest, and R1.3's cover rule makes the chest stop
+					// bombs like any block. Out in the open a thrown bomb must root him; his first comes 3 s after he appears.
+					standInTheOpen(world, level);
 					context.waitForScreen(QuestionScreen.class);
+					check(pickedUp(world, level) == 0, "a bomb Graaf Fout threw rooted the kid, he did not pick one up");
 					answerQuestion(context);
 					context.waitTicks(24);
 					context.takeScreenshot("r1-05-yeet-in-arena");
+				}
+				if (level == FightLevel.MOEILIJK) {
+					// R1.3: a bomb he dodged lies where it fell, and walking into it asks the question without a throw.
+					world.getServer().runOnServer(server -> {
+						ServerPlayer kid = server.getPlayerList().getPlayers().getFirst();
+						BlockPos next = Direction.Plane.HORIZONTAL.stream()
+								.map(direction -> kid.blockPosition().relative(direction))
+								.filter(pos -> server.overworld().getBlockState(pos).isAir())
+								.findFirst().orElseThrow();
+						tafelBoem().run(level).orElseThrow().fight().placeLyingBomb(next, BombTier.GEWONE_TNT);
+					});
+					context.waitForScreen(QuestionScreen.class);
+					check(pickedUp(world, level) == 1, "the kid picked up the bomb lying next to him");
+					answerQuestion(context);
 				}
 				walkOut(context, world, level);
 			}
@@ -196,6 +244,22 @@ public class WorldClientGameTest implements FabricClientGameTest {
 
 	private static List<Entity> hubEntities(MinecraftServer server, Predicate<Entity> which) {
 		return server.overworld().getEntities((Entity) null, aabb(tafelBoem().hub().bounds()), which);
+	}
+
+	/** How many lying bombs the kid has picked up in this level's fight. */
+	private static int pickedUp(TestSingleplayerContext world, FightLevel level) {
+		return world.getServer().computeOnServer(server -> tafelBoem().run(level).orElseThrow().fight()
+				.tally(server.getPlayerList().getPlayers().getFirst().getUUID()).pickedUp());
+	}
+
+	/** Puts the kid on open ground, 8 blocks beside the middle of the arena: 10 blocks or more from the chest and the bell. */
+	private static void standInTheOpen(TestSingleplayerContext world, FightLevel level) {
+		world.getServer().runOnServer(server -> {
+			PlacedArea arena = tafelBoem().run(level).orElseThrow().arena();
+			BlockPos spot = BlockPos.containing(arena.middle()).relative(Direction.fromYRot(arena.yaw()).getClockWise(), 8);
+			server.getPlayerList().getPlayers().getFirst()
+					.teleportTo(server.overworld(), spot.getX() + 0.5, arena.standAt().getY(), spot.getZ() + 0.5, Set.of(), arena.yaw(), 0F, true);
+		});
 	}
 
 	/** Drops an item in a corner of the arena, away from the kid's path and from where Graaf Fout's booms go. */

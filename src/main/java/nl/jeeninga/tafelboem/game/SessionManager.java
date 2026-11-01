@@ -261,19 +261,29 @@ public final class SessionManager {
 				it.remove();
 				continue;
 			}
+			if (player.isDeadOrDying()) {
+				// Died while answering (R1.3, Normal or Hard): the question goes, or the pin would pull the respawned kid back.
+				endQuestion(it, player, session);
+				continue;
+			}
 
 			RootLock.pin(player, session.anchor());
 			int age = session.tickAge();
 			int timeout = session.state() == QuizSession.State.ASKING ? ANSWER_TIMEOUT_TICKS : CORRECTION_TIMEOUT_TICKS;
 			if (age > timeout) {
-				it.remove();
-				RootLock.release(player);
-				BombEffects.fizzle(player.level(), session.bombPos());
-				client.send(player, QuizS2C.close(session.id()));
+				endQuestion(it, player, session);
 			} else if (session.state() == QuizSession.State.ASKING && age % 5 == 0) {
 				BombEffects.fuseTick(player.level(), session.bombPos(), 100);
 			}
 		}
+	}
+
+	/** The question goes without an answer: no pin, no bomb, no screen. */
+	private void endQuestion(Iterator<QuizSession> it, ServerPlayer player, QuizSession session) {
+		it.remove();
+		RootLock.release(player);
+		BombEffects.fizzle(player.level(), session.bombPos());
+		client.send(player, QuizS2C.close(session.id()));
 	}
 
 	private void tickBooms() {

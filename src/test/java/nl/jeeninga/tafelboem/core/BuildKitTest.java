@@ -28,14 +28,27 @@ class BuildKitTest {
 	}
 
 	@Test
-	void nothingThatHurtsFloodsOrBurnsIsInTheKit() {
+	void nothingThatFloodsBurnsOrExplodesIsInTheKit() {
 		for (BuildKit.Stack stack : BuildKit.CHEST) {
 			for (String leftOut : BuildKit.LEFT_OUT) {
 				assertFalse(stack.item().contains(leftOut), stack.item() + " is left out on purpose (" + leftOut + ")");
 			}
 		}
-		assertTrue(BuildKit.LEFT_OUT.containsAll(List.of("tnt", "lava", "water", "flint_and_steel", "cactus", "sweet_berries", "magma",
-				"dispenser", "_bed", "spawn_egg")));
+		assertEquals(List.of("tnt", "lava", "water", "flint_and_steel", "fire_charge", "dispenser", "_bed", "spawn_egg"), BuildKit.LEFT_OUT);
+	}
+
+	@Test
+	void theKitHoldsTheTrapsAndWhatTheyGrowOn() {
+		for (String trap : List.of("cactus", "sand", "sweet_berries", "dirt", "magma_block", "cobweb")) {
+			assertEquals(16, BuildKit.CHEST.stream().filter(stack -> stack.item().equals(trap)).findFirst().orElseThrow().count(), trap);
+		}
+	}
+
+	@Test
+	void theTrapsTookThreeWoolsPlaceAndTheChestIsFull() {
+		List<String> items = BuildKit.CHEST.stream().map(BuildKit.Stack::item).toList();
+		assertEquals(BuildKit.SLOTS, items.size());
+		assertEquals(List.of("red_wool", "yellow_wool", "light_blue_wool"), items.stream().filter(item -> item.endsWith("_wool")).toList());
 	}
 
 	@Test

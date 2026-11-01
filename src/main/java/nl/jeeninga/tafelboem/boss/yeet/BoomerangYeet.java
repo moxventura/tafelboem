@@ -50,4 +50,10 @@ final class BoomerangYeet extends Yeet {
 		}
 		return boss.onGround();
 	}
+
+	/** Only the drop in front of the kid, not the way out and back. */
+	@Override
+	protected boolean mayBePulled() {
+		return ticks() > OUT_TICKS && !boss.isNoGravity();
+	}
 }

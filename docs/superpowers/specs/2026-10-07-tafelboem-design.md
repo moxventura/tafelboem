@@ -922,8 +922,9 @@ minute or adding frustration.
 
 ### Logs for the evaluation
 - The fight line (`FightRecord`) gets per kid: `dodged` (bombs thrown at them that missed),
-  `pickedUp` (lying bombs they walked into), `trapped` (trap landings after their kicks, by kind).
-  Older lines without them still read.
+  `pickedUp` (lying bombs they walked into), `trapped` (trap landings after their kicks, by kind);
+  and `difficulty`, the world's Minecraft difficulty (peaceful, easy, normal or hard), so deaths can
+  be read against the safety. Older lines without them still read.
 - The yeet line gets `trap=<kind>` when a trap pulled him in.
 - `died` is an outcome next to `left` in the fight and session lines.
 - Answers per minute keeps counting from his arrival, comparable with playtest 4.

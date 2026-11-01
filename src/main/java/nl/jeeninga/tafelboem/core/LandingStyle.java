@@ -21,10 +21,23 @@ public enum LandingStyle {
 	/** The Gewone TNT's signature: a soot face with white eyes, coughing smoke. */
 	SOOT(40),
 	/** The Kippenbom's signature: angry chickens chase him round. */
-	CHASED(40);
+	CHASED(40),
+	/** Landed in a cactus or a berry bush: hops round, "Au au au!" (R1.3). */
+	PRICKLED(40),
+	/** Landed in a cobweb: stuck and wriggling for 2 s (R1.3). */
+	WEBBED(40),
+	/** Landed on a slime block: one more bounce (R1.3). */
+	BOING(30);
 
-	/** The landings after any bomb; the others are signatures. */
+	/** The landings after any bomb; the others are signatures, or only a trap gives them. */
 	public static final List<LandingStyle> GENERIC = List.of(DIZZY, HEAD_FIRST, PANCAKE, FRANTIC_RUN);
+
+	/**
+	 * The landings only a trap gives; neither generic nor a bomb's signature. A landing from a trap is
+	 * never logged as a signature, not even a lying bomb's {@link #SOOT} (which stays the Gewone TNT's
+	 * signature): the fight reports that itself.
+	 */
+	public static final List<LandingStyle> TRAPS = List.of(PRICKLED, WEBBED, BOING);
 
 	private final int ticks;
 
@@ -37,7 +50,11 @@ public enum LandingStyle {
 	}
 
 	public boolean isSignature() {
-		return !GENERIC.contains(this);
+		return !GENERIC.contains(this) && !TRAPS.contains(this);
+	}
+
+	public boolean isTrap() {
+		return TRAPS.contains(this);
 	}
 
 	/** Running from chickens looks like running round in a panic, so the two count as one for "never twice in a row". */

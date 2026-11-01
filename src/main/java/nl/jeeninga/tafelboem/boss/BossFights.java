@@ -5,11 +5,16 @@ import java.util.List;
 
 import org.jspecify.annotations.Nullable;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
+import nl.jeeninga.tafelboem.config.TafelBoemConfig;
 import nl.jeeninga.tafelboem.core.ArenaBox;
+import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.game.SessionManager;
 import nl.jeeninga.tafelboem.registry.ModEntities;
@@ -25,6 +30,11 @@ public final class BossFights {
 
 	public BossFights(SessionManager sessions) {
 		this.sessions = sessions;
+	}
+
+	/** The parent's switches the fights play with. */
+	public TafelBoemConfig config() {
+		return sessions.config();
 	}
 
 	public boolean hasFightNear(ServerLevel level, Vec3 position) {
@@ -64,6 +74,34 @@ public final class BossFights {
 	public void end(BossFight fight) {
 		fight.end();
 		fights.remove(fight);
+	}
+
+	/**
+	 * A kid hit or used a bomb block. When it is a fight's lying bomb, that counts as touching it:
+	 * its question comes if one can start now.
+	 *
+	 * @return true when it is a lying bomb, so nothing else may happen to it: no breaking, no free-play question
+	 */
+	public boolean touchLyingBomb(ServerPlayer kid, BlockPos pos) {
+		for (BossFight fight : fights) {
+			if (fight.boss().level() == kid.level() && fight.hasLyingBomb(pos)) {
+				fight.pickUp(kid, pos);
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** A player is about to break a block. A lying bomb is touched instead of broken, so it never drops as an item. */
+	public boolean mayBreak(Player player, BlockPos pos) {
+		return !(player instanceof ServerPlayer kid && touchLyingBomb(kid, pos));
+	}
+
+	/** A kid right-clicked a bomb block: a lying bomb is touched; any other starts its free-play question. */
+	public void useBombBlock(ServerPlayer kid, BlockPos pos, BombTier tier) {
+		if (!touchLyingBomb(kid, pos)) {
+			sessions.startFromBlock(kid, tier, pos);
+		}
 	}
 
 	public void tick() {

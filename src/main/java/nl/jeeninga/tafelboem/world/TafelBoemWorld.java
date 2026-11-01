@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 
 import org.jspecify.annotations.Nullable;
 
@@ -20,8 +21,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.util.Mth;
+import net.minecraft.world.Difficulty;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Blocks;
@@ -44,6 +48,7 @@ import nl.jeeninga.tafelboem.core.BuildRecord;
 import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.core.FightRecord;
 import nl.jeeninga.tafelboem.core.FightTally;
+import nl.jeeninga.tafelboem.core.SafetyFloor;
 import nl.jeeninga.tafelboem.core.Stars;
 import nl.jeeninga.tafelboem.game.BombEffects;
 import nl.jeeninga.tafelboem.game.ProtectedAreas;
@@ -76,6 +81,7 @@ public final class TafelBoemWorld {
 	private final Map<FightLevel, ArenaRun> runs = new EnumMap<>(FightLevel.class);
 	private final List<Consumer<BuildRecord>> buildListeners = new ArrayList<>();
 	private LongSupplier clock = System::currentTimeMillis;
+	private Supplier<Difficulty> difficulty;
 	private final Map<UUID, QueuedDoor> queuedDoors = new LinkedHashMap<>();
 	private final Map<UUID, Integer> doorCooldown = new HashMap<>();
 	private final Map<String, int[]> bestStars = new HashMap<>();
@@ -112,6 +118,7 @@ public final class TafelBoemWorld {
 		this.client = client;
 		this.catchEveryone = catchEveryone;
 		this.buildPhase = buildPhase;
+		this.difficulty = level::getDifficulty;
 	}
 
 	/** On every world load: the world rules, a fresh hub, and the spawn in the middle of its spot. */
@@ -141,6 +148,34 @@ public final class TafelBoemWorld {
 	/** Where run and fight times come from: wall time in a real world; GameTests, whose server runs faster than 20 ticks a second, use game ticks. */
 	public void useClock(LongSupplier clock) {
 		this.clock = clock;
+	}
+
+	/** Whose difficulty decides arena safety: the world's own; GameTests choose one, as they can't change the shared server's. */
+	public void useDifficulty(Supplier<Difficulty> difficulty) {
+		this.difficulty = difficulty;
+	}
+
+	/**
+	 * R1.3's arena safety, before damage lands on a player: on Peaceful and Easy a kid in an arena run
+	 * keeps half a heart, whatever hurts them; the rest of the hit is taken off. Damage that ignores
+	 * invulnerability ({@code /kill}, the void) stays vanilla.
+	 *
+	 * @return false when this hit is cancelled; a smaller one may have landed instead
+	 */
+	public boolean allowDamage(ServerPlayer kid, DamageSource source, float amount) {
+		if (kid.level() != level || source.is(DamageTypeTags.BYPASSES_INVULNERABILITY) || runOf(kid).isEmpty()
+				|| !SafetyFloor.protects(fights.config().arenaSafety, difficulty.get().getId())) {
+			return true;
+		}
+		float allowed = SafetyFloor.allowed(kid.getHealth(), amount);
+		if (allowed >= amount) {
+			return true;
+		}
+		if (allowed > 0F) {
+			// This smaller hit comes back through ALLOW_DAMAGE and passes (in a GameTest nothing hooks it in, so it lands at once).
+			kid.hurtServer(level, source, allowed);
+		}
+		return false;
 	}
 
 	/** Hears every build phase as it ends: he came, or everyone left. */
@@ -193,10 +228,7 @@ public final class TafelBoemWorld {
 		}
 		doorCooldown.put(player.getUUID(), ticks + DOOR_COOLDOWN_TICKS);
 		if (door == 0) {
-			if (!fighting.isReturning() && TafelBoem.config().stars) {
-				// Playtest 3 (P28): the kids didn't know that leaving gives no stars.
-				client.chat(player, Component.translatable("tafelboem.message.left_no_stars"));
-			}
+			tellNoStars(player, fighting);
 			leave(player, fighting, FightRecord.LEFT);
 			teleport(player, hub.standAt(), hub.yaw());
 			return;
@@ -281,10 +313,12 @@ public final class TafelBoemWorld {
 			}
 		}
 
-		// A kid who is somewhere else now (a command, another dimension) has left the fight.
+		// A kid who died (R1.3, Normal or Hard) or is somewhere else now (a command, another dimension) has left the fight.
 		for (UUID id : run.kids()) {
 			ServerPlayer kid = level.getServer().getPlayerList().getPlayer(id);
-			if (kid != null && !stillIn(run, kid)) {
+			if (kid != null && kid.isDeadOrDying()) {
+				died(kid, run);
+			} else if (kid != null && !stillIn(run, kid)) {
 				leave(kid, run, FightRecord.LEFT);
 			}
 		}
@@ -405,6 +439,19 @@ public final class TafelBoemWorld {
 		run.remove(kid.getUUID());
 	}
 
+	/** Dying in an arena counts as leaving: no stars, the same line as the exit door (P28), "died" in the fights log. */
+	private void died(ServerPlayer kid, ArenaRun run) {
+		tellNoStars(kid, run);
+		leave(kid, run, FightRecord.DIED);
+	}
+
+	/** Playtest 3 (P28): the kids didn't know that leaving gives no stars. After a win they have them already. */
+	private void tellNoStars(ServerPlayer kid, ArenaRun run) {
+		if (!run.isReturning() && TafelBoem.config().stars) {
+			client.chat(kid, Component.translatable("tafelboem.message.left_no_stars"));
+		}
+	}
+
 	public void onDisconnect(ServerPlayer player) {
 		runOf(player).ifPresent(run -> {
 			leave(player, run, FightRecord.DISCONNECTED);
@@ -429,7 +476,8 @@ public final class TafelBoemWorld {
 		// The record's timestamp is a date, not a duration: always wall time.
 		fightLog.append(new FightRecord(System.currentTimeMillis(), kid.getPlainTextName(), run.level().number(), run.arena().name(), result,
 				tally.answers(), tally.wrong(), tally.dontKnow(), tally.chickenOut(), stars, run.fightSeconds(now), run.everyone().size(),
-				TafelBoem.version(), tally.farthestYeet(), run.buildSeconds(now)));
+				TafelBoem.version(), tally.farthestYeet(), run.buildSeconds(now), tally.dodged(), tally.pickedUp(), tally.trapped(),
+				difficulty.get().getSerializedName()));
 	}
 
 	/** Falling is never fatal: back to the arena's arrival spot in a fight, otherwise to the hub. */

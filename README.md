@@ -28,8 +28,8 @@ go/no-go (see the spec):
 | **R1 "Kies je level"** | TafelBoem world with a hub and a door per level, levels 1–3 with their own tables and bombs, arenas (random per level, replaceable by the kids' own), stars; from 1.0.2 hearts, food, music per level | ✅ published (1.0.x), playtest 3 played on 2026-10-31, go/no-go still open |
 | **R1.1 "Meer yeets"** | A flight plus a landing per hit (wall splat, head-first, pancake, running round, a landing per bomb), fast answers and streaks yeet Graaf Fout further with a record per kid, the counting Kippenbom | ✅ 1.1.x, played in playtest 3 on 2026-10-31, go/no-go still open |
 | Faster tests | Nothing new for the kids: the same tests, quicker to run | ✅ done on 2026-10-26 (merged, no publish) |
-| **R1.2 "Bouwen"** | A build phase before every fight: the kids build the plain arena from a chest of blocks, with a countdown and a bell, and then Graaf Fout comes | built, not published yet |
-| R1.3 "Dekking" | Terrain in the fight: dodging behind blocks the kids built, and traps Graaf Fout can land in | backlog, after R1.2 |
+| **R1.2 "Bouwen"** | A build phase before every fight: the kids build the plain arena from a chest of blocks, with a countdown and a bell, and then Graaf Fout comes | ✅ published (1.2.0) on 2026-11-01, playtest 4 still to come |
+| **R1.3 "Dekking"** | Terrain in the fight: dodging behind blocks the kids built, and traps Graaf Fout can land in | built, not published yet (it waits for playtest 4) |
 | R2 "Leren dat blijft" | Fact states, spaced practice, Tafelkaart, parent report, daily limit, "Kies je bom", leg-kick animation | backlog |
 | R3 "Meer boem" | Bombs 4–9, craters, particle shows, lives, co-op rescue | backlog |
 | R4 new villains | Tante Toverfout, Robo-Rekenaar 3000 | backlog |
@@ -72,6 +72,13 @@ back on the next Play.
   counts only when Minecraft itself rings it: right-click its front or back, not its top, and not
   while sneaking with something in your hand. His bombs can blow holes in what you built. The next
   time, the arena is empty again.
+- **Cover and traps (1.3).** Graaf Fout's bombs only get you when they land within 2 blocks of
+  you: run, or hide behind what you built. A bomb that misses lies there (he says so); walk into it
+  and you get its sum after all, and either of you can. After a right answer he may land in a trap
+  within 4 blocks: cactus, berry bush, magma, cobweb, slime or a lying bomb. That's one more hit, and
+  the trap is gone. The chest has cactus with sand, berries with dirt, magma and cobweb. On Peaceful
+  and Easy nothing in an arena takes your last half heart; on Normal and Hard you can die, and that
+  counts as leaving.
 - **Stars.** A win is ★, a win with at most 2 wrong answers is ★★ and a win without a wrong answer
   is ★★★. Only typed wrong answers count: "?" and ESC don't. The best result per level counts. Stand
   within 3 blocks of a door in the hub to see your own stars for that level. Set `stars` to `false`
@@ -108,7 +115,8 @@ back on the next Play.
 - **Other worlds.** Every other world still works as before: the summon item starts the R0.1 fight
   with all tables, and `/tafelboem arena` still sets one up. In a TafelBoem world the summon item
   only says to use the doors. The R1.1 yeets, landings, boost and counting Kippenbom work there too;
-  records are only kept in a TafelBoem world.
+  records are only kept in a TafelBoem world. Dodging, lying bombs and traps belong to the arenas
+  behind the level doors: a fight from the summon item plays as before.
 
 Each fight is written to `tafelboem/fights-<player>.jsonl` in the world folder, next to the answer
 log. `/tafelboem stats` shows a line per level, for example "Medium: ★★☆, 3 of 4 won".
@@ -258,6 +266,9 @@ version, and the mod warns when they don't match, even when two builds are only 
 | `bombSignatures` | `true` | Each bomb's own landing every other kick: sore toe, soot face, chasing chickens |
 | `arenaMusic` | `true` | Each level's arena plays its own track. `false` keeps the normal music; applies from the next arena a kid walks into |
 | `buildPhase` | `true` | Through a level door the kids first build in the plain arena, with a double chest of blocks and a bell. Graaf Fout comes when the countdown in the boss bar runs out (5, 4 or 3 minutes by level) or 10 seconds after someone rings the bell. `false` is 1.1.2: a random arena, and he comes 3 seconds after the first kid |
+| `dodging` | `true` | A bomb that lands more than 2 blocks from the kid it was thrown at lies still until a kid walks into it. `false` is 1.2.0: wherever it lands, that kid answers |
+| `traps` | `true` | After a right answer Graaf Fout lands in the nearest trap within 4 blocks for one more hit, and the trap goes. `false`: no pull and no bonus; the chest keeps the trap blocks |
+| `arenaSafety` | `true` | On Peaceful and Easy nothing takes a kid in an arena below half a heart. `false`: vanilla damage everywhere, on every difficulty |
 
 `/tafelboem stats [player]` shows accuracy and typical time per table, the hardest facts, how often a
 missed fact is right when it comes back, and how often "?" was probably pressed by accident.

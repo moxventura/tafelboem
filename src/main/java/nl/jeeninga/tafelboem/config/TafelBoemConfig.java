@@ -73,6 +73,27 @@ public final class TafelBoemConfig {
 	 */
 	public boolean buildPhase = true;
 
+	/**
+	 * R1.3: in an arena, a bomb that lands more than 2 blocks from the kid it was thrown at (they ran, or the build
+	 * stopped it) lies still until a kid walks into it, and then asks its sum. Off, as 1.2.0: wherever it lands, its
+	 * kid answers. A fight outside a TafelBoem world always plays as 1.2.0.
+	 */
+	public boolean dodging = true;
+
+	/**
+	 * R1.3: after a right answer Graaf Fout lands in the nearest trap within 4 blocks of where he would land
+	 * (cactus, sweet berry bush, magma block, cobweb, slime block, a lying bomb) for one more hit, and the trap
+	 * goes. Off: no pull and no bonus; the trap blocks stay in the chest.
+	 */
+	public boolean traps = true;
+
+	/**
+	 * R1.3: on Peaceful and Easy nothing takes a kid in an arena (build phase and fight) below half a heart.
+	 * On Normal and Hard damage is vanilla, and dying in an arena counts as leaving. Off: vanilla damage
+	 * everywhere, on every difficulty. Our booms and wrong answers never hurt that much either way.
+	 */
+	public boolean arenaSafety = true;
+
 	public static TafelBoemConfig load(Path file) {
 		if (!Files.exists(file)) {
 			TafelBoemConfig defaults = new TafelBoemConfig();

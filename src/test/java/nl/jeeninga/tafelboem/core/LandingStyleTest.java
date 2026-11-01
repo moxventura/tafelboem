@@ -17,7 +17,18 @@ class LandingStyleTest {
 		Set<LandingStyle> signatures = Arrays.stream(BombTier.values()).map(LandingStyle::signatureOf).collect(Collectors.toSet());
 		assertEquals(BombTier.values().length, signatures.size());
 		signatures.forEach(signature -> assertTrue(signature.isSignature(), signature.name()));
-		assertEquals(EnumSet.complementOf(EnumSet.copyOf(LandingStyle.GENERIC)), EnumSet.copyOf(signatures));
+		EnumSet<LandingStyle> neither = EnumSet.copyOf(LandingStyle.GENERIC);
+		neither.addAll(LandingStyle.TRAPS);
+		assertEquals(EnumSet.complementOf(neither), EnumSet.copyOf(signatures));
+	}
+
+	@Test
+	void trapLandingsAreNoSignatures() {
+		for (LandingStyle trap : LandingStyle.TRAPS) {
+			assertTrue(trap.isTrap(), trap.name());
+			assertFalse(trap.isSignature(), trap.name());
+		}
+		assertFalse(LandingStyle.SOOT.isTrap(), "the lying bomb borrows the soot face, which stays a signature");
 	}
 
 	@Test
