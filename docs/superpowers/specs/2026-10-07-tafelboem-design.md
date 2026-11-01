@@ -37,7 +37,8 @@ R0.1 playtest 2 on 2026-10-14; see [`docs/evaluations/`](../../evaluations/). De
 - **Penalties escalate with tier.** Wrong answers are harmless, then hurt, then cause a silly
   death at tiers 7–9. **3 lives per fight.** Items are always kept. A wrong answer is always
   shorter and less fun than a right one.
-- **No timer in normal play.** A **hardcore mode** with "fuse burns while thinking" unlocks
+- **No timer on answering in normal play** (R1.2's build phase has a countdown, on building, not
+  on a sum). A **hardcore mode** with "fuse burns while thinking" unlocks
   after beating the final boss (Robo-Rekenaar 3000, level 9).
 - **Daily dose.** The bosses go to sleep after about 15 min or 60 fight questions per day.
   Free TNT play and the practice field stay open. There are no guilt messages and no streaks that
@@ -71,7 +72,8 @@ multiplayer sessions and a one-step deploy to every PC are part of R0.
 | **R1 "Kies je level"** | see the R1 scope below: the TafelBoem world with a hub and a door per level; levels 1–3 (easy, medium, hard) with their own tables, bombs and hits; arenas built from code or from structure templates, picked at random per level; stars | With a world of their own, a hub and three levels to choose from, the kids keep asking to play, and over time they pick harder levels and collect stars | see the R1 evaluation below |
 | **R1.1 "Meer yeets"** | see the R1.1 scope below: a flight plus a landing per hit (wall splat, head-first, pancake, frantic running, bomb signatures), the full yeet-o-meter (fast answers and streaks yeet further, a personal best), the counting Kippenbom; the kids' own arenas as they come | More variety keeps them coming back | see the R1.1 evaluation below |
 | *Faster tests, right after R1.1* | nothing new for the kids (see the faster-tests scope below): the same tests, quicker; a quick and a fights group (`runGameTest` runs every test on one server); tests that count entities count only their own | A suite that is quicker to run keeps releases small and cheap to check | see the faster-tests targets below; no test loses what it proves |
-| R1.2 *(after R1.1)* | experiments behind toggles: dodgeable bombs and "Graaf Fout eats your mistake" | Dodging and healing don't cut answers per minute or add frustration | answers per minute vs R1, frustration tally |
+| **R1.2 "Bouwen"** | see the R1.2 scope below: a build phase before every fight: the plain arena, a double chest with a building kit and a bell, a countdown in the boss bar (5, 4 or 3 minutes by level), ring the bell and he comes in 10 s; then the fight as today, craters in the build included | Building first makes a round more fun, without cutting answers per minute in the fight below playtest 3 | see the R1.2 evaluation below: the `TafelBoem build:` lines (time built, bell or not, what they placed), answers per minute from his arrival, and asking whether building was fun |
+| R1.3 "Dekking" *(after R1.2)* | terrain in the fight: a built block between Graaf Fout and the kid stops a bomb, and running away dodges too; a dodged bomb lies still until a kid walks into it; after a yeet he can land in a trap the kids built (magma, cactus, berry bush, fire, slime, cobweb, a dodged bomb) for +1 hit | Dodging and traps make the build count in the fight, without cutting answers per minute or adding frustration | answers per minute vs R1.2, dodges and trap landings per fight, frustration tally |
 | **R2 "Leren dat blijft"** | fact states and spaced picker, a Tafelkaart screen (GUI), parent report, the daily limit, "Kies je bom", the full leg kick in third person | The practice spreads out and facts move toward Fluent | 2 weeks of logs: % Accurate/Fluent up, median time down, sessions spread over days, kids still asking |
 | **R3 "Meer boem"** | bombs 4–9, levels 4–9, particle choreographies, craters, escape aids, lethal tiers with 3 lives, inventory stash, signature reactions for bombs 4–9, co-op rescue sums, the lobby extras in the hub (Tafelkaart wall, trophy wall, animal pen) | Escalation keeps them climbing without frustration | level reached per week, favourite bombs, no tears at levels 7–9, FPS OK on the woonkamer PC |
 | R4 new villains *(when they ask for it)* | Tante Toverfout, then Robo-Rekenaar 3000 | Pulled by the kids beating Graaf Fout | |
@@ -291,7 +293,9 @@ Decided with the parent on 2026-10-14, after R0.1 playtest 2 (P-numbers refer to
 `docs/evaluations/R0.1.md`). R1 combines the level choice with the TafelBoem world, its hub and its
 arenas, because that is what the kids asked for: an easy way to choose the difficulty (P4) and a
 "server-style" world instead of creative superflat (P11). The yeet catalogue, the full yeet-o-meter
-and the counting Kippenbom moved to R1.1; the two toggle experiments to R1.2.
+and the counting Kippenbom moved to R1.1; the two toggle experiments were planned for R1.2 (on
+2026-11-01 dodgeable bombs moved on to R1.3 and "Graaf Fout eats your mistake" was dropped for now,
+see the backlog).
 
 **Hypothesis:** with a world of their own, a hub to come back to and three levels to choose from,
 the kids keep asking to play, and over time they pick harder levels and collect stars.
@@ -471,7 +475,9 @@ The parent played 1.0.1 through once himself; findings P18–P21 are in `docs/ev
 - the kids' own arena: a later 1.0.Z build, once they have built one
 - R1.1: the yeet catalogue, the full yeet-o-meter (personal best; fast answers and streaks yeet
   further), the counting Kippenbom
-- R1.2: dodgeable bombs and "Graaf Fout eats your mistake", behind toggles
+- R1.2: the two toggle experiments as planned then; on 2026-11-01 R1.2 became the build phase
+  ("Bouwen"), dodgeable bombs moved to R1.3 ("Dekking") and "Graaf Fout eats your mistake" was
+  dropped for now (see the backlog)
 - the learning model (R2), and P13: the summon item isn't needed in the TafelBoem world, and its
   cause is still open
 
@@ -687,7 +693,7 @@ starting world type (a client mixin) or a new button (not vanilla):
   brings a fresh one back.
 - A preserved file never leaves the index (packwiz would delete it on the PCs); `Packwiz.write`
   refuses.
-- Building arenas in-game without cheats is for later (P27).
+- Building in-game without cheats is R1.2's build phase (P27).
 
 In the same patch:
 - **No stars after leaving (P28).** A kid who leaves through the exit door before Graaf Fout is
@@ -702,6 +708,124 @@ These two are fixes to R1 and R1.1 behaviour, so they get no switch of their own
 
 **Hypothesis:** a kid can start a TafelBoem game without help, knows that leaving costs the stars,
 and sees more different landings. Checked at the next playtest (P26, P28, P24).
+
+## R1.2 "Bouwen" (detailed scope)
+
+Decided with the parent on 2026-11-01, after playtest 3 (P-numbers refer to
+`docs/evaluations/R1.md` and `R1.1.md`). The kids couldn't build an arena without cheats (P27) and
+wanted to dodge (P20). The parent wants terrain to become part of the game: first the kids build the
+arena, after a while Graaf Fout appears. That is two ideas, so they are split so that each playtest
+tests one thing. R1.2 is the build phase only, with the fight as it is. R1.3 "Dekking" puts the
+terrain into the fight: dodging behind blocks, traps he can land in (see the release table and the
+backlog). The two toggle experiments that stood here before moved: dodgeable bombs into R1.3,
+"Graaf Fout eats your mistake" is dropped for now (see the backlog for why).
+
+The parent chose to skip a playtest of 1.1.1 and 1.1.2, so their changes (the camera nudge P29, the
+ready-made world P26, the leave message P28, fewer dizzy spells in a row P24) reach the kids together
+with R1.2. Their effects can't be told apart from R1.2's; the evaluation says so.
+
+**Hypothesis:** building first makes a round more fun, without cutting answers per minute in the
+fight below playtest 3 (Kid A 4.7, Kid B 3.9; inside the fights 5.0 and 4.0).
+
+**A countdown, on purpose.** `AGENTS.md` says "No timers in normal play". The build phase has a
+countdown: the parent's explicit choice. It is a timer on building, never on answering a sum. The
+implementation rewords the rule to "no timer on answering a sum; the build phase has a countdown".
+
+### The course of a round
+1. **Entering.** A door clears the slot and places the arena fresh, as in R1, but always the plain
+   arena from code (`ArenaShape`: floor, obsidian walls on obsidian, exit door). The templates and
+   the random pick (`ArenaCatalog`) stay in the code and aren't used while the build phase is on.
+   Near the arrival spot, opposite the exit door, stand a double chest (54 slots) with the building
+   kit and a vanilla bell.
+2. **The build phase.** Graaf Fout doesn't come 3 s after the first kid (`START_DELAY_TICKS`); the
+   run's `startAt` is the build time: **5 minutes on Makkelijk, 4 on Gemiddeld, 3 on Moeilijk.**
+   The boss bar that shows his health in the fight (`Participants`) shows the countdown instead:
+   *"Graaf Fout komt over 4:59"*. The kids build what they like with the chest; nothing else in the
+   arena changes.
+3. **The bell.** Ringing the bell sets the countdown to at most 10 s for everyone in that arena:
+   `min(remaining, 10 s)`, so it never makes it longer. On LAN any kid in the arena can ring it.
+   The arena's chat says who rang it, *"<kid> luidt de bel! Graaf Fout komt over 10 seconden."*,
+   and counts the last 10 s down: 10, 5, 3, 2, 1. The same five lines come when the time runs out
+   on its own.
+4. **Chat stays in the arena.** Every build-phase line goes only to the kids in that run, never
+   LAN-wide. Today's chat already works that way: Graaf Fout's lines reach the boss-bar players
+   (`Participants.say`), the rest goes to one kid.
+5. **He appears.** At zero he appears in the middle of the arena and the fight runs as in 1.1.2:
+   bombs land at the kid's feet, kicked bombs blow craters, in the build too, never within 3 blocks
+   of a kid (`PlayerSafeExplosion`). Slime and honey do nothing special to him in R1.2: his flights
+   and landings are scripted. Bouncing him is R1.3.
+6. **After the fight.** Everyone goes back to the hub as today. The build is gone: the next entry
+   of that door clears the slot, as it clears the craters now. Keeping builds (the structure-block
+   route) is a possible later step, not R1.2.
+7. **Joining.** A kid who walks through the door during the build phase joins the run and sees the
+   same countdown. After he appeared they join the fight as today.
+8. **Leaving.** Leaving through the exit door during the build phase counts as `left`: no stars,
+   the 1.1.2 chat line (P28), and the fights log gets its `left` line as today, with 0 answers.
+   When the last kid leaves, the run ends without a fight; he never appears.
+9. **No new block protection.** In survival the kids can break arena blocks by hand (obsidian is
+   too slow by hand to matter). Digging through the floor ends in the void catch, which brings them
+   back to the arrival spot, as today.
+10. **Switch `buildPhase`, default on.** Off is 1.1.2's behaviour: random arenas, no chest or bell,
+    he comes 3 s after the first kid.
+
+### The chest
+A double chest, 54 slots, filled in groups so the kids can find things. The exact list lives in one
+place in `core/`, so a unit test counts its slots.
+
+| Group | What | How much |
+|---|---|---|
+| Building | stone bricks, oak planks, glass, stairs, slabs, scaffolding, ladders, fences and a gate, doors, trapdoors | full stacks of stone bricks, planks and glass; half stacks of the rest |
+| Colour | wool in 6 colours, stained glass, concrete | half stacks |
+| Bouncing and sticking | slime blocks, honey blocks | half stacks |
+| Redstone | levers, buttons, pressure plates, redstone dust, repeaters, pistons and sticky pistons, redstone lamps, note blocks, a target block, an observer | 2–8 each |
+| Light and decoration | lanterns, sea lanterns, end rods, candles, flowers and flower pots, signs, item frames, an armour stand, a banner | 2–8 each |
+| Tools | a stone pickaxe and an axe | 1 each |
+
+- **Enough for two kids for 3–5 minutes.** Whatever a kid doesn't place stays with them; nothing
+  is taken back.
+- **Deliberately left out:** TNT (our bombs are the only explosives), lava, water, flint and steel
+  (fire, floods, a floating arena), cactus, berry bushes and magma (traps belong to R1.3),
+  dispensers (a weapon against him is an R1.3 question), beds, spawn eggs.
+- **Later idea, not R1.2:** rewards that fill the chest with better or cooler blocks.
+
+### Logs for the evaluation
+- A new `TafelBoem build:` line per run: level, build seconds used, bell rung (by whom) or time ran
+  out, blocks placed per kid by block kind, how many kids.
+- The fight's time counts from his arrival, not from entry, so answers per minute stay comparable
+  with playtest 3. The fights log (`FightRecord`) gets a separate field with the build seconds; older
+  lines without it still read, as lines without `farthestYeet` do since 1.1.
+
+### Load contract
+A world reload during the build phase is handled like one during a fight today: the kid logs in
+inside an arena without a run and goes to the hub (`onJoin`); the build is cleared on the next entry
+of that door. The implementation adds two rows to the load-contract table in `AGENTS.md`:
+
+| When | What | Rule |
+|---|---|---|
+| arena entry | chest and bell | placed near the arrival spot, opposite the exit door, the chest filled with the kit |
+| reload mid-build | the build and the run | the kid goes to the hub; the build is cleared on the next entry |
+
+### R1.2 tests
+- **Unit tests:** the build time per level; the bell rule (`min(remaining, 10 s)`, never longer);
+  the countdown text; the kit fits in 54 slots; an old fights-log line without the build seconds.
+- **Game tests:** entry places the double chest with its kit and the bell; a ring brings him 10 s
+  later; leaving during the build phase ends the run without a fight; `buildPhase` off gives 1.1.2's
+  behaviour (a random arena, he comes after 3 s). GameTests can't wait 5 minutes: the build time
+  must be settable for tests, or the tests ring the bell.
+- **Client game test:** a screenshot of the countdown in the boss bar.
+
+**R1.2 evaluation (playtest 4).** Record it in `docs/evaluations/R1.2.md`. The numbers come from
+the `TafelBoem build:` lines (time built, bell or not, what they placed) and answers per minute from
+his arrival (`TafelBoem fight:` and `TafelBoem session:` lines, now without the build time). The
+parent asks each kid *"Was bouwen leuk? Wil je het de volgende keer weer?"* and checks P29, P26,
+P28 and P24 from 1.1.1 and 1.1.2 in the same session, knowing they can't be told apart from R1.2.
+
+**Go when:**
+- each kid says building was fun and wants it again next time
+- answers per minute in the fight, from his arrival, are no lower than playtest 3's (Kid A 5.0,
+  Kid B 4.0 inside the fights), and % right and "?" are no worse
+- the build lines show they built, and the bell or the time ran out without frustration
+- the kids still ask to play
 
 ## Faster tests (detailed scope)
 
@@ -893,16 +1017,27 @@ test and build changes only.
       siblings on LAN see each other kick. This needs a player-model pose plus a payload to the
       other clients. In first person your own legs aren't visible; a boot swinging into view is
       later polish.
-- **Dodgeable bombs (R1.2 experiment, toggle).** The kids wanted to dodge.
-  - A bomb you dodge lies on the ground with a visible fuse.
-  - Running into it starts the question as before.
-  - If the fuse runs out, it pops harmlessly: a soot puff, no question, no damage to the boss.
-  - Damage only comes from answered kicks, so dodging never replaces sums. Watch answers per minute.
+- **Dodgeable bombs (moved into R1.3 "Dekking", decided 2026-11-01).** The kids wanted to dodge
+  (P20). R1.2's build phase gives them the terrain; R1.3 makes it count in the fight.
+  - Dodging both ways: a built block between Graaf Fout and the kid stops a bomb, and running away
+    dodges too, because the bomb aims where the kid stood when he threw.
+  - A dodged bomb lies on the ground with no fuse until a kid walks into it; then the question
+    starts as before. Dodging never costs a sum, and damage only comes from answered kicks, so
+    dodging never replaces sums. Watch answers per minute.
+  - Traps as a landing bonus: only after a yeet (so only after a right answer) can he land in a
+    trap: magma, cactus, a berry bush, fire (these hurt kids too, as in vanilla; the kids choose
+    whether to build them), slime (he bounces), cobweb (he sticks); a dodged bomb he lands on goes
+    off. +1 extra hit, at most one bonus per yeet. No lava.
+  - Proposed safety rule, to settle in R1.3's design: in the arena a kid never drops below half a
+    heart (as for wrong answers), because dying in the arena isn't designed.
 - **"Kies je bom" (R2).** Several bombs lie on the ground and the kid picks which one to run into.
   - A big bomb asks a fact the kid is still learning, deals more damage and gives a bigger yeet.
   - A small bomb asks a fact they know and deals 1 hit.
   - The kid chooses the challenge in the moment; the picker still decides *which* facts come up.
-- **Graaf Fout eats your mistake (R1.2 experiment, toggle).** The kids' idea.
+- **Graaf Fout eats your mistake (dropped for now, 2026-11-01).** The kids' idea, kept here. It was
+  planned as an R1.2 experiment. Dropped because since 1.0.2 a typed wrong answer already costs
+  hearts on Gemiddeld and Moeilijk; healing him too would punish twice, and an eating show risks
+  making wrong answers fun, while a wrong answer must stay shorter and less fun than a right one.
   - He loves mistakes, so on a wrong answer he catches the wrong number and eats it, and gets one
     hit back. The boss bar visibly goes up.
   - "?" and ESC never heal him: *"Hè, geen fout om op te eten!"* This makes "?" better than
