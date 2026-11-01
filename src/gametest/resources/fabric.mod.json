@@ -15,7 +15,8 @@
 			"nl.jeeninga.tafelboem.gametest.LevelDoorGameTest",
 			"nl.jeeninga.tafelboem.gametest.HubAndArenasGameTest",
 			"nl.jeeninga.tafelboem.gametest.TafelBoemWorldGameTest",
-			"nl.jeeninga.tafelboem.gametest.BuildPhaseGameTest"
+			"nl.jeeninga.tafelboem.gametest.BuildPhaseGameTest",
+			"nl.jeeninga.tafelboem.gametest.DodgeGameTest"
 		],
 		"fabric-client-gametest": [
 			"nl.jeeninga.tafelboem.gametest.PlaythroughClientGameTest",

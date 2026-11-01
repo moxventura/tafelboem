@@ -73,6 +73,13 @@ public final class TafelBoemConfig {
 	 */
 	public boolean buildPhase = true;
 
+	/**
+	 * R1.3: in an arena, a bomb that lands more than 2 blocks from the kid it was thrown at (they ran, or the build
+	 * stopped it) lies still until a kid walks into it, and then asks its sum. Off, as 1.2.0: wherever it lands, its
+	 * kid answers. A fight outside a TafelBoem world always plays as 1.2.0.
+	 */
+	public boolean dodging = true;
+
 	public static TafelBoemConfig load(Path file) {
 		if (!Files.exists(file)) {
 			TafelBoemConfig defaults = new TafelBoemConfig();

@@ -33,7 +33,8 @@ public class BombBlock extends Block {
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
 		if (player instanceof ServerPlayer serverPlayer) {
-			TafelBoem.sessions().startFromBlock(serverPlayer, tier, pos);
+			// A lying bomb from a dodge (R1.3) is its fight's, not free play's.
+			TafelBoem.fights().useBombBlock(serverPlayer, pos, tier);
 		}
 		return InteractionResult.SUCCESS;
 	}

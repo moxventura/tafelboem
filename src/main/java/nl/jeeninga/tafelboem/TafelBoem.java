@@ -16,6 +16,7 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
@@ -151,6 +152,9 @@ public class TafelBoem implements ModInitializer {
 			}
 			return InteractionResult.PASS;
 		});
+
+		// A lying bomb (R1.3) can't be broken: hitting it is touching it, so it never drops as an item.
+		PlayerBlockBreakEvents.BEFORE.register((level, player, pos, state, blockEntity) -> fights == null || fights.mayBreak(player, pos));
 
 		LOGGER.info("TafelBoem loaded - every fuse is a sum!");
 	}

@@ -19,10 +19,12 @@ public final class Dodging {
 	}
 
 	/**
-	 * A kid touches a lying bomb when their feet are in its block or a neighbouring one (diagonals
-	 * too), at its height or standing on it.
+	 * A kid touches a lying bomb when their feet are strictly inside the window around it: {@code x - 1 < kidX < x + 2},
+	 * the same for z, and {@code y - 1 < kidY < y + 2}. That is the bomb's own block and the eight blocks around it,
+	 * diagonals too, at its height or standing on it. The window is open, so feet exactly on the low edge of the block
+	 * before it ({@code kidX == x - 1}) don't count, and feet exactly on {@code y - 1} or {@code y + 2} don't either.
 	 *
-	 * @param x the bomb block, as Minecraft counts blocks (its corner)
+	 * @param x the bomb block, as Minecraft counts blocks (its corner, also below zero)
 	 */
 	public static boolean touches(int x, int y, int z, double kidX, double kidY, double kidZ) {
 		return Math.abs(kidX - (x + 0.5)) < 1.5 && Math.abs(kidZ - (z + 0.5)) < 1.5 && kidY > y - 1 && kidY < y + 2;

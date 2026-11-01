@@ -30,4 +30,18 @@ class DodgingTest {
 		assertFalse(Dodging.touches(0, 64, 0, 0.5, 66, 0.5), "a block above it");
 		assertFalse(Dodging.touches(0, 64, 0, 0.5, 63, 0.5), "under it");
 	}
+
+	@Test
+	void theWindowIsTheSameBelowZero() {
+		// A bomb in block -5 has its middle at -4.5; the window is strictly between -6 and -3: blocks -6, -5 and -4.
+		assertTrue(Dodging.touches(-5, 64, -5, -4.5, 64, -4.5), "in its block");
+		assertTrue(Dodging.touches(-5, 64, -5, -5.99, 64, -5.99), "at the low end of the block before it, both ways");
+		assertTrue(Dodging.touches(-5, 64, -5, -3.01, 64, -3.01), "at the high end of the block after it, both ways");
+		assertFalse(Dodging.touches(-5, 64, -5, -6.0, 64, -4.5), "exactly on the low edge of the block before it: the window is open");
+		assertFalse(Dodging.touches(-5, 64, -5, -4.5, 64, -6.0), "the same on the other axis");
+		assertFalse(Dodging.touches(-5, 64, -5, -6.01, 64, -4.5), "in the block two before it");
+		assertFalse(Dodging.touches(-5, 64, -5, -3.0, 64, -4.5), "in the second block after it");
+		assertTrue(Dodging.touches(-1, 64, -1, 0.99, 64, 0.0), "across zero, from block -1 into block 0");
+		assertFalse(Dodging.touches(-1, 64, -1, 1.0, 64, 0.0), "but not into block 1");
+	}
 }
