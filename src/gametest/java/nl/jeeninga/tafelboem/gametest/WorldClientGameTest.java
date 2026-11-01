@@ -10,6 +10,7 @@ import org.lwjgl.glfw.GLFW;
 
 import net.minecraft.client.gui.screens.worldselection.WorldCreationUiState;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
@@ -37,6 +38,7 @@ import nl.jeeninga.tafelboem.TafelBoem;
 import nl.jeeninga.tafelboem.block.LevelDoorBlock;
 import nl.jeeninga.tafelboem.client.QuestionScreen;
 import nl.jeeninga.tafelboem.core.ArenaBox;
+import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.game.BombEffects;
 import nl.jeeninga.tafelboem.world.ArenaRun;
@@ -107,6 +109,34 @@ public class WorldClientGameTest implements FabricClientGameTest {
 						"Graaf Fout in arena " + level);
 				context.waitTicks(10);
 				context.takeScreenshot("r1-0" + (level.number() + 1) + "-arena-" + level.number());
+				if (level == FightLevel.MAKKELIJK) {
+					// R1.3: a bomb the build stopped lies behind the wall until a kid walks into it. The kid looks from
+					// beside the wall, so both show; Graaf Fout's own throws may add more.
+					BlockPos bomb = world.getServer().computeOnServer(server -> {
+						ArenaRun run = tafelBoem().run(level).orElseThrow();
+						PlacedArea arena = run.arena();
+						Direction ahead = Direction.fromYRot(arena.yaw());
+						Direction side = ahead.getClockWise();
+						BlockPos wall = arena.standAt().relative(ahead, 6);
+						for (int across = -2; across <= 2; across++) {
+							for (int up = 0; up < 2; up++) {
+								server.overworld().setBlockAndUpdate(wall.relative(side, across).above(up), Blocks.STONE_BRICKS.defaultBlockState());
+							}
+						}
+						BlockPos behind = wall.relative(ahead);
+						run.fight().placeLyingBomb(behind, BombTier.GEWONE_TNT);
+						BlockPos look = behind.relative(side, 4);
+						server.getPlayerList().getPlayers().getFirst()
+								.teleportTo(server.overworld(), look.getX() + 0.5, look.getY(), look.getZ() + 0.5, Set.of(), arena.yaw(), 0F, true);
+						return behind;
+					});
+					context.waitTicks(3);
+					context.getInput().lookAt(bomb);
+					context.waitTicks(5);
+					check(world.getServer().computeOnServer(server -> tafelBoem().run(level).orElseThrow().fight().lyingBombs().contains(bomb)),
+							"the bomb lies behind the wall");
+					context.takeScreenshot("r1.3-01-lying-bomb");
+				}
 				check(music(context).equals(TRACKS.get(level)), "arena " + level + " plays " + TRACKS.get(level) + ", not " + music(context));
 
 				if (level == FightLevel.MAKKELIJK) {
