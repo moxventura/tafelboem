@@ -51,6 +51,9 @@ public abstract class Landing {
 			case TOE_HOP -> new ToeHopLanding(boss, scene);
 			case SOOT -> new SootLanding(boss, scene);
 			case CHASED -> new ChasedLanding(boss, scene);
+			case PRICKLED -> new PricklyLanding(boss, scene);
+			case WEBBED -> new WebbedLanding(boss, scene);
+			case BOING -> new BoingLanding(boss, scene);
 		};
 		landing.begin(level);
 		return landing;
