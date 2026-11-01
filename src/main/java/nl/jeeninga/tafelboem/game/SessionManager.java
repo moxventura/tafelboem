@@ -261,6 +261,14 @@ public final class SessionManager {
 				it.remove();
 				continue;
 			}
+			if (player.isDeadOrDying()) {
+				// Died while answering (R1.3, Normal or Hard): the question goes, or the pin would pull the respawned kid back.
+				it.remove();
+				RootLock.release(player);
+				BombEffects.fizzle(player.level(), session.bombPos());
+				client.send(player, QuizS2C.close(session.id()));
+				continue;
+			}
 
 			RootLock.pin(player, session.anchor());
 			int age = session.tickAge();

@@ -21,6 +21,7 @@ import net.minecraft.world.phys.Vec3;
 
 import nl.jeeninga.tafelboem.block.BombBlock;
 import nl.jeeninga.tafelboem.core.BombTier;
+import nl.jeeninga.tafelboem.core.SafetyFloor;
 
 /**
  * What the bombs look and sound like. R0 uses vanilla particles; the choreographed shows come in R2.
@@ -164,7 +165,7 @@ public final class BombEffects {
 	 * it; creative players can't be hurt at all.
 	 */
 	public static void hurt(ServerPlayer player, float amount) {
-		float allowed = Math.min(amount, player.getHealth() - 1F);
+		float allowed = SafetyFloor.allowed(player.getHealth(), amount);
 		if (allowed > 0F) {
 			player.hurtServer(player.level(), player.level().damageSources().magic(), allowed);
 		}

@@ -87,6 +87,13 @@ public final class TafelBoemConfig {
 	 */
 	public boolean traps = true;
 
+	/**
+	 * R1.3: on Peaceful and Easy nothing takes a kid in an arena (build phase and fight) below half a heart.
+	 * On Normal and Hard damage is vanilla, and dying in an arena counts as leaving. Off: vanilla damage
+	 * everywhere, on every difficulty. Our booms and wrong answers never hurt that much either way.
+	 */
+	public boolean arenaSafety = true;
+
 	public static TafelBoemConfig load(Path file) {
 		if (!Files.exists(file)) {
 			TafelBoemConfig defaults = new TafelBoemConfig();

@@ -8,11 +8,13 @@ import org.jspecify.annotations.Nullable;
 
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.level.storage.LevelResource;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -155,6 +157,10 @@ public class TafelBoem implements ModInitializer {
 
 		// A lying bomb (R1.3) can't be broken: hitting it is touching it, so it never drops as an item.
 		PlayerBlockBreakEvents.BEFORE.register((level, player, pos, state, blockEntity) -> fights == null || fights.mayBreak(player, pos));
+
+		// R1.3: on Peaceful and Easy nothing takes a kid in an arena below half a heart.
+		ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) ->
+				!(entity instanceof ServerPlayer kid && world != null) || world.allowDamage(kid, source, amount));
 
 		LOGGER.info("TafelBoem loaded - every fuse is a sum!");
 	}

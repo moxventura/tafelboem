@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 
 import org.jspecify.annotations.Nullable;
 
@@ -20,8 +21,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.util.Mth;
+import net.minecraft.world.Difficulty;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Blocks;
@@ -44,6 +48,7 @@ import nl.jeeninga.tafelboem.core.BuildRecord;
 import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.core.FightRecord;
 import nl.jeeninga.tafelboem.core.FightTally;
+import nl.jeeninga.tafelboem.core.SafetyFloor;
 import nl.jeeninga.tafelboem.core.Stars;
 import nl.jeeninga.tafelboem.game.BombEffects;
 import nl.jeeninga.tafelboem.game.ProtectedAreas;
@@ -76,6 +81,7 @@ public final class TafelBoemWorld {
 	private final Map<FightLevel, ArenaRun> runs = new EnumMap<>(FightLevel.class);
 	private final List<Consumer<BuildRecord>> buildListeners = new ArrayList<>();
 	private LongSupplier clock = System::currentTimeMillis;
+	private Supplier<Difficulty> difficulty;
 	private final Map<UUID, QueuedDoor> queuedDoors = new LinkedHashMap<>();
 	private final Map<UUID, Integer> doorCooldown = new HashMap<>();
 	private final Map<String, int[]> bestStars = new HashMap<>();
@@ -112,6 +118,7 @@ public final class TafelBoemWorld {
 		this.client = client;
 		this.catchEveryone = catchEveryone;
 		this.buildPhase = buildPhase;
+		this.difficulty = level::getDifficulty;
 	}
 
 	/** On every world load: the world rules, a fresh hub, and the spawn in the middle of its spot. */
@@ -141,6 +148,34 @@ public final class TafelBoemWorld {
 	/** Where run and fight times come from: wall time in a real world; GameTests, whose server runs faster than 20 ticks a second, use game ticks. */
 	public void useClock(LongSupplier clock) {
 		this.clock = clock;
+	}
+
+	/** Whose difficulty decides arena safety: the world's own; GameTests choose one, as they can't change the shared server's. */
+	public void useDifficulty(Supplier<Difficulty> difficulty) {
+		this.difficulty = difficulty;
+	}
+
+	/**
+	 * R1.3's arena safety, before damage lands on a player: on Peaceful and Easy a kid in an arena run
+	 * keeps half a heart, whatever hurts them; the rest of the hit is taken off. Damage that ignores
+	 * invulnerability ({@code /kill}, the void) stays vanilla.
+	 *
+	 * @return false when this hit is cancelled; a smaller one may have landed instead
+	 */
+	public boolean allowDamage(ServerPlayer kid, DamageSource source, float amount) {
+		if (kid.level() != level || source.is(DamageTypeTags.BYPASSES_INVULNERABILITY) || runOf(kid).isEmpty()
+				|| !SafetyFloor.protects(fights.config().arenaSafety, difficulty.get().getId())) {
+			return true;
+		}
+		float allowed = SafetyFloor.allowed(kid.getHealth(), amount);
+		if (allowed >= amount) {
+			return true;
+		}
+		if (allowed > 0F) {
+			// This smaller hit comes back through here and passes.
+			kid.hurtServer(level, source, allowed);
+		}
+		return false;
 	}
 
 	/** Hears every build phase as it ends: he came, or everyone left. */
@@ -281,10 +316,12 @@ public final class TafelBoemWorld {
 			}
 		}
 
-		// A kid who is somewhere else now (a command, another dimension) has left the fight.
+		// A kid who died (R1.3, Normal or Hard) or is somewhere else now (a command, another dimension) has left the fight.
 		for (UUID id : run.kids()) {
 			ServerPlayer kid = level.getServer().getPlayerList().getPlayer(id);
-			if (kid != null && !stillIn(run, kid)) {
+			if (kid != null && kid.isDeadOrDying()) {
+				died(kid, run);
+			} else if (kid != null && !stillIn(run, kid)) {
 				leave(kid, run, FightRecord.LEFT);
 			}
 		}
@@ -403,6 +440,14 @@ public final class TafelBoemWorld {
 			run.building().left(kid);
 		}
 		run.remove(kid.getUUID());
+	}
+
+	/** Dying in an arena counts as leaving: no stars, the same line as the exit door (P28), "died" in the fights log. */
+	private void died(ServerPlayer kid, ArenaRun run) {
+		if (!run.isReturning() && TafelBoem.config().stars) {
+			client.chat(kid, Component.translatable("tafelboem.message.left_no_stars"));
+		}
+		leave(kid, run, FightRecord.DIED);
 	}
 
 	public void onDisconnect(ServerPlayer player) {

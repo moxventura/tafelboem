@@ -17,7 +17,8 @@
 			"nl.jeeninga.tafelboem.gametest.TafelBoemWorldGameTest",
 			"nl.jeeninga.tafelboem.gametest.BuildPhaseGameTest",
 			"nl.jeeninga.tafelboem.gametest.DodgeGameTest",
-			"nl.jeeninga.tafelboem.gametest.TrapGameTest"
+			"nl.jeeninga.tafelboem.gametest.TrapGameTest",
+			"nl.jeeninga.tafelboem.gametest.ArenaSafetyGameTest"
 		],
 		"fabric-client-gametest": [
 			"nl.jeeninga.tafelboem.gametest.PlaythroughClientGameTest",

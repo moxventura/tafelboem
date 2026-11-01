@@ -171,6 +171,21 @@ public class SessionGameTest {
 		helper.succeed();
 	}
 
+	/** R1.3, Normal or Hard: a dead kid keeps no question, or the pin would pull the respawned kid back to the bomb. */
+	@GameTest
+	public void aKidWhoDiesWhileAnsweringLosesTheQuestion(GameTestHelper helper) {
+		Fixture f = new Fixture(helper);
+		f.ask();
+		f.player.setHealth(0F);
+
+		helper.succeedWhen(() -> {
+			helper.assertFalse(f.manager.isBusy(f.player), "wait for the question to go");
+			helper.assertFalse(f.isRooted(), "the pin is gone");
+			helper.assertValueEqual(f.client.last().mode(), QuizS2C.CLOSE, "the question closes on his screen");
+			helper.assertBlockNotPresent(ModBlocks.bomb(BombTier.KNALLETJE), BOMB);
+		});
+	}
+
 	private static final class Fixture {
 		final GameTestHelper helper;
 		final RecordingQuizClient client = new RecordingQuizClient();
