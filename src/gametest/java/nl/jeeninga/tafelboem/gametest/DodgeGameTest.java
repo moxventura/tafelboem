@@ -261,7 +261,11 @@ public class DodgeGameTest {
 	 * He must still be gone 60 ticks after that hit, and everyone gets the reward.
 	 */
 	private static void beatenWhileTheSiblingAnswers(GameTestHelper helper, boolean right) {
-		ArenaFight arena = new ArenaFight(helper, new TafelBoemConfig());
+		// The lying bomb goes down while he is still flying from his second-last hit. With traps on, his flight can be
+		// pulled onto it, and that trap is his last hit: beaten before the sibling ever picks it up.
+		TafelBoemConfig config = new TafelBoemConfig();
+		config.traps = false;
+		ArenaFight arena = new ArenaFight(helper, config);
 		ServerPlayer sibling = arena.addKid(arena.box.middleX() + 7, arena.box.middleZ() + 5);
 
 		Set<Integer> answered = new HashSet<>();
