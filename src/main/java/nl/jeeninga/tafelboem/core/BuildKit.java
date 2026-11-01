@@ -4,7 +4,7 @@ import java.util.List;
 
 /**
  * What the build phase's double chest holds, in chest order and in groups so the kids can find
- * things: building, colour, bouncing and sticking, redstone, light and decoration, tools. Enough for
+ * things: building, colour, bouncing and sticking, traps, redstone, light and decoration, tools. Enough for
  * two kids for 3–5 minutes; whatever a kid doesn't place stays theirs.
  */
 public final class BuildKit {
@@ -21,12 +21,14 @@ public final class BuildKit {
 			new Stack("scaffolding", 32), new Stack("ladder", 32), new Stack("oak_fence", 32), new Stack("oak_fence_gate", 32),
 			new Stack("oak_door", 32), new Stack("oak_trapdoor", 32),
 			// Colour
-			new Stack("red_wool", 32), new Stack("orange_wool", 32), new Stack("yellow_wool", 32), new Stack("lime_wool", 32),
-			new Stack("light_blue_wool", 32), new Stack("purple_wool", 32),
+			new Stack("red_wool", 32), new Stack("yellow_wool", 32), new Stack("light_blue_wool", 32),
 			new Stack("red_stained_glass", 32), new Stack("yellow_stained_glass", 32), new Stack("light_blue_stained_glass", 32),
 			new Stack("white_concrete", 32), new Stack("lime_concrete", 32), new Stack("magenta_concrete", 32),
 			// Bouncing and sticking
 			new Stack("slime_block", 32), new Stack("honey_block", 32),
+			// Traps (R1.3), with what cactus and berries grow on
+			new Stack("cactus", 16), new Stack("sand", 16), new Stack("sweet_berries", 16), new Stack("dirt", 16),
+			new Stack("magma_block", 16), new Stack("cobweb", 16),
 			// Redstone
 			new Stack("lever", 8), new Stack("stone_button", 8), new Stack("stone_pressure_plate", 8), new Stack("redstone", 8),
 			new Stack("repeater", 4), new Stack("piston", 4), new Stack("sticky_piston", 4), new Stack("redstone_lamp", 4),
@@ -44,11 +46,11 @@ public final class BuildKit {
 	public static final List<String> PLACEABLE = CHEST.stream().map(Stack::item).filter(item -> !TOOLS.contains(item)).toList();
 
 	/**
-	 * Never in the kit, as parts of an id: our bombs are the only explosives; no fire, floods or a
-	 * floating arena; traps and weapons against him are R1.3 questions; no beds or spawn eggs.
+	 * Never in the kit, as parts of an id: our bombs are the only explosives; no fire (it spreads
+	 * through planks and wool), floods or a floating arena; no beds or spawn eggs.
 	 */
-	public static final List<String> LEFT_OUT = List.of("tnt", "lava", "water", "flint_and_steel", "fire_charge", "cactus",
-			"sweet_berries", "magma", "dispenser", "_bed", "spawn_egg");
+	public static final List<String> LEFT_OUT = List.of("tnt", "lava", "water", "flint_and_steel", "fire_charge", "dispenser", "_bed",
+			"spawn_egg");
 
 	private BuildKit() {
 	}
