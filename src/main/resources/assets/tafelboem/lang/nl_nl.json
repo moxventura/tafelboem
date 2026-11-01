@@ -65,5 +65,8 @@
   "tafelboem.message.left_no_stars": "Je ging weg voordat Graaf Fout verslagen was, dus deze keer geen sterren.",
   "tafelboem.door.busy": "Even wachten, de anderen komen net terug!",
   "tafelboem.arena.skipped": "Arena %s heeft geen uitgang en is overgeslagen.",
-  "tafelboem.build.countdown": "Graaf Fout komt over %s"
+  "tafelboem.build.countdown": "Graaf Fout komt over %s",
+  "tafelboem.build.bell": "%s luidt de bel! Graaf Fout komt over %s seconden.",
+  "tafelboem.build.seconds": "Graaf Fout komt over %s seconden.",
+  "tafelboem.build.one_second": "Graaf Fout komt over 1 seconde."
 }

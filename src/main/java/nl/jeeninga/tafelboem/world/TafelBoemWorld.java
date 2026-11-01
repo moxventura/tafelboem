@@ -19,6 +19,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.storage.LevelData;
 import net.minecraft.world.phys.Vec3;
@@ -228,10 +229,14 @@ public final class TafelBoemWorld {
 
 	private void tick(ArenaRun run) {
 		if (run.fight() == null && !run.kids().isEmpty()) {
-			run.countdown().tick();
+			int call = run.countdown().tick();
 			Building building = run.building();
 			if (building != null) {
 				building.show(kidsIn(run), run.countdown());
+				if (call > 0) {
+					tellRun(run, call == 1 ? Component.translatable("tafelboem.build.one_second")
+							: Component.translatable("tafelboem.build.seconds", call));
+				}
 			}
 			if (run.countdown().isOver()) {
 				Vec3 spot = run.arena().middle().add(0, 1.5, 0);
@@ -280,6 +285,32 @@ public final class TafelBoemWorld {
 				fights.end(fight);
 			}
 			removeRun(run);
+		}
+	}
+
+	/**
+	 * A kid used a block. A bell in their own arena, before he came, brings him within 10 s, for
+	 * everyone in that arena; any bell there counts, so one the kids moved still rings.
+	 */
+	public void onUseBlock(Player player, BlockPos pos) {
+		if (!(player instanceof ServerPlayer kid) || kid.level() != level || !level.getBlockState(pos).is(Blocks.BELL)) {
+			return;
+		}
+		ArenaRun run = runOf(kid).orElse(null);
+		if (run == null || run.fight() != null || run.building() == null || !run.arena().bounds().containsColumn(pos.getX(), pos.getZ())) {
+			return;
+		}
+		if (run.countdown().ring()) {
+			run.building().rungBy(kid.getPlainTextName());
+			tellRun(run, Component.translatable("tafelboem.build.bell", kid.getDisplayName(), run.countdown().secondsLeft()));
+		}
+	}
+
+	/** A line in the chat of the kids in this arena only, never the whole LAN. */
+	private void tellRun(ArenaRun run, Component line) {
+		Component gold = line.copy().withStyle(ChatFormatting.GOLD);
+		for (ServerPlayer kid : kidsIn(run)) {
+			client.chat(kid, gold);
 		}
 	}
 

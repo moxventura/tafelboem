@@ -8,6 +8,7 @@ import org.jspecify.annotations.Nullable;
 
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.level.storage.LevelResource;
 
 import net.fabricmc.api.ModInitializer;
@@ -15,6 +16,7 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
 
@@ -140,6 +142,13 @@ public class TafelBoem implements ModInitializer {
 			if (TafelBoemWorld.isLeftOver(entity, world)) {
 				entity.discard();
 			}
+		});
+		// The build phase's bell: right-clicking it rings it as in vanilla, and brings Graaf Fout within 10 s.
+		UseBlockCallback.EVENT.register((player, level, hand, hit) -> {
+			if (world != null && !level.isClientSide()) {
+				world.onUseBlock(player, hit.getBlockPos());
+			}
+			return InteractionResult.PASS;
 		});
 
 		LOGGER.info("TafelBoem loaded - every fuse is a sum!");

@@ -65,5 +65,8 @@
   "tafelboem.message.left_no_stars": "You left before Count Wrong was beaten, so no stars this time.",
   "tafelboem.door.busy": "Just a moment, the others are on their way back!",
   "tafelboem.arena.skipped": "Arena %s has no exit door, so it was skipped.",
-  "tafelboem.build.countdown": "Count Wrong comes in %s"
+  "tafelboem.build.countdown": "Count Wrong comes in %s",
+  "tafelboem.build.bell": "%s rings the bell! Count Wrong comes in %s seconds.",
+  "tafelboem.build.seconds": "Count Wrong comes in %s seconds.",
+  "tafelboem.build.one_second": "Count Wrong comes in 1 second."
 }
