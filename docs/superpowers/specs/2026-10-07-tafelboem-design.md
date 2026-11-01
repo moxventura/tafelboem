@@ -735,8 +735,10 @@ implementation rewords the rule to "no timer on answering a sum; the build phase
 1. **Entering.** A door clears the slot and places the arena fresh, as in R1, but always the plain
    arena from code (`ArenaShape`: floor, obsidian walls on obsidian, exit door). The templates and
    the random pick (`ArenaCatalog`) stay in the code and aren't used while the build phase is on.
-   Near the arrival spot, opposite the exit door, stand a double chest (54 slots) with the building
-   kit and a vanilla bell.
+   The whole 48³ slot is cleared first, so the last build goes, above the walls too. Blocks a kid
+   placed outside the slot (above it, or over the outer wall's edge) are never cleared.
+   3 blocks ahead of the arrival spot, with the exit door behind the kids, stand a double chest
+   (54 slots) with the building kit and a vanilla bell on the floor.
 2. **The build phase.** Graaf Fout doesn't come 3 s after the first kid (`START_DELAY_TICKS`); the
    run's `startAt` is the build time: **5 minutes on Makkelijk, 4 on Gemiddeld, 3 on Moeilijk.**
    The boss bar that shows his health in the fight (`Participants`) shows the countdown instead:
@@ -744,24 +746,34 @@ implementation rewords the rule to "no timer on answering a sum; the build phase
    arena changes.
 3. **The bell.** Ringing the bell sets the countdown to at most 10 s for everyone in that arena:
    `min(remaining, 10 s)`, so it never makes it longer. On LAN any kid in the arena can ring it.
+   It rings only where vanilla rings a floor bell (a hit on its side, main hand, not sneaking, not
+   a spectator), so a click on its top or a sneak-place next to it does nothing.
    The arena's chat says who rang it, *"<kid> luidt de bel! Graaf Fout komt over 10 seconden."*,
    and counts the last 10 s down: 10, 5, 3, 2, 1. The same five lines come when the time runs out
    on its own.
 4. **Chat stays in the arena.** Every build-phase line goes only to the kids in that run, never
    LAN-wide. Today's chat already works that way: Graaf Fout's lines reach the boss-bar players
    (`Participants.say`), the rest goes to one kid.
-5. **He appears.** At zero he appears in the middle of the arena and the fight runs as in 1.1.2:
+5. **He appears.** At zero he appears in the middle of the arena, on top of whatever the kids
+   built there (the higher of the floor and the top of the build), and the fight runs as in 1.1.2:
    bombs land at the kid's feet, kicked bombs blow craters, in the build too, never within 3 blocks
    of a kid (`PlayerSafeExplosion`). Slime and honey do nothing special to him in R1.2: his flights
    and landings are scripted. Bouncing him is R1.3.
 6. **After the fight.** Everyone goes back to the hub as today. The build is gone: the next entry
    of that door clears the slot, as it clears the craters now. Keeping builds (the structure-block
-   route) is a possible later step, not R1.2.
+   route) is a possible later step, not R1.2. A kid who joins later or is caught from the void
+   still lands on the arrival spot, even if someone built there.
 7. **Joining.** A kid who walks through the door during the build phase joins the run and sees the
    same countdown. After he appeared they join the fight as today.
 8. **Leaving.** Leaving through the exit door during the build phase counts as `left`: no stars,
    the 1.1.2 chat line (P28), and the fights log gets its `left` line as today, with 0 answers.
    When the last kid leaves, the run ends without a fight; he never appears.
+   **Near the walls.** The kids can build over the walls and climb out. During the build phase a
+   kid still counts as in the run within 8 blocks of the arena (`BUILD_MARGIN`); further out counts
+   as left. Once he has come, the arena's own footprint applies again, so a kid still out there at
+   his arrival has left (known gap: without the P28 chat line). Closing the world mid-build ends
+   the run and writes its build line when the last kid disconnects. A per-kid world border was
+   considered and declined for now (2026-11-01); a later idea.
 9. **No new block protection.** In survival the kids can break arena blocks by hand (obsidian is
    too slow by hand to matter). Digging through the floor ends in the void catch, which brings them
    back to the arrival spot, as today.
@@ -797,13 +809,16 @@ place in `core/`, so a unit test counts its slots.
 
 ### Load contract
 A world reload during the build phase is handled like one during a fight today: the kid logs in
-inside an arena without a run and goes to the hub (`onJoin`); the build is cleared on the next entry
-of that door. The implementation adds two rows to the load-contract table in `AGENTS.md`:
+inside an arena without a run and goes to the hub (`onJoin`); the slots are cleared on load. As
+built in 1.2.0, `AGENTS.md`'s load-contract table has these rows:
 
 | When | What | Rule |
 |---|---|---|
-| arena entry | chest and bell | placed near the arrival spot, opposite the exit door, the chest filled with the kit |
-| reload mid-build | the build and the run | the kid goes to the hub; the build is cleared on the next entry |
+| arena entry, build phase | the arena | always the plain one; the whole slot cleared first; blocks outside the 48³ slot are never cleared |
+| arena entry, build phase | chest and bell | 3 blocks ahead of the arrival spot (the exit door behind the kids), the chest filled with the kit |
+| reload mid-build | the build and the run | the kid goes to the hub; the slots are cleared on load |
+| close mid-build | the build line | written when the last kid disconnects |
+| build phase | a kid near the walls | still in the run within 8 blocks of the arena; further out, or once he has come, = left |
 
 ### R1.2 tests
 - **Unit tests:** the build time per level; the bell rule (`min(remaining, 10 s)`, never longer);
