@@ -386,7 +386,8 @@ public final class BossFight implements QuizListener {
 		} else if (dodging()) {
 			// The kid ran, or the build stopped it. Also for a kid who has gone or is answering another bomb.
 			placeLyingBomb(restingSpot(pos), tier);
-			if (target != null) {
+			// A kid who died while it flew dodged nothing, and gets no taunt on the death screen.
+			if (target != null && target.isAlive()) {
 				tally(targetId).dodge();
 				participants.sayTo(target, Component.translatable("tafelboem.boss.graaf_fout.dodged"));
 			}
@@ -402,9 +403,9 @@ public final class BossFight implements QuizListener {
 		cooldown(COOLDOWN_TICKS);
 	}
 
-	/** Whether a bomb landing here hits this kid, who must still be in the arena. */
+	/** Whether a bomb landing here hits this kid, who must be alive and still in the arena: a dead kid's body stays there until Respawn. */
 	private boolean hits(ServerPlayer kid, BlockPos bomb) {
-		return participants.players().contains(kid) && Dodging.isHit(bomb.getX() + 0.5, bomb.getZ() + 0.5, kid.getX(), kid.getZ());
+		return kid.isAlive() && participants.players().contains(kid) && Dodging.isHit(bomb.getX() + 0.5, bomb.getZ() + 0.5, kid.getX(), kid.getZ());
 	}
 
 	/** A bomb landed on its kid: they are rooted and the question comes. */
@@ -449,15 +450,15 @@ public final class BossFight implements QuizListener {
 
 	/**
 	 * A kid touched a lying bomb: its question, the same rooted flow as a hit, with that bomb's tier.
-	 * Not while he is being kicked or yeeted (it comes once his reaction is over), and not for a kid
-	 * who is answering.
+	 * Not while he is being kicked or yeeted (it comes once his reaction is over), not for a kid
+	 * who is answering, and not for a dead kid's body.
 	 *
 	 * @return whether the question started
 	 */
 	boolean pickUp(ServerPlayer kid, BlockPos pos) {
 		BombTier tier = lying.get(pos);
 		boolean between = phase == Phase.COOLDOWN || phase == Phase.BOMB_IN_FLIGHT || phase == Phase.ANSWERING;
-		if (tier == null || !between || kid.isSpectator() || !participants.players().contains(kid)) {
+		if (tier == null || !between || !kid.isAlive() || kid.isSpectator() || !participants.players().contains(kid)) {
 			return false;
 		}
 		if (sessions.start(kid, tier, pos, "fight", this) == null) {

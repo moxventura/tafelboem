@@ -6,15 +6,19 @@ import java.util.Set;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.protocol.game.ServerboundPlayerLoadedPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.AABB;
 
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 
 import nl.jeeninga.tafelboem.block.BombBlock;
+import nl.jeeninga.tafelboem.boss.ThrownBomb;
 import nl.jeeninga.tafelboem.config.TafelBoemConfig;
 import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.game.PlayerSafeExplosion;
@@ -88,6 +92,54 @@ public class DodgeGameTest {
 			helper.assertTrue(arena.sessions.isBusy(arena.kid), "rooted, as after a hit");
 			helper.assertTrue(arena.fight.lyingBombs().isEmpty(), "it no longer lies around");
 			helper.assertTrue(arena.fight.tally(arena.kid.getUUID()).pickedUp() == 1, "counted as picked up");
+			arena.end();
+		});
+	}
+
+	@GameTest(maxTicks = 100, padding = 48)
+	public void aDeadKidsBodyPicksUpNoLyingBomb(GameTestHelper helper) {
+		ArenaFight arena = new ArenaFight(helper, new TafelBoemConfig());
+		survival(arena.kid);
+		BlockPos lying = arena.kid.blockPosition().east();
+		// On Normal the body stays in the arena until its kid presses Respawn.
+		helper.runAfterDelay(5, () -> {
+			arena.kid.kill(arena.level);
+			arena.fight.placeLyingBomb(lying, BombTier.GEWONE_TNT);
+		});
+		helper.runAfterDelay(30, () -> {
+			helper.assertTrue(arena.kid.isDeadOrDying(), "the kid is dead");
+			helper.assertTrue(arena.fight.lyingBombs().equals(Set.of(lying)), "the bomb still lies there: " + arena.fight.lyingBombs());
+			helper.assertTrue(arena.fight.tally(arena.kid.getUUID()).pickedUp() == 0, "no pick-up for a dead kid");
+			helper.assertFalse(arena.askedAnything(), "no question flashes over the death screen");
+			helper.assertFalse(arena.sessions.isBusy(arena.kid), "nobody is rooted");
+			arena.end();
+			helper.succeed();
+		});
+	}
+
+	@GameTest(maxTicks = 200, padding = 48)
+	@Fight
+	public void aBombThatLandsOnAKidWhoJustDiedLiesStillWithoutATauntOrADodge(GameTestHelper helper) {
+		ArenaFight arena = new ArenaFight(helper, new TafelBoemConfig());
+		survival(arena.kid);
+		AABB around = new AABB(arena.kid.blockPosition()).inflate(30);
+		boolean[] killed = {false};
+		helper.onEachTick(() -> {
+			// His first bomb is in the air, aimed at the kid: now the kid dies.
+			if (!killed[0] && !arena.level.getEntitiesOfClass(ThrownBomb.class, around).isEmpty()) {
+				killed[0] = true;
+				arena.kid.kill(arena.level);
+			}
+		});
+
+		helper.succeedWhen(() -> {
+			helper.assertTrue(killed[0], "wait for his bomb to be in the air");
+			helper.assertTrue(arena.fight.lyingBombs().size() == 1, "wait for the bomb to land and lie still: " + arena.fight.lyingBombs());
+			helper.assertFalse(arena.askedAnything(), "a dead kid is asked nothing");
+			helper.assertFalse(arena.sessions.isBusy(arena.kid), "and rooted by nothing");
+			helper.assertTrue(arena.fight.tally(arena.kid.getUUID()).dodged() == 0, "nothing was dodged by a dead kid");
+			helper.assertTrue(arena.fight.tally(arena.kid.getUUID()).pickedUp() == 0, "and nothing picked up");
+			helper.assertFalse(arena.heard(arena.kid, "tafelboem.boss.graaf_fout.dodged"), "he does not taunt a dead kid");
 			arena.end();
 		});
 	}
@@ -278,6 +330,15 @@ public class DodgeGameTest {
 		helper.assertTrue(level.getBlockState(centre.below()).isAir(), "the crater is there");
 		helper.assertTrue(level.getBlockState(bomb).getBlock() instanceof BombBlock, "the bomb beside it still lies there");
 		helper.succeed();
+	}
+
+	/**
+	 * Mock players start in creative, which nothing kills; and until their client has loaded (a mock one
+	 * never says so) Minecraft keeps a player invulnerable, even to {@code kill()}.
+	 */
+	private static void survival(ServerPlayer kid) {
+		kid.setGameMode(GameType.SURVIVAL);
+		kid.connection.handleAcceptPlayerLoad(new ServerboundPlayerLoadedPacket());
 	}
 
 	/**
