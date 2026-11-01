@@ -25,9 +25,9 @@ go/no-go (see the spec):
 |---|---|---|
 | **R0 "Graaf Fout komt!"** | Core question loop, 3 bombs, basic Graaf Fout (yeeted on every hit), LAN, answer log | ✅ playtest 1 done |
 | **R0.1 "Beter mikken"** | Fixes from playtest 1: clearer question screen, correction on the HUD, distinct bombs, camera assist, a simple kick, more yeets, world setup, better stats, self-updating Prism instance | ✅ playtest 2 done |
-| **R1 "Kies je level"** | TafelBoem world with a hub and a door per level, levels 1–3 with their own tables and bombs, arenas (random per level, replaceable by the kids' own), stars; from 1.0.2 hearts, food, music per level | ✅ published (1.0.x), playtest 3 to do |
-| **R1.1 "Meer yeets"** | A flight plus a landing per hit (wall splat, head-first, pancake, running round, a landing per bomb), fast answers and streaks yeet Graaf Fout further with a record per kid, the counting Kippenbom | ✅ 1.1.x, playtest to do |
-| Faster tests | Nothing new for the kids: the same tests, quicker to run | next, after R1.1 |
+| **R1 "Kies je level"** | TafelBoem world with a hub and a door per level, levels 1–3 with their own tables and bombs, arenas (random per level, replaceable by the kids' own), stars; from 1.0.2 hearts, food, music per level | ✅ published (1.0.x), playtest 3 played on 2026-10-31, go/no-go still open |
+| **R1.1 "Meer yeets"** | A flight plus a landing per hit (wall splat, head-first, pancake, running round, a landing per bomb), fast answers and streaks yeet Graaf Fout further with a record per kid, the counting Kippenbom | ✅ 1.1.x, played in playtest 3 on 2026-10-31, go/no-go still open |
+| Faster tests | Nothing new for the kids: the same tests, quicker to run | ✅ done on 2026-10-26 (merged, no publish) |
 | **R1.2 "Bouwen"** | A build phase before every fight: the kids build the plain arena from a chest of blocks, with a countdown and a bell, and then Graaf Fout comes | built, not published yet |
 | R1.3 "Dekking" | Terrain in the fight: dodging behind blocks the kids built, and traps Graaf Fout can land in | backlog, after R1.2 |
 | R2 "Leren dat blijft" | Fact states, spaced practice, Tafelkaart, parent report, daily limit, "Kies je bom", leg-kick animation | backlog |
@@ -68,7 +68,7 @@ back on the next Play.
 - **Building first (1.2).** Behind a level door the arena is empty at first: a double chest full of
   blocks (wood, stone, glass, wool, slime, redstone, lanterns and more) and a bell stand in front of
   you. Build what you like. Graaf Fout comes when the countdown in the boss bar runs out (5 minutes on
-  Makkelijk, 4 on Gemiddeld, 3 on Moeilijk), or 10 seconds after someone rings the bell. The bell
+  level 1, 4 on level 2, 3 on level 3), or 10 seconds after someone rings the bell. The bell
   counts only when Minecraft itself rings it: right-click its front or back, not its top, and not
   while sneaking with something in your hand. His bombs can blow holes in what you built. The next
   time, the arena is empty again.

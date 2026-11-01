@@ -64,6 +64,8 @@ and a check. Put new world work on arena entry rather than on world load.
 | arena entry, build phase | chest and bell | 3 blocks ahead of the arrival spot (the exit door behind the kids), the chest filled with the kit | `BuildPhaseGameTest` |
 | login | a kid inside an arena without a fight | to the hub | `TafelBoemWorldGameTest` |
 | reload mid-build | the build and the run | the kid goes to the hub (the login row); the slots are cleared on load | `TafelBoemWorldGameTest`, `HubAndArenasGameTest` |
+| close mid-build | the build line | written when the last kid disconnects (closing the world never ticks again) | `BuildPhaseGameTest` |
+| build phase | a kid near the walls | still in the run within 8 blocks of the arena (`BUILD_MARGIN`); further out, or once he has come, = left | `BuildPhaseGameTest` |
 | any time | the void | everyone who falls is caught, never fatally | `TafelBoemWorldGameTest` |
 
 Spectacle animals that appear after the boom (the counting Kippenbom's groups, the chase) get their
