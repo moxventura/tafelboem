@@ -1,5 +1,6 @@
 package nl.jeeninga.tafelboem.world;
 
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -8,6 +9,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Consumer;
+import java.util.function.LongSupplier;
 
 import org.jspecify.annotations.Nullable;
 
@@ -34,6 +37,7 @@ import nl.jeeninga.tafelboem.boss.YeetRecords;
 import nl.jeeninga.tafelboem.command.ArenaSetup;
 import nl.jeeninga.tafelboem.core.BuildCountdown;
 import nl.jeeninga.tafelboem.core.BuildPhase;
+import nl.jeeninga.tafelboem.core.BuildRecord;
 import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.core.FightRecord;
 import nl.jeeninga.tafelboem.core.FightTally;
@@ -65,6 +69,8 @@ public final class TafelBoemWorld {
 	private final boolean catchEveryone;
 	private final BuildPhase buildPhase;
 	private final Map<FightLevel, ArenaRun> runs = new EnumMap<>(FightLevel.class);
+	private final List<Consumer<BuildRecord>> buildListeners = new ArrayList<>();
+	private LongSupplier clock = System::currentTimeMillis;
 	private final Map<UUID, QueuedDoor> queuedDoors = new LinkedHashMap<>();
 	private final Map<UUID, Integer> doorCooldown = new HashMap<>();
 	private final Map<String, int[]> bestStars = new HashMap<>();
@@ -125,6 +131,16 @@ public final class TafelBoemWorld {
 
 	public PlacedArea hub() {
 		return hub;
+	}
+
+	/** Where run and fight times come from: wall time in a real world; GameTests, whose server runs faster than 20 ticks a second, use game ticks. */
+	public void useClock(LongSupplier clock) {
+		this.clock = clock;
+	}
+
+	/** Hears every build phase as it ends: he came, or everyone left. */
+	public void onBuildEnded(Consumer<BuildRecord> listener) {
+		buildListeners.add(listener);
 	}
 
 	public ServerLevel level() {
@@ -188,7 +204,7 @@ public final class TafelBoemWorld {
 			return;
 		}
 		if (run == null) {
-			long now = System.currentTimeMillis();
+			long now = clock.getAsLong();
 			if (buildPhase.on()) {
 				PlacedArea arena = catalog.placePlain(level, layout, fightLevel);
 				BuildCorner.place(level, arena);
@@ -247,9 +263,10 @@ public final class TafelBoemWorld {
 				if (fight != null) {
 					fight.useYeetRecords(yeetRecords);
 				}
-				run.start(fight, System.currentTimeMillis());
+				run.start(fight, clock.getAsLong());
 				if (building != null && fight != null) {
 					building.hide();
+					endBuild(run, building.rangBy() != null ? BuildRecord.BELL : BuildRecord.TIME);
 				}
 			}
 		}
@@ -332,7 +349,20 @@ public final class TafelBoemWorld {
 		runs.remove(run.level());
 		if (run.building() != null) {
 			run.building().hide();
+			// Everyone left before he came: the build line still goes to the log.
+			endBuild(run, BuildRecord.EVERYONE_LEFT);
 		}
+	}
+
+	/** Once per run: how long they built, how it ended, and what each kid placed. */
+	private void endBuild(ArenaRun run, String ending) {
+		Building building = run.building();
+		if (building == null || !building.finish()) {
+			return;
+		}
+		BuildRecord record = new BuildRecord(run.level().number(), run.buildSeconds(clock.getAsLong()), ending,
+				BuildRecord.BELL.equals(ending) ? building.rangBy() : null, run.everyone().size(), building.placed(kidsIn(run)));
+		buildListeners.forEach(listener -> listener.accept(record));
 	}
 
 	/** Stars and a "won" line for every kid still in the arena; a new best gets a message. */
@@ -375,8 +405,9 @@ public final class TafelBoemWorld {
 
 	private void write(ServerPlayer kid, ArenaRun run, String result, int stars) {
 		FightTally tally = run.fight() == null ? new FightTally() : run.fight().tally(kid.getUUID());
-		long now = System.currentTimeMillis();
-		fightLog.append(new FightRecord(now, kid.getPlainTextName(), run.level().number(), run.arena().name(), result,
+		long now = clock.getAsLong();
+		// The record's timestamp is a date, not a duration: always wall time.
+		fightLog.append(new FightRecord(System.currentTimeMillis(), kid.getPlainTextName(), run.level().number(), run.arena().name(), result,
 				tally.answers(), tally.wrong(), tally.dontKnow(), tally.chickenOut(), stars, run.fightSeconds(now), run.everyone().size(),
 				TafelBoem.version(), tally.farthestYeet(), run.buildSeconds(now)));
 	}

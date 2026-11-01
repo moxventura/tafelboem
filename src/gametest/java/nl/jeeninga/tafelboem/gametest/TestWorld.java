@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,7 @@ import nl.jeeninga.tafelboem.boss.BossFight;
 import nl.jeeninga.tafelboem.boss.BossFights;
 import nl.jeeninga.tafelboem.config.TafelBoemConfig;
 import nl.jeeninga.tafelboem.core.ArenaBox;
+import nl.jeeninga.tafelboem.core.BuildRecord;
 import nl.jeeninga.tafelboem.core.BuildPhase;
 import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.game.ProtectedAreas;
@@ -65,6 +67,8 @@ final class TestWorld {
 	SessionManager sessions;
 	BossFights fights;
 	FightLog log;
+	/** Every build phase that ended, as the game log's build lines would get it. */
+	final List<BuildRecord> builds = new ArrayList<>();
 	TafelBoemWorld world;
 	private final Set<Integer> answered = new HashSet<>();
 	private final Set<UUID> wrongOnce = new HashSet<>();
@@ -133,6 +137,9 @@ final class TestWorld {
 		log = new FightLog(dir);
 		world = new TafelBoemWorld(level, layout, fights, log,
 				new ArenaCatalog(level.getServer().getStructureManager(), new Random(1), ARENAS), client, false, buildPhase);
+		// The test server runs faster than 20 ticks a second: count run and fight times in game ticks.
+		world.useClock(() -> helper.getTick() * 50L);
+		world.onBuildEnded(builds::add);
 		world.placeHub(HUB);
 		helper.onEachTick(() -> {
 			sessions.tick();

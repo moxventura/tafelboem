@@ -2,6 +2,7 @@ package nl.jeeninga.tafelboem.gametest;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -9,6 +10,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
@@ -23,7 +25,9 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 
 import nl.jeeninga.tafelboem.core.BuildKit;
 import nl.jeeninga.tafelboem.core.BuildPhase;
+import nl.jeeninga.tafelboem.core.BuildRecord;
 import nl.jeeninga.tafelboem.core.FightLevel;
+import nl.jeeninga.tafelboem.core.FightRecord;
 import nl.jeeninga.tafelboem.world.ArenaRun;
 import nl.jeeninga.tafelboem.world.BuildCorner;
 import nl.jeeninga.tafelboem.world.PlacedArea;
@@ -179,6 +183,73 @@ public class BuildPhaseGameTest {
 			helper.assertTrue(test.world.run(FightLevel.MOEILIJK).map(ArenaRun::fight).isPresent(), "wait for Graaf Fout");
 			helper.assertTrue(calls(test, kid).equals(List.of(10, 5, 3, 2, 1)), "10, 5, 3, 2, 1: " + calls(test, kid));
 			helper.assertTrue(!keys(test, kid).contains("tafelboem.build.bell"), "nobody rang");
+			test.close();
+		});
+	}
+
+	@GameTest(maxTicks = 300, padding = TestWorld.PADDING)
+	public void leavingDuringTheBuildEndsTheRunWithoutAFightAndTheNextEntryClearsTheBuild(GameTestHelper helper) {
+		TestWorld test = new TestWorld(helper).withBuildPhase(BuildPhase.STANDARD).running();
+		ServerPlayer kid = test.kidInTheHub();
+		BlockPos[] tower = {null};
+		test.whenLoaded(() -> {
+			test.world.enterDoor(kid, 2);
+			// A block high above the walls, where only the build phase's clearing reaches.
+			tower[0] = BlockPos.containing(test.world.run(FightLevel.GEMIDDELD).orElseThrow().arena().middle()).above(30);
+			test.level.setBlockAndUpdate(tower[0], Blocks.OAK_PLANKS.defaultBlockState());
+		});
+		// The door cooldown is 40 ticks.
+		helper.runAfterDelay(5 + 45, () -> test.world.enterDoor(kid, 0));
+		helper.runAfterDelay(5 + 45 + 10, () -> {
+			helper.assertTrue(test.world.run(FightLevel.GEMIDDELD).isEmpty(), "the run ended");
+			helper.assertTrue(test.fights.active().isEmpty(), "he never came");
+			List<FightRecord> fights = test.log.read(kid.getPlainTextName());
+			helper.assertTrue(fights.size() == 1 && fights.getFirst().result().equals(FightRecord.LEFT) && fights.getFirst().answers() == 0
+					&& fights.getFirst().seconds() == 0 && fights.getFirst().buildSeconds() >= 2, "logged as left, built ~2 s: " + fights);
+			helper.assertTrue(keys(test, kid).contains("tafelboem.message.left_no_stars"), "the P28 line");
+			helper.assertTrue(test.builds.size() == 1 && test.builds.getFirst().ending().equals(BuildRecord.EVERYONE_LEFT),
+					"a build line: everyone left: " + test.builds);
+		});
+		// Back in once the cooldown is over again: a fresh arena, the tower gone.
+		helper.runAfterDelay(5 + 45 + 45, () -> test.world.enterDoor(kid, 2));
+		helper.succeedWhen(() -> {
+			helper.assertTrue(test.world.run(FightLevel.GEMIDDELD).isPresent(), "wait until the kid is back in");
+			helper.assertTrue(test.level.getBlockState(tower[0]).isAir(), "the last build is gone, also high above the walls");
+			test.close();
+		});
+	}
+
+	@GameTest(maxTicks = 600, padding = TestWorld.PADDING)
+	@Fight
+	public void theBuildLineCountsWhatEachKidPlacedAndTheFightTimeStartsWhenHeComes(GameTestHelper helper) {
+		TestWorld test = new TestWorld(helper).withBuildPhase(BuildPhase.STANDARD).running();
+		ServerPlayer kid = test.kidInTheHub();
+		test.whenLoaded(() -> test.world.enterDoor(kid, 1));
+		helper.runAfterDelay(10, () -> {
+			// Minecraft counts a placed block as "used"; the mock kid can't place, so it gets the count.
+			kid.awardStat(Stats.ITEM_USED.get(Items.OAK_PLANKS), 3);
+			kid.awardStat(Stats.ITEM_USED.get(Items.GLASS), 2);
+			test.world.onUseBlock(kid, InteractionHand.MAIN_HAND, frontOf(test, BuildCorner.bellAt(test.world.run(FightLevel.MAKKELIJK).orElseThrow().arena())));
+		});
+		boolean[] out = {false};
+		helper.onEachTick(() -> {
+			if (!out[0] && test.world.run(FightLevel.MAKKELIJK).map(ArenaRun::fight).isPresent()) {
+				out[0] = true;
+				helper.runAfterDelay(45, () -> test.world.enterDoor(kid, 0));
+			}
+		});
+
+		helper.succeedWhen(() -> {
+			helper.assertTrue(test.builds.size() == 1, "wait for the build line");
+			BuildRecord build = test.builds.getFirst();
+			helper.assertTrue(build.ending().equals(BuildRecord.BELL) && kid.getPlainTextName().equals(build.rangBy()), "the bell, by the kid: " + build);
+			helper.assertTrue(build.placed().equals(Map.of(kid.getPlainTextName(), Map.of("oak_planks", 3, "glass", 2))),
+					"what the kid placed: " + build.placed());
+			helper.assertTrue(build.seconds() >= 10 && build.seconds() <= 12, "built ~11 s: " + build);
+			List<FightRecord> fights = test.log.read(kid.getPlainTextName());
+			helper.assertTrue(fights.size() == 1, "wait until the kid left the fight");
+			helper.assertTrue(fights.getFirst().seconds() <= 3 && fights.getFirst().buildSeconds() >= 10,
+					"the fight's time counts from his arrival: " + fights.getFirst());
 			test.close();
 		});
 	}

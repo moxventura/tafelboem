@@ -87,6 +87,7 @@ public class TafelBoem implements ModInitializer {
 				world = new TafelBoemWorld(overworld, WorldLayout.DEFAULT, fights, fightLog,
 						new ArenaCatalog(server.getStructureManager(), new Random(), ArenaCatalog.DEFAULT_FOLDER), QuizClient.NETWORK, true, buildPhase(config));
 				world.setUp();
+				world.onBuildEnded(build -> LOGGER.info("TafelBoem build: {}", build.describe()));
 				LevelDoorBlock.use(world::queueDoor);
 			}
 		});
