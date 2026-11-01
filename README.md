@@ -28,7 +28,8 @@ go/no-go (see the spec):
 | **R1 "Kies je level"** | TafelBoem world with a hub and a door per level, levels 1–3 with their own tables and bombs, arenas (random per level, replaceable by the kids' own), stars; from 1.0.2 hearts, food, music per level | ✅ published (1.0.x), playtest 3 to do |
 | **R1.1 "Meer yeets"** | A flight plus a landing per hit (wall splat, head-first, pancake, running round, a landing per bomb), fast answers and streaks yeet Graaf Fout further with a record per kid, the counting Kippenbom | ✅ 1.1.x, playtest to do |
 | Faster tests | Nothing new for the kids: the same tests, quicker to run | next, after R1.1 |
-| R1.2 | Experiments: dodgeable bombs, Graaf Fout eats your mistake | backlog |
+| **R1.2 "Bouwen"** | A build phase before every fight: the kids build the plain arena from a chest of blocks, with a countdown and a bell, and then Graaf Fout comes | built, not published yet |
+| R1.3 "Dekking" | Terrain in the fight: dodging behind blocks the kids built, and traps Graaf Fout can land in | backlog, after R1.2 |
 | R2 "Leren dat blijft" | Fact states, spaced practice, Tafelkaart, parent report, daily limit, "Kies je bom", leg-kick animation | backlog |
 | R3 "Meer boem" | Bombs 4–9, craters, particle shows, lives, co-op rescue | backlog |
 | R4 new villains | Tante Toverfout, Robo-Rekenaar 3000 | backlog |
@@ -60,9 +61,10 @@ back on the next Play.
   door says which level it is, and the bombs Graaf Fout throws there sit beside it in item frames.
   Builds on the hub's own platform are reset every time the world loads; builds beside it stay.
 - **The levels.** Walk into a door to go to its arena. Level 1 asks the tables of 1, 2, 5 and 10,
-  level 2 adds 3, 4 and 9, and level 3 asks all ten. About three seconds after you arrive, Graaf
-  Fout appears and the fight starts. Anyone who walks through the same door while the fight runs
-  joins it.
+  level 2 adds 3, 4 and 9, and level 3 asks all ten. Graaf Fout appears when the build countdown
+  runs out or 10 seconds after someone rings the bell (see "Building first" below), and then the
+  fight starts. With `buildPhase` off he appears about three seconds after you arrive. Anyone who
+  walks through the same door while the fight runs joins it.
 - **Building first (1.2).** Behind a level door the arena is empty at first: a double chest full of
   blocks (wood, stone, glass, wool, slime, redstone, lanterns and more) and a bell stand in front of
   you. Build what you like. Graaf Fout comes when the countdown in the boss bar runs out (5 minutes on
@@ -114,9 +116,11 @@ log. `/tafelboem stats` shows a line per level, for example "Medium: ★★☆, 
 ## Build your own arena
 
 The kids can build their own hub and arenas in creative, in any world with cheats on, and save them
-with vanilla structure blocks. The mod picks one of the arenas for a level at random, never the same
-one twice in a row. It uses the plain arena it builds itself only when a level has none, or when all
-of its arenas are skipped.
+with vanilla structure blocks. With `buildPhase` on (the default) every level uses the plain arena,
+so the kids can build in it; the saved arenas are picked at random only with `buildPhase` set to
+`false`. With it off, the mod picks one of the arenas for a level at random, never the same one
+twice in a row. It uses the plain arena it builds itself only when a level has none, or when all of
+its arenas are skipped.
 
 1. Build it. The door blocks, one per level and an exit, are in the **TafelBoem** creative tab.
 2. Run `/give @s minecraft:structure_block`. Put one structure block in each of two opposite
@@ -125,8 +129,9 @@ of its arenas are skipped.
    `tafelboem:level_2/kasteel`, or `tafelboem:hub` for the hub.
 3. Press **Detect** on the Save block, then **Save**.
 4. Minecraft writes `saves/<world>/generated/tafelboem/structure/<name>.nbt`. In a TafelBoem world
-   the arena is used from the next time a kid walks into that level. To ship it to every PC, copy
-   the `.nbt` file into `src/main/resources/data/tafelboem/structure/` and publish a new version.
+   the arena is used (with `buildPhase` off) from the next time a kid walks into that level. To
+   ship it to every PC, copy the `.nbt` file into `src/main/resources/data/tafelboem/structure/` and
+   publish a new version.
 
 **Rules for an arena:**
 - At most 48 × 48 × 48, which is what one structure block can save.
