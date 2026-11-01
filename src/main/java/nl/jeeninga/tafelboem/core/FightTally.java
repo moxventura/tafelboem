@@ -1,5 +1,9 @@
 package nl.jeeninga.tafelboem.core;
 
+import java.util.EnumMap;
+import java.util.Map;
+import java.util.TreeMap;
+
 /**
  * One kid's answers in one fight. Only typed wrong answers cost stars and end a streak: "?" and ESC
  * never do.
@@ -11,6 +15,9 @@ public final class FightTally {
 	private int chickenOut;
 	private int streak;
 	private int farthestYeet;
+	private int dodged;
+	private int pickedUp;
+	private final Map<TrapKind, Integer> trapped = new EnumMap<>(TrapKind.class);
 
 	public void record(Outcome outcome) {
 		answers++;
@@ -53,6 +60,36 @@ public final class FightTally {
 
 	public int farthestYeet() {
 		return farthestYeet;
+	}
+
+	/** A bomb thrown at this kid missed them (R1.3): they ran, or the build stopped it. */
+	public void dodge() {
+		dodged++;
+	}
+
+	public int dodged() {
+		return dodged;
+	}
+
+	/** This kid walked into a lying bomb and got its question. */
+	public void pickUp() {
+		pickedUp++;
+	}
+
+	public int pickedUp() {
+		return pickedUp;
+	}
+
+	/** Graaf Fout landed in a trap after this kid's kick. */
+	public void trap(TrapKind kind) {
+		trapped.merge(kind, 1, Integer::sum);
+	}
+
+	/** Trap landings after this kid's kicks, by {@link TrapKind#id()}. */
+	public Map<String, Integer> trapped() {
+		Map<String, Integer> byId = new TreeMap<>();
+		trapped.forEach((kind, count) -> byId.put(kind.id(), count));
+		return byId;
 	}
 
 	/** No stars without a win, and none for a kid who never answered in this fight. */

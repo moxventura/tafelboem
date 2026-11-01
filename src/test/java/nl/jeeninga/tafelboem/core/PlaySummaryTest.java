@@ -58,4 +58,11 @@ class PlaySummaryTest {
 		assertEquals("Kid A: level 1 in arena default, won ★★★ (11 answers, 0 wrong, 0 \"?\", 0 ESC, 120 s, 1 kid, farthest yeet 31 blocks)",
 				fight.describe());
 	}
+
+	@Test
+	void aKidWhoDiedInAnArenaShowsDiedInTheSessionLine() {
+		PlaySummary summary = new PlaySummary(-1);
+		summary.fought(new FightRecord(0L, "Kid A", 3, "default", FightRecord.DIED, 4, 1, 0, 0, 0, 50, 1, "1.3.0"));
+		assertTrue(summary.describe("Kid A", 0).endsWith("fights: level 3 died"), summary.describe("Kid A", 0));
+	}
 }

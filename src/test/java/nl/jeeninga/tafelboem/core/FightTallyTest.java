@@ -2,6 +2,8 @@ package nl.jeeninga.tafelboem.core;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.Map;
+
 import org.junit.jupiter.api.Test;
 
 class FightTallyTest {
@@ -39,5 +41,21 @@ class FightTallyTest {
 		tally.yeeted(31);
 		tally.yeeted(7);
 		assertEquals(31, tally.farthestYeet());
+	}
+
+	@Test
+	void dodgesPickUpsAndTrapsAreCountedPerKind() {
+		FightTally tally = new FightTally();
+		tally.dodge();
+		tally.dodge();
+		tally.pickUp();
+		tally.trap(TrapKind.COBWEB);
+		tally.trap(TrapKind.CACTUS);
+		tally.trap(TrapKind.CACTUS);
+
+		assertEquals(2, tally.dodged());
+		assertEquals(1, tally.pickedUp());
+		assertEquals(Map.of("cactus", 2, "cobweb", 1), tally.trapped());
+		assertEquals(0, tally.answers(), "none of them is an answer");
 	}
 }

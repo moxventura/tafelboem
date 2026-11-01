@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -101,5 +102,30 @@ class FightLogTest {
 		assertEquals(300, log.read("Sanne").getFirst().buildSeconds());
 		assertEquals("Sanne: level 1 in arena default, won ★★★ (12 answers, 0 wrong, 0 \"?\", 0 ESC, 100 s after 300 s of building, 1 kid, "
 				+ "farthest yeet 31 blocks)", fight.describe());
+	}
+
+	@Test
+	void aLineFromBefore13HasNoDodgesPickUpsOrTraps() throws IOException {
+		Files.writeString(dir.resolve("fights-Sanne.jsonl"), "{\"timestamp\":0,\"player\":\"Sanne\",\"level\":2,\"arena\":\"default\","
+				+ "\"result\":\"won\",\"answers\":12,\"wrong\":1,\"dontKnow\":0,\"chickenOut\":0,\"stars\":2,\"seconds\":120,\"kids\":1,"
+				+ "\"version\":\"1.2.0\",\"farthestYeet\":25,\"buildSeconds\":240}\n");
+
+		FightRecord old = new FightLog(dir).read("Sanne").getFirst();
+		assertEquals(0, old.dodged());
+		assertEquals(0, old.pickedUp());
+		assertEquals(Map.of(), old.trapped(), "empty, never null");
+		assertEquals(240, old.buildSeconds());
+	}
+
+	@Test
+	void theNewCountsAreWrittenReadBackAndShownInTheLine() {
+		FightLog log = new FightLog(dir);
+		FightRecord fight = new FightRecord(0L, "Sanne", 1, "default", FightRecord.WON, 12, 0, 0, 0, 3, 100, 1, "1.3.0", 31, 300, 4, 2,
+				Map.of("cobweb", 1, "cactus", 2));
+		log.append(fight);
+
+		assertEquals(fight, log.read("Sanne").getFirst());
+		assertEquals("Sanne: level 1 in arena default, won ★★★ (12 answers, 0 wrong, 0 \"?\", 0 ESC, 100 s after 300 s of building, 1 kid, "
+				+ "farthest yeet 31 blocks, dodged 4, picked up 2, trapped 3 (cactus 2, cobweb 1))", fight.describe());
 	}
 }

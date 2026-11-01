@@ -44,8 +44,10 @@ final class YeetMeter {
 	 * @param kick    the kick that sent him; null for a yeet on cue (a test)
 	 * @param landing the landing's id, for the game log
 	 * @param factor  how much further the kick sent him
+	 * @param trap    the trap he landed in (R1.3), see {@code TrapKind.id()}; null for none
 	 */
-	void landed(Yeet yeet, boolean flewOut, @Nullable Kick kick, String landing, boolean signature, double factor) {
+	void landed(Yeet yeet, boolean flewOut, @Nullable Kick kick, String landing, boolean signature, double factor,
+			@Nullable String trap) {
 		ServerLevel level = (ServerLevel) boss.level();
 		ServerPlayer kicker = kick == null ? null : level.getServer().getPlayerList().getPlayer(kick.kicker());
 		int blocks = yeet.blocks();
@@ -76,7 +78,7 @@ final class YeetMeter {
 			String name = kicker != null ? kicker.getPlainTextName() : kick.kicker().toString();
 			TafelBoem.LOGGER.info("TafelBoem yeet: {}", new YeetReport(name, kick.tier(), kick.fact(), kick.millis(), kick.usual(),
 					kick.fast(), kick.streak(), factor, yeet.style(), landing, signature, blocks, yeet.measuresHeight(), flewOut,
-					record, previousBest).describe());
+					record, previousBest, trap).describe());
 		}
 	}
 

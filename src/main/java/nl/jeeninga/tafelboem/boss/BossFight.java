@@ -424,7 +424,7 @@ public final class BossFight implements QuizListener {
 		reactionCooldown = Pacing.cooldownAfter(landing);
 		followKickerFor(landing.ticks());
 		farthest(yeet);
-		meter.landed(yeet, false, kick, landing.id(), landing.isSignature(), kickFactor);
+		meter.landed(yeet, false, kick, landing.id(), landing.isSignature(), kickFactor, null);
 	}
 
 	/** Out of the arena and into the void: say how far he got, then he comes straight back. */
@@ -437,7 +437,7 @@ public final class BossFight implements QuizListener {
 		reactions.played(LandingStyle.DIZZY);
 		reactionCooldown = Pacing.cooldownAfter(LandingStyle.DIZZY);
 		farthest(cut);
-		meter.landed(cut, true, kick, LandingStyle.DIZZY.id(), false, kickFactor);
+		meter.landed(cut, true, kick, LandingStyle.DIZZY.id(), false, kickFactor, null);
 		followKickerFor(LANDED_CAM_TICKS);
 	}
 

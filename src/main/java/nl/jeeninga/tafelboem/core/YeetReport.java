@@ -12,10 +12,16 @@ import java.util.OptionalLong;
  * @param landing      the landing's id, see {@code LandingStyle.id()}
  * @param high         the blocks are how high he flew (the helicopter), not how far
  * @param previousBest the kid's farthest yeet before this one, when it was a record
+ * @param trap         the trap that pulled him in at the end, see {@code TrapKind.id()}; null for none
  */
 public record YeetReport(String kicker, BombTier bomb, Fact fact, long millis, OptionalLong usual, boolean fast, int streak,
 		double factor, YeetStyle flight, String landing, boolean signature, int blocks, boolean high, boolean flewOut,
-		boolean record, int previousBest) {
+		boolean record, int previousBest, String trap) {
+	public YeetReport {
+		// A trap's landing is the trap's, never a signature (a lying bomb's soot included).
+		signature = signature && trap == null;
+	}
+
 	public String describe() {
 		StringBuilder line = new StringBuilder(kicker).append(" kicked a ").append(bomb.id()).append(" on ").append(fact)
 				.append(" in ").append(millis).append(" ms (usual ").append(usual.isPresent() ? usual.getAsLong() + " ms" : "none")
@@ -23,7 +29,8 @@ public record YeetReport(String kicker, BombTier bomb, Fact fact, long millis, O
 				.append(String.format(Locale.ROOT, ", x%.2f): ", factor))
 				.append(flight.name().toLowerCase(Locale.ROOT)).append(" + ").append(landing).append(signature ? " (signature)" : "")
 				.append(", ").append(blocks).append(high ? " blocks high" : " blocks")
-				.append(flewOut ? ", out of the arena" : "");
+				.append(flewOut ? ", out of the arena" : "")
+				.append(trap != null ? ", trap=" + trap : "");
 		if (record) {
 			line.append(", a record (was ").append(previousBest).append(")");
 		}
