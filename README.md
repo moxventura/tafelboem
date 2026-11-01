@@ -28,7 +28,7 @@ go/no-go (see the spec):
 | **R1 "Kies je level"** | TafelBoem world with a hub and a door per level, levels 1–3 with their own tables and bombs, arenas (random per level, replaceable by the kids' own), stars; from 1.0.2 hearts, food, music per level | ✅ published (1.0.x), playtest 3 played on 2026-10-31, go/no-go still open |
 | **R1.1 "Meer yeets"** | A flight plus a landing per hit (wall splat, head-first, pancake, running round, a landing per bomb), fast answers and streaks yeet Graaf Fout further with a record per kid, the counting Kippenbom | ✅ 1.1.x, played in playtest 3 on 2026-10-31, go/no-go still open |
 | Faster tests | Nothing new for the kids: the same tests, quicker to run | ✅ done on 2026-10-26 (merged, no publish) |
-| **R1.2 "Bouwen"** | A build phase before every fight: the kids build the plain arena from a chest of blocks, with a countdown and a bell, and then Graaf Fout comes | built, not published yet |
+| **R1.2 "Bouwen"** | A build phase before every fight: the kids build the plain arena from a chest of blocks, with a countdown and a bell, and then Graaf Fout comes | ✅ published (1.2.0) on 2026-11-01, playtest 4 still to come |
 | **R1.3 "Dekking"** | Terrain in the fight: dodging behind blocks the kids built, and traps Graaf Fout can land in | built, not published yet (it waits for playtest 4) |
 | R2 "Leren dat blijft" | Fact states, spaced practice, Tafelkaart, parent report, daily limit, "Kies je bom", leg-kick animation | backlog |
 | R3 "Meer boem" | Bombs 4–9, craters, particle shows, lives, co-op rescue | backlog |
