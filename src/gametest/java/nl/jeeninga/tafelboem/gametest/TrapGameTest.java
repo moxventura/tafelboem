@@ -8,6 +8,7 @@ import java.util.Set;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
@@ -60,6 +61,58 @@ public class TrapGameTest {
 		// The summon item's fight: 1.2.0's yeets, whatever the switch says.
 		ArenaFight arena = new ArenaFight(helper, new TafelBoemConfig(), false);
 		noPull(helper, arena, cactus(arena, 3));
+	}
+
+	/**
+	 * The one place where traps, the hit counter and the finale meet: a real fight is played with right
+	 * answers until he has two hits left, then cacti stand all over the arena. That kick takes one hit and
+	 * the cactus he lands in the other, so the trap's hit is the one that beats him. He must fly off at
+	 * once, not start a dizzy landing, and the win is rewarded.
+	 */
+	@GameTest(maxTicks = 6000, padding = 48)
+	@Fight
+	public void aTrapsExtraHitCanBeTheLastAndTheFightEndsWithAWin(GameTestHelper helper) {
+		TafelBoemConfig config = new TafelBoemConfig();
+		// Craters would break the walls that keep him over the cacti.
+		config.arenaCraters = false;
+		ArenaFight arena = new ArenaFight(helper, config);
+		walls(arena);
+
+		Set<Integer> answered = new HashSet<>();
+		boolean[] cacti = {false};
+		long[] wonAt = {-1};
+		long[] goneAt = {-1};
+		LandingStyle[] landingWhenBeaten = {null};
+		helper.onEachTick(() -> {
+			for (QuizS2C question : arena.questionsTo(arena.kid)) {
+				if (answered.add(question.sessionId())) {
+					arena.answerRight(arena.kid, question);
+				}
+			}
+			// Only once the yeet before has landed: it must not find a cactus, or the hits would not add up.
+			if (!cacti[0] && arena.fight.hitsRemaining() == 2 && !arena.fight.boss().isReacting()) {
+				cacti[0] = true;
+				cactiEverywhere(arena);
+			}
+			if (arena.fight.isWon() && wonAt[0] < 0) {
+				wonAt[0] = helper.getTick();
+				landingWhenBeaten[0] = arena.fight.boss().landingStyle();
+			}
+			if (arena.fight.isOver() && goneAt[0] < 0) {
+				goneAt[0] = helper.getTick();
+			}
+		});
+
+		helper.succeedWhen(() -> {
+			helper.assertTrue(arena.fight.isOver(), "wait until he is beaten and gone");
+			helper.assertTrue(cacti[0], "the cacti stood there for the last kick");
+			helper.assertTrue(arena.fight.tally(arena.kid.getUUID()).trapped().equals(Map.of("cactus", 1)),
+					"the trap gave the last hit: " + arena.fight.tally(arena.kid.getUUID()).trapped());
+			helper.assertTrue(answered.size() == 10, "10 kicks did it: 9 hits, and 1 kick with the cactus: " + answered.size());
+			helper.assertTrue(landingWhenBeaten[0] == null, "he flies off at once, no landing in the finale: " + landingWhenBeaten[0]);
+			helper.assertTrue(goneAt[0] - wonAt[0] <= 65, "he was gone " + (goneAt[0] - wonAt[0]) + " ticks after his last hit");
+			helper.assertTrue(arena.kid.getInventory().countItem(Items.COOKED_CHICKEN) == 4, "the win is rewarded");
+		});
 	}
 
 	/**
@@ -120,7 +173,10 @@ public class TrapGameTest {
 	/** A cactus on sand, this many blocks east of Graaf Fout. */
 	private static BlockPos cactus(ArenaFight arena, int east) {
 		GraafFout boss = arena.fight.boss();
-		BlockPos cactus = BlockPos.containing(boss.getX() + east, arena.floorY, boss.getZ());
+		return cactusAt(arena, BlockPos.containing(boss.getX() + east, arena.floorY, boss.getZ()));
+	}
+
+	private static BlockPos cactusAt(ArenaFight arena, BlockPos cactus) {
 		// The floor floats: without a block under it, the sand falls and the cactus breaks.
 		arena.level.setBlockAndUpdate(cactus.below(2), Blocks.STONE.defaultBlockState());
 		arena.level.setBlockAndUpdate(cactus.below(), Blocks.SAND.defaultBlockState());
@@ -173,6 +229,24 @@ public class TrapGameTest {
 				BlockPos pos = new BlockPos(minX + dx, arena.floorY, minZ + dz);
 				if (Math.abs(pos.getX() - kid.getX()) > 3 || Math.abs(pos.getZ() - kid.getZ()) > 3) {
 					arena.fight.placeLyingBomb(pos, BombTier.KNALLETJE);
+				}
+			}
+		}
+	}
+
+	/**
+	 * A cactus every 3 blocks over the floor, so any flight comes down within reach of one; none within
+	 * 2.5 blocks of the kid, where his next bomb may land.
+	 */
+	private static void cactiEverywhere(ArenaFight arena) {
+		int middleX = (int) Math.floor(arena.box.middleX());
+		int middleZ = (int) Math.floor(arena.box.middleZ());
+		for (int dx = -9; dx <= 9; dx += 3) {
+			for (int dz = -9; dz <= 9; dz += 3) {
+				double kidX = arena.kid.getX() - (middleX + dx + 0.5);
+				double kidZ = arena.kid.getZ() - (middleZ + dz + 0.5);
+				if (kidX * kidX + kidZ * kidZ >= 2.5 * 2.5) {
+					cactusAt(arena, new BlockPos(middleX + dx, arena.floorY, middleZ + dz));
 				}
 			}
 		}

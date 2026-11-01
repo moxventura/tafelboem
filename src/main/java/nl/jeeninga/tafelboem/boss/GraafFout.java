@@ -302,7 +302,8 @@ public class GraafFout extends Evoker {
 		if (fight != null) {
 			fight.onYeetLanded(landed);
 		}
-		if (landing == null) {
+		// A trap's last hit started his finale in there: he flies off, and nothing lands.
+		if (landing == null && !finale) {
 			// No fight to pick one (or it's over): the dizzy spell, as always.
 			startLanding(LandingStyle.DIZZY, Landing.Scene.NONE);
 		}
