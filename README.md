@@ -245,6 +245,7 @@ version, and the mod warns when they don't match, even when two builds are only 
 | `yeetCatalogue` | `true` | The wall splat and the landings head-first, pancake and running round. `false`: the R1 yeets and the dizzy spell |
 | `bombSignatures` | `true` | Each bomb's own landing every other kick: sore toe, soot face, chasing chickens |
 | `arenaMusic` | `true` | Each level's arena plays its own track. `false` keeps the normal music; applies from the next arena a kid walks into |
+| `buildPhase` | `true` | Through a level door the kids first build in the plain arena, with a double chest of blocks and a bell. Graaf Fout comes when the countdown in the boss bar runs out (5, 4 or 3 minutes by level) or 10 seconds after someone rings the bell. `false` is 1.1.2: a random arena, and he comes 3 seconds after the first kid |
 
 `/tafelboem stats [player]` shows accuracy and typical time per table, the hardest facts, how often a
 missed fact is right when it comes back, and how often "?" was probably pressed by accident.

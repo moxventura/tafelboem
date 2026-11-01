@@ -66,6 +66,13 @@ public final class TafelBoemConfig {
 	/** Each level's arena plays its own music: Otherside, Pigstep, "Boss". Applies from the next arena placed. */
 	public boolean arenaMusic = true;
 
+	/**
+	 * Through a level door the kids first build in the plain arena, with a chest of blocks and a bell, until a
+	 * countdown (5, 4 or 3 minutes by level) or the bell brings Graaf Fout. Off, as 1.1.2: a random arena, he
+	 * comes 3 s after the first kid. Applies from the next arena entered.
+	 */
+	public boolean buildPhase = true;
+
 	public static TafelBoemConfig load(Path file) {
 		if (!Files.exists(file)) {
 			TafelBoemConfig defaults = new TafelBoemConfig();

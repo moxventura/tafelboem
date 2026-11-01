@@ -79,9 +79,7 @@ public final class ArenaCatalog {
 			}
 		}
 
-		// Blocks only where the last arena stood (all of the slot when that isn't known); stray entities anywhere in it.
-		lastPlaced.getOrDefault(fightLevel, Optional.of(slot)).ifPresent(box -> ShapePlacer.clearBlocks(level, box));
-		ShapePlacer.clearEntities(level, slot);
+		clearLast(level, slot, fightLevel);
 		PlacedArea arena;
 		if (!usable.isEmpty()) {
 			ArenaPicker picker = pickers.computeIfAbsent(fightLevel, key -> new ArenaPicker(random));
@@ -89,15 +87,43 @@ public final class ArenaCatalog {
 			StructureTemplate found = usable.get(name);
 			arena = ShapePlacer.placeTemplate(level, WorldLayout.cornerFor(slot, found.getSize().getX(), found.getSize().getZ()), name, found);
 		} else {
-			Shape shape = ArenaShape.forLevel(fightLevel.number());
-			arena = ShapePlacer.placeShape(level, WorldLayout.cornerFor(slot, shape.sizeX(), shape.sizeZ()), shape);
+			arena = placeShape(level, slot, fightLevel);
 		}
 		lastPlaced.put(fightLevel, Optional.of(arena.bounds()));
-		// Over the arena, from the bottom to the top of its slot: wherever a kid is in it, the music plays.
+		setMusic(level, slot, arena, fightLevel);
+		return arena;
+	}
+
+	/**
+	 * The build phase's arena: always the plain one from code, templates or not. The kids build on it,
+	 * up to the top of the slot and beside the walls, so the next entry clears all of the slot.
+	 */
+	public PlacedArea placePlain(ServerLevel level, WorldLayout layout, FightLevel fightLevel) {
+		ArenaBox slot = layout.arenaSlot(fightLevel);
+		clearLast(level, slot, fightLevel);
+		PlacedArea arena = placeShape(level, slot, fightLevel);
+		lastPlaced.put(fightLevel, Optional.of(slot));
+		setMusic(level, slot, arena, fightLevel);
+		return arena;
+	}
+
+	/** Blocks only where the last arena stood (all of the slot when that isn't known); stray entities anywhere in it. */
+	private void clearLast(ServerLevel level, ArenaBox slot, FightLevel fightLevel) {
+		lastPlaced.getOrDefault(fightLevel, Optional.of(slot)).ifPresent(box -> ShapePlacer.clearBlocks(level, box));
+		// After the blocks: a chest that went to air spilled its kit, and that goes too.
+		ShapePlacer.clearEntities(level, slot);
+	}
+
+	private static PlacedArea placeShape(ServerLevel level, ArenaBox slot, FightLevel fightLevel) {
+		Shape shape = ArenaShape.forLevel(fightLevel.number());
+		return ShapePlacer.placeShape(level, WorldLayout.cornerFor(slot, shape.sizeX(), shape.sizeZ()), shape);
+	}
+
+	/** Over the arena, from the bottom to the top of its slot: wherever a kid is in it, the music plays. */
+	private static void setMusic(ServerLevel level, ArenaBox slot, PlacedArea arena, FightLevel fightLevel) {
 		ArenaBox over = arena.bounds();
 		ArenaBiomes.set(level, new ArenaBox(over.minX(), slot.minY(), over.minZ(), over.maxX(), slot.maxY(), over.maxZ()), fightLevel,
 				TafelBoem.config().arenaMusic);
-		return arena;
 	}
 
 	public static boolean hasExitDoor(StructureTemplate template) {

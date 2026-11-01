@@ -25,6 +25,7 @@ import nl.jeeninga.tafelboem.boss.BossFight;
 import nl.jeeninga.tafelboem.boss.BossFights;
 import nl.jeeninga.tafelboem.config.TafelBoemConfig;
 import nl.jeeninga.tafelboem.core.ArenaBox;
+import nl.jeeninga.tafelboem.core.BuildPhase;
 import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.game.ProtectedAreas;
 import nl.jeeninga.tafelboem.game.SessionManager;
@@ -59,6 +60,8 @@ final class TestWorld {
 	final RecordingQuizClient client = new RecordingQuizClient();
 	/** The switches this world plays with; null: the mod's own. */
 	TafelBoemConfig config;
+	/** Off unless a test asks: the fight tests shouldn't wait for a build phase. */
+	BuildPhase buildPhase = BuildPhase.OFF;
 	SessionManager sessions;
 	BossFights fights;
 	FightLog log;
@@ -114,6 +117,12 @@ final class TestWorld {
 		return this;
 	}
 
+	/** Plays with this build phase; call before {@link #running()}. */
+	TestWorld withBuildPhase(BuildPhase phase) {
+		this.buildPhase = phase;
+		return this;
+	}
+
 	/** Runs a TafelBoem world in the layout: the hub placed, every question answered right. */
 	TestWorld running() {
 		Path dir = tempDir();
@@ -123,7 +132,7 @@ final class TestWorld {
 		fights = new BossFights(sessions);
 		log = new FightLog(dir);
 		world = new TafelBoemWorld(level, layout, fights, log,
-				new ArenaCatalog(level.getServer().getStructureManager(), new Random(1), ARENAS), client, false);
+				new ArenaCatalog(level.getServer().getStructureManager(), new Random(1), ARENAS), client, false, buildPhase);
 		world.placeHub(HUB);
 		helper.onEachTick(() -> {
 			sessions.tick();

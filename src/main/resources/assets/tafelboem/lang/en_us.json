@@ -64,5 +64,6 @@
   "tafelboem.door.stars": "%s: %s",
   "tafelboem.message.left_no_stars": "You left before Count Wrong was beaten, so no stars this time.",
   "tafelboem.door.busy": "Just a moment, the others are on their way back!",
-  "tafelboem.arena.skipped": "Arena %s has no exit door, so it was skipped."
+  "tafelboem.arena.skipped": "Arena %s has no exit door, so it was skipped.",
+  "tafelboem.build.countdown": "Count Wrong comes in %s"
 }

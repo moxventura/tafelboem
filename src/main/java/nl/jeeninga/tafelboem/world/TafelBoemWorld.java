@@ -28,6 +28,8 @@ import nl.jeeninga.tafelboem.boss.BossFight;
 import nl.jeeninga.tafelboem.boss.BossFights;
 import nl.jeeninga.tafelboem.boss.YeetRecords;
 import nl.jeeninga.tafelboem.command.ArenaSetup;
+import nl.jeeninga.tafelboem.core.BuildCountdown;
+import nl.jeeninga.tafelboem.core.BuildPhase;
 import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.core.FightRecord;
 import nl.jeeninga.tafelboem.core.FightTally;
@@ -57,6 +59,7 @@ public final class TafelBoemWorld {
 	private final ArenaCatalog catalog;
 	private final QuizClient client;
 	private final boolean catchEveryone;
+	private final BuildPhase buildPhase;
 	private final Map<FightLevel, ArenaRun> runs = new EnumMap<>(FightLevel.class);
 	private final Map<UUID, QueuedDoor> queuedDoors = new LinkedHashMap<>();
 	private final Map<UUID, Integer> doorCooldown = new HashMap<>();
@@ -82,9 +85,10 @@ public final class TafelBoemWorld {
 	 * @param catchEveryone true in a real TafelBoem world: everyone who falls into the void is caught,
 	 *     wherever they are. GameTests share their level with other tests, so they only catch the
 	 *     players above their own hub and arenas.
+	 * @param buildPhase whether kids build first, and how long; {@link BuildPhase#OFF} is 1.1.2
 	 */
 	public TafelBoemWorld(ServerLevel level, WorldLayout layout, BossFights fights, FightLog fightLog, ArenaCatalog catalog, QuizClient client,
-			boolean catchEveryone) {
+			boolean catchEveryone, BuildPhase buildPhase) {
 		this.level = level;
 		this.layout = layout;
 		this.fights = fights;
@@ -92,6 +96,7 @@ public final class TafelBoemWorld {
 		this.catalog = catalog;
 		this.client = client;
 		this.catchEveryone = catchEveryone;
+		this.buildPhase = buildPhase;
 	}
 
 	/** On every world load: the world rules, a fresh hub, and the spawn in the middle of its spot. */
@@ -179,12 +184,23 @@ public final class TafelBoemWorld {
 			return;
 		}
 		if (run == null) {
-			PlacedArea arena = catalog.place(level, layout, fightLevel,
-					name -> player.sendSystemMessage(Component.translatable("tafelboem.arena.skipped", name).withStyle(ChatFormatting.GOLD)));
-			run = new ArenaRun(fightLevel, arena, ticks + START_DELAY_TICKS, System.currentTimeMillis());
+			long now = System.currentTimeMillis();
+			if (buildPhase.on()) {
+				PlacedArea arena = catalog.placePlain(level, layout, fightLevel);
+				BuildCorner.place(level, arena);
+				run = new ArenaRun(fightLevel, arena, new BuildCountdown(buildPhase.seconds(fightLevel) * BuildCountdown.TICKS_PER_SECOND), now,
+						new Building());
+			} else {
+				PlacedArea arena = catalog.place(level, layout, fightLevel,
+						name -> player.sendSystemMessage(Component.translatable("tafelboem.arena.skipped", name).withStyle(ChatFormatting.GOLD)));
+				run = new ArenaRun(fightLevel, arena, new BuildCountdown(START_DELAY_TICKS), now, null);
+			}
 			runs.put(fightLevel, run);
 		}
 		run.join(player.getUUID());
+		if (run.building() != null && run.fight() == null) {
+			run.building().joined(player);
+		}
 		teleport(player, run.arena().standAt(), run.arena().yaw());
 	}
 
@@ -211,13 +227,23 @@ public final class TafelBoemWorld {
 	}
 
 	private void tick(ArenaRun run) {
-		if (run.fight() == null && ticks >= run.startAt() && !run.kids().isEmpty()) {
-			Vec3 spot = run.arena().middle().add(0, 1.5, 0);
-			BossFight fight = fights.summon(level, spot, run.level(), run.arena().bounds());
-			if (fight != null) {
-				fight.useYeetRecords(yeetRecords);
+		if (run.fight() == null && !run.kids().isEmpty()) {
+			run.countdown().tick();
+			Building building = run.building();
+			if (building != null) {
+				building.show(kidsIn(run), run.countdown());
 			}
-			run.start(fight);
+			if (run.countdown().isOver()) {
+				Vec3 spot = run.arena().middle().add(0, 1.5, 0);
+				BossFight fight = fights.summon(level, spot, run.level(), run.arena().bounds());
+				if (fight != null) {
+					fight.useYeetRecords(yeetRecords);
+				}
+				run.start(fight, System.currentTimeMillis());
+				if (building != null && fight != null) {
+					building.hide();
+				}
+			}
 		}
 
 		// A kid who is somewhere else now (a command, another dimension) has left the fight.
@@ -236,7 +262,7 @@ public final class TafelBoemWorld {
 					leave(kid, run, FightRecord.LEFT);
 					teleport(kid, hub.standAt(), hub.yaw());
 				}
-				runs.remove(run.level());
+				removeRun(run);
 				return;
 			}
 			award(run, fight);
@@ -246,14 +272,22 @@ public final class TafelBoemWorld {
 			for (ServerPlayer kid : kidsIn(run)) {
 				teleport(kid, hub.standAt(), hub.yaw());
 			}
-			runs.remove(run.level());
+			removeRun(run);
 			return;
 		}
 		if (run.kids().isEmpty() && !run.isReturning()) {
 			if (fight != null && !fight.isOver()) {
 				fights.end(fight);
 			}
-			runs.remove(run.level());
+			removeRun(run);
+		}
+	}
+
+	/** The run is over: the countdown's boss bar goes with it. */
+	private void removeRun(ArenaRun run) {
+		runs.remove(run.level());
+		if (run.building() != null) {
+			run.building().hide();
 		}
 	}
 
@@ -278,6 +312,9 @@ public final class TafelBoemWorld {
 		if (!run.isReturning()) {
 			write(kid, run, result, 0);
 		}
+		if (run.building() != null && run.fight() == null) {
+			run.building().left(kid);
+		}
 		run.remove(kid.getUUID());
 	}
 
@@ -294,9 +331,10 @@ public final class TafelBoemWorld {
 
 	private void write(ServerPlayer kid, ArenaRun run, String result, int stars) {
 		FightTally tally = run.fight() == null ? new FightTally() : run.fight().tally(kid.getUUID());
-		long seconds = (System.currentTimeMillis() - run.startedAtMillis()) / 1000;
-		fightLog.append(new FightRecord(System.currentTimeMillis(), kid.getPlainTextName(), run.level().number(), run.arena().name(), result,
-				tally.answers(), tally.wrong(), tally.dontKnow(), tally.chickenOut(), stars, seconds, run.everyone().size(), TafelBoem.version(), tally.farthestYeet()));
+		long now = System.currentTimeMillis();
+		fightLog.append(new FightRecord(now, kid.getPlainTextName(), run.level().number(), run.arena().name(), result,
+				tally.answers(), tally.wrong(), tally.dontKnow(), tally.chickenOut(), stars, run.fightSeconds(now), run.everyone().size(),
+				TafelBoem.version(), tally.farthestYeet(), run.buildSeconds(now)));
 	}
 
 	/** Falling is never fatal: back to the arena's arrival spot in a fight, otherwise to the hub. */

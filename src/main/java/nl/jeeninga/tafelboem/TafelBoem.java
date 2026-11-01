@@ -25,6 +25,7 @@ import nl.jeeninga.tafelboem.block.LevelDoorBlock;
 import nl.jeeninga.tafelboem.boss.BossFights;
 import nl.jeeninga.tafelboem.command.TafelBoemCommand;
 import nl.jeeninga.tafelboem.config.TafelBoemConfig;
+import nl.jeeninga.tafelboem.core.BuildPhase;
 import nl.jeeninga.tafelboem.game.ProtectedAreas;
 import nl.jeeninga.tafelboem.game.QuizClient;
 import nl.jeeninga.tafelboem.game.SessionManager;
@@ -82,7 +83,7 @@ public class TafelBoem implements ModInitializer {
 			ServerLevel overworld = server.overworld();
 			if (TafelBoemWorlds.isTafelBoemWorld(overworld)) {
 				world = new TafelBoemWorld(overworld, WorldLayout.DEFAULT, fights, fightLog,
-						new ArenaCatalog(server.getStructureManager(), new Random(), ArenaCatalog.DEFAULT_FOLDER), QuizClient.NETWORK, true);
+						new ArenaCatalog(server.getStructureManager(), new Random(), ArenaCatalog.DEFAULT_FOLDER), QuizClient.NETWORK, true, buildPhase(config));
 				world.setUp();
 				LevelDoorBlock.use(world::queueDoor);
 			}
@@ -146,6 +147,18 @@ public class TafelBoem implements ModInitializer {
 
 	public static TafelBoemConfig config() {
 		return config;
+	}
+
+	/**
+	 * The build phase the world plays with: the parent's switch, and for the client GameTests a short time
+	 * ({@code -Dtafelboem.buildSeconds}, set in build.gradle) so they don't wait minutes per arena.
+	 */
+	static BuildPhase buildPhase(TafelBoemConfig config) {
+		if (!config.buildPhase) {
+			return BuildPhase.OFF;
+		}
+		Integer seconds = Integer.getInteger("tafelboem.buildSeconds");
+		return seconds == null ? BuildPhase.STANDARD : BuildPhase.everyLevel(seconds);
 	}
 
 	public static SessionManager sessions() {

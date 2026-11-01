@@ -26,6 +26,7 @@ import nl.jeeninga.tafelboem.core.YeetPose;
 import nl.jeeninga.tafelboem.gametest.RecordingQuizClient.Bar;
 import nl.jeeninga.tafelboem.registry.ModBlocks;
 import nl.jeeninga.tafelboem.world.ArenaRun;
+import nl.jeeninga.tafelboem.world.BuildCorner;
 
 /**
  * Playing a TafelBoem world: through a door into a fight, together, to the stars, and back home.
@@ -40,6 +41,8 @@ public class TafelBoemWorldGameTest {
 		helper.assertTrue(test.layout.arenaSlot(FightLevel.GEMIDDELD).containsColumn(kid.getX(), kid.getZ()), "the kid is in the level 2 arena");
 		BlockPos below = kid.blockPosition().below();
 		helper.assertTrue(test.level.getBlockState(below).is(Blocks.GRASS_BLOCK), "standing on the arena's grass");
+		helper.assertFalse(test.level.getBlockState(BuildCorner.chestAt(test.world.run(FightLevel.GEMIDDELD).orElseThrow().arena())).is(Blocks.CHEST),
+				"without a build phase there is no chest, as in 1.1.2");
 		helper.succeedWhen(() -> {
 			BossFight fight = test.world.run(FightLevel.GEMIDDELD).map(ArenaRun::fight).orElse(null);
 			helper.assertTrue(fight != null, "wait for Graaf Fout");
