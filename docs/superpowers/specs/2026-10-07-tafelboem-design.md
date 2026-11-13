@@ -74,7 +74,7 @@ multiplayer sessions and a one-step deploy to every PC are part of R0.
 | *Faster tests, right after R1.1* | nothing new for the kids (see the faster-tests scope below): the same tests, quicker; a quick and a fights group (`runGameTest` runs every test on one server); tests that count entities count only their own | A suite that is quicker to run keeps releases small and cheap to check | see the faster-tests targets below; no test loses what it proves |
 | **R1.2 "Bouwen"** | see the R1.2 scope below: a build phase before every fight: the plain arena, a double chest with a building kit and a bell, a countdown in the boss bar (5, 4 or 3 minutes by level), ring the bell and he comes in 10 s; then the fight as today, craters in the build included | Building first makes a round more fun, without cutting answers per minute in the fight below playtest 3 | see the R1.2 evaluation below: the `TafelBoem build:` lines (time built, bell or not, what they placed), answers per minute from his arrival, and asking whether building was fun |
 | **R1.3 "Dekking"** | see the R1.3 scope below: terrain in the fight: a built block between Graaf Fout and the kid stops a bomb, and running away dodges too; a dodged bomb lies still until a kid walks into it (no cap); after a yeet he is pulled into a trap the kids built within 4 blocks (cactus, berry bush, magma, cobweb, slime, a lying bomb) for +1 hit, once per trap; arena safety by Minecraft difficulty | Dodging and traps make the build count in the fight, without cutting answers per minute or adding frustration | answers per minute vs R1.2, dodges and trap landings per fight, frustration tally |
-| **R1.4 "Terug!"** | see the R1.4 scope below: no build phase (he comes straight away); harder dodging (he aims ahead, a landing ring, a 3-block blast zone, quicker throws by level); a dodged bomb can be caught by any kid (up to 3) and thrown back: a hit staggers him and asks a "Terug!" question, and a right answer is a hit with a ×1.5 yeet | Dodging that is hard but pays off with a throw-back makes the fight more fun and gives more sums per minute, not fewer | see the R1.4 evaluation below: dodge rate per level against the targets, catches and throw-backs, answers per minute vs 1.3.0 |
+| **R1.4 "Terug!"** | see the R1.4 scope below: no build phase (he comes straight away); harder dodging (he aims ahead, a landing ring, a 3-block blast zone, quicker throws by level); a dodged bomb can be caught by any kid (up to 3) and thrown back: a hit staggers him and asks a "Terug!" question, and a right answer is a hit with a ×1.5 yeet; hit him mid-yeet for a juggle: he freezes in the air, and a right answer is a ×2 super yeet | Dodging that is hard but pays off with a throw-back makes the fight more fun and gives more sums per minute, not fewer | see the R1.4 evaluation below: dodge rate per level against the targets, catches and throw-backs, answers per minute vs 1.3.0 |
 | **R2 "Leren dat blijft"** | fact states and spaced picker, a Tafelkaart screen (GUI), parent report, the daily limit, "Kies je bom", the full leg kick in third person | The practice spreads out and facts move toward Fluent | 2 weeks of logs: % Accurate/Fluent up, median time down, sessions spread over days, kids still asking |
 | **R3 "Meer boem"** | bombs 4–9, levels 4–9, particle choreographies, craters, escape aids, lethal tiers with 3 lives, inventory stash, signature reactions for bombs 4–9, co-op rescue sums, the lobby extras in the hub (Tafelkaart wall, trophy wall, animal pen) | Escalation keeps them climbing without frustration | level reached per week, favourite bombs, no tears at levels 7–9, FPS OK on the woonkamer PC |
 | R4 new villains *(when they ask for it)* | Tante Toverfout, then Robo-Rekenaar 3000 | Pulled by the kids beating Graaf Fout | |
@@ -1022,12 +1022,24 @@ dodges it. In R1.4, by level:
    - **Right:** it blows up on him: one hit, and a yeet with ×1.5 on top of the usual yeet-o-meter
      factor. It can be the last hit; the fight then ends as usual.
    - **Wrong:** it fizzles, like any wrong answer. No extra penalty.
-6. **A miss** (it hits the ground or a wall first) poofs. A bomb that reaches him while he is being
-   yeeted, landing, or in his finale bounces off and drops as a catchable bomb again.
-7. **A kid who is answering** can't throw (the question screen is open anyway).
-8. **When the fight ends,** won, lost or everyone gone, every caught bomb on the ground or in a
+6. **A miss** (it hits the ground or a wall first) poofs. A bomb that reaches him while he is
+   landing (on the ground, still reacting) or in his finale bounces off and drops as a catchable
+   bomb again.
+7. **The juggle: hit him mid-yeet.** A throw-back that hits him while he is flying from a yeet
+   freezes him in the air, spinning and flailing, and the kid who threw it gets the Terug! question
+   while he hangs there.
+   - **Right: SUPER YEET.** One hit, and a new yeet ×2 (on top of the usual yeet-o-meter factor) in
+     a fresh direction, with its own sound and particles. It can be the last hit.
+   - **Wrong:** he unfreezes and falls the normal way; no hit.
+   - **One juggle per yeet.** A super yeet can't be juggled again; a bomb that reaches him then
+     drops back as a catchable bomb. So he never hangs in the air for good.
+   - **Two kids at once:** the first throw-back to hit him counts; a second in the same flight drops
+     back as a catchable bomb.
+   - **Not in his finale.** His finale yeet stays as it is.
+8. **A kid who is answering** can't throw (the question screen is open anyway).
+9. **When the fight ends,** won, lost or everyone gone, every caught bomb on the ground or in a
    pocket poofs. A kid who leaves the arena or dies loses theirs.
-9. **Switch `dodging`, default on,** now means all of this. Off is 1.2.0's behaviour: wherever the
+10. **Switch `dodging`, default on,** now means all of this. Off is 1.2.0's behaviour: wherever the
    bomb lands, its kid is rooted, and there is no lead, ring or throw-back.
 
 ### Logs for the evaluation
@@ -1035,7 +1047,8 @@ dodges it. In R1.4, by level:
   `backHits` (throw-backs that hit him), and the Terug! answers right and wrong; plus the level, so
   the dodge rate per level can be read against the targets. `pickedUp` and `trapped` stay readable
   in old lines.
-- The yeet line marks a throw-back yeet (`back`), so its ×1.5 is visible.
+- The yeet line marks a throw-back yeet (`back`, ×1.5) and a juggle (`super`, ×2). The yeet-o-meter
+  keeps a separate personal best for super yeets ("hoogste juggle").
 - Answers per minute keeps counting from his arrival, comparable with 1.3.0.
 
 ### Load contract
@@ -1053,11 +1066,15 @@ row in `AGENTS.md`:
 - **Game tests:** a kid running straight at walking speed is hit on level 3; a kid who turns after
   the throw dodges; a dodged bomb drops as a Terugbom; any kid catches it, a fourth is refused, it
   poofs after 10 s; a throw-back that hits staggers him, skips a throw and starts the Terug!
-  question; right is a hit with ×1.5, wrong fizzles; a throw-back during his yeet drops back;
+  question; right is a hit with ×1.5, wrong fizzles; a throw-back mid-yeet freezes him and asks the
+  question, right is a hit and a ×2 super yeet, wrong lets him fall; a super yeet can't be juggled
+  again; a second kid's throw-back in the same flight drops back; a throw-back while he lands or in
+  his finale drops back;
   caught bombs poof at the end of the fight and from the pocket of a kid who leaves; the ring is
   there with `landingRing` on and gone with it off; a fight starts without a build phase; each
   switch off gives its old behaviour.
-- **Client game test:** a screenshot of the landing ring and of a kid holding a Terugbom.
+- **Client game test:** a screenshot of the landing ring, of a kid holding a Terugbom, and of him
+  frozen mid-air in a juggle.
 
 **R1.4 evaluation (playtest 6).** Record it in `docs/evaluations/R1.4.md`.
 
@@ -1067,7 +1084,8 @@ row in `AGENTS.md`:
 - the kids catch and throw back without being told
 - the kids still ask to play
 
-**Watch:** a kid who hoards bombs instead of throwing; throw-backs that keep missing (is the aim
+**Watch:** how often the kids juggle, and whether they try to; a kid who hoards bombs instead of
+throwing; throw-backs that keep missing (is the aim
 help enough?); whether the ring makes it too easy (it has a switch); deaths on Normal.
 
 ## Faster tests (detailed scope)
