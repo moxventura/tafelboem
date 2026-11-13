@@ -74,6 +74,7 @@ multiplayer sessions and a one-step deploy to every PC are part of R0.
 | *Faster tests, right after R1.1* | nothing new for the kids (see the faster-tests scope below): the same tests, quicker; a quick and a fights group (`runGameTest` runs every test on one server); tests that count entities count only their own | A suite that is quicker to run keeps releases small and cheap to check | see the faster-tests targets below; no test loses what it proves |
 | **R1.2 "Bouwen"** | see the R1.2 scope below: a build phase before every fight: the plain arena, a double chest with a building kit and a bell, a countdown in the boss bar (5, 4 or 3 minutes by level), ring the bell and he comes in 10 s; then the fight as today, craters in the build included | Building first makes a round more fun, without cutting answers per minute in the fight below playtest 3 | see the R1.2 evaluation below: the `TafelBoem build:` lines (time built, bell or not, what they placed), answers per minute from his arrival, and asking whether building was fun |
 | **R1.3 "Dekking"** | see the R1.3 scope below: terrain in the fight: a built block between Graaf Fout and the kid stops a bomb, and running away dodges too; a dodged bomb lies still until a kid walks into it (no cap); after a yeet he is pulled into a trap the kids built within 4 blocks (cactus, berry bush, magma, cobweb, slime, a lying bomb) for +1 hit, once per trap; arena safety by Minecraft difficulty | Dodging and traps make the build count in the fight, without cutting answers per minute or adding frustration | answers per minute vs R1.2, dodges and trap landings per fight, frustration tally |
+| **R1.4 "Terug!"** | see the R1.4 scope below: no build phase (he comes straight away); harder dodging (he aims ahead, a landing ring, a 3-block blast zone, quicker throws by level); a dodged bomb can be caught by any kid (up to 3) and thrown back: a hit staggers him and asks a "Terug!" question, and a right answer is a hit with a ×1.5 yeet | Dodging that is hard but pays off with a throw-back makes the fight more fun and gives more sums per minute, not fewer | see the R1.4 evaluation below: dodge rate per level against the targets, catches and throw-backs, answers per minute vs 1.3.0 |
 | **R2 "Leren dat blijft"** | fact states and spaced picker, a Tafelkaart screen (GUI), parent report, the daily limit, "Kies je bom", the full leg kick in third person | The practice spreads out and facts move toward Fluent | 2 weeks of logs: % Accurate/Fluent up, median time down, sessions spread over days, kids still asking |
 | **R3 "Meer boem"** | bombs 4–9, levels 4–9, particle choreographies, craters, escape aids, lethal tiers with 3 lives, inventory stash, signature reactions for bombs 4–9, co-op rescue sums, the lobby extras in the hub (Tafelkaart wall, trophy wall, animal pen) | Escalation keeps them climbing without frustration | level reached per week, favourite bombs, no tears at levels 7–9, FPS OK on the woonkamer PC |
 | R4 new villains *(when they ask for it)* | Tante Toverfout, then Robo-Rekenaar 3000 | Pulled by the kids beating Graaf Fout | |
@@ -958,6 +959,116 @@ new row in `AGENTS.md`:
 
 **Watch:** bunker play (many dodges, few pick-ups); bombs piling up (no cap); whether traps change
 what they build; how many arena deaths, and on which difficulty they play.
+
+## R1.4 "Terug!" (detailed scope)
+
+Decided with the parent on 2026-11-13, after the playtest of 1.3.0 (see `docs/evaluations/R1.2.md`
+and `R1.3.md`). The kids didn't like building: it didn't help them in the fight. Dodging was too
+easy: every bomb that could be dodged was, and the bombs left lying around were no fun and didn't
+help either. R1.4 drops building, keeps dodging, makes it harder, and makes a dodge pay off.
+
+**Hypothesis:** dodging that is hard but pays off with a throw-back makes the fight more fun and
+gives more sums per minute, not fewer.
+
+**Learning rule.** A dodge never takes health off Graaf Fout by itself. It earns an extra chance at
+a hit, and that hit still needs a right answer.
+
+### No building
+1. **Switch `buildPhase`, default now off.** He comes straight away, as in 1.1.2: no chest, no bell,
+   no countdown. The R1.2 code stays behind the switch.
+2. **Switch `traps`, default now off.** Without the kit there is nothing to build them from; the
+   R1.3 code stays behind the switch.
+3. **Cover stays.** A block between him and the kid still stops a bomb, which counts as a dodge.
+   Without building, the cover is whatever the arena has.
+
+### Harder dodging
+Today he aims at where the kid stands when he throws, and the bomb flies 0.75–2 s, so any walking
+dodges it. In R1.4, by level:
+
+| | Level 1 | Level 2 | Level 3 |
+|---|---|---|---|
+| Lead: how much of the kid's movement he aims ahead | 50% | 80% | 95% |
+| Flight time, of today's 15–40 ticks | ×1.0 | ×0.8 | ×0.65 |
+
+1. **He aims ahead.** He takes the kid's velocity when he throws and aims where they will be when the
+   bomb lands, times the lead for the level. A kid who keeps running straight is hit; a kid who
+   turns or stops dodges.
+2. **Quicker throws.** The flight time is today's times the factor for the level, never below
+   12 ticks (0.6 s), so there is always time to react.
+3. **Blast zone 3 blocks.** A bomb hits the kid it was thrown at when it lands within 3 blocks
+   horizontally of where that kid stands then (was 2). The rest of the hit rule stays: a kid who is
+   answering, has left or has died can't be hit.
+4. **Landing ring.** When he throws, a ring of particles shows where the bomb will land, the size of
+   the blast zone. It stays put: it shows his guess, not the kid. **Switch `landingRing`, default
+   on.**
+5. **Targets:** a kid who tries dodges about 1 in 3 throws on level 1 and about 1 in 5 on level 3;
+   a kid who stands still is always hit. They are tuning targets for the playtest, not test
+   assertions; the numbers above are constants.
+
+### Catch and throw back
+1. **A dodged bomb doesn't lie still.** It lands as a bomb item on the ground, with a small poof and
+   his taunt (*"Mis!"*). It is not a bomb block: no lying bombs, and nothing for a crater to set off.
+2. **Any kid can catch it** by walking onto it, as a vanilla item pick-up, on LAN either sibling.
+   A kid carries at most 3; with 3, they can't pick up more. A caught bomb nobody picks up poofs
+   after 10 s.
+3. **It is its own item, "Terugbom"** (per tier), not the placeable bomb block: it can't be placed
+   and never starts a free-play question. It stacks to 3 and can't be dropped into another
+   container.
+4. **Throwing it:** right-click throws it like a snowball. Within 2 blocks of him it steers a little
+   towards him (aim help for an 8-year-old against a moving target).
+5. **A hit staggers him:** a short wobble, and he skips his next throw. Then the kid who threw it
+   gets the **"Terug!" question**: the same rooted flow as a hit, with the caught bomb's tier and a
+   fact from that kid's own progress.
+   - **Right:** it blows up on him: one hit, and a yeet with ×1.5 on top of the usual yeet-o-meter
+     factor. It can be the last hit; the fight then ends as usual.
+   - **Wrong:** it fizzles, like any wrong answer. No extra penalty.
+6. **A miss** (it hits the ground or a wall first) poofs. A bomb that reaches him while he is being
+   yeeted, landing, or in his finale bounces off and drops as a catchable bomb again.
+7. **A kid who is answering** can't throw (the question screen is open anyway).
+8. **When the fight ends,** won, lost or everyone gone, every caught bomb on the ground or in a
+   pocket poofs. A kid who leaves the arena or dies loses theirs.
+9. **Switch `dodging`, default on,** now means all of this. Off is 1.2.0's behaviour: wherever the
+   bomb lands, its kid is rooted, and there is no lead, ring or throw-back.
+
+### Logs for the evaluation
+- The fight line (`FightRecord`) gets per kid: `thrownAt`, `dodged`, `caught`, `thrownBack`,
+  `backHits` (throw-backs that hit him), and the Terug! answers right and wrong; plus the level, so
+  the dodge rate per level can be read against the targets. `pickedUp` and `trapped` stay readable
+  in old lines.
+- The yeet line marks a throw-back yeet (`back`), so its ×1.5 is visible.
+- Answers per minute keeps counting from his arrival, comparable with 1.3.0.
+
+### Load contract
+Caught bombs are items: on the ground in the slot, or in a pocket. One rule replaces the lying-bomb
+row in `AGENTS.md`:
+
+| When | What | Rule |
+|---|---|---|
+| fight ends, a kid leaves or dies, world load | caught bombs (ground and pockets) | all poof |
+
+### R1.4 tests
+- **Unit tests (`core/`):** `Aim` (the lead and flight time per level, the 12-tick floor; a still
+  kid is aimed at where they stand); `Dodging` with the 3-block zone; `Ammo` (at most 3 per kid);
+  the new fight-line counts, and an old line still reads.
+- **Game tests:** a kid running straight at walking speed is hit on level 3; a kid who turns after
+  the throw dodges; a dodged bomb drops as a Terugbom; any kid catches it, a fourth is refused, it
+  poofs after 10 s; a throw-back that hits staggers him, skips a throw and starts the Terug!
+  question; right is a hit with ×1.5, wrong fizzles; a throw-back during his yeet drops back;
+  caught bombs poof at the end of the fight and from the pocket of a kid who leaves; the ring is
+  there with `landingRing` on and gone with it off; a fight starts without a build phase; each
+  switch off gives its old behaviour.
+- **Client game test:** a screenshot of the landing ring and of a kid holding a Terugbom.
+
+**R1.4 evaluation (playtest 6).** Record it in `docs/evaluations/R1.4.md`.
+
+**Go when:**
+- dodge rate per level is near the targets (about 1 in 3 on level 1, 1 in 5 on level 3)
+- answers per minute are no lower than 1.3.0's, and % right and "?" are no worse
+- the kids catch and throw back without being told
+- the kids still ask to play
+
+**Watch:** a kid who hoards bombs instead of throwing; throw-backs that keep missing (is the aim
+help enough?); whether the ring makes it too easy (it has a switch); deaths on Normal.
 
 ## Faster tests (detailed scope)
 
