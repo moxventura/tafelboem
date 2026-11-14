@@ -9,6 +9,7 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 
 import nl.jeeninga.tafelboem.config.TafelBoemConfig;
 import nl.jeeninga.tafelboem.core.Aim;
+import nl.jeeninga.tafelboem.core.Dodging;
 import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.core.FightTally;
 import nl.jeeninga.tafelboem.core.Pacing;
@@ -60,14 +61,20 @@ public class AimGameTest {
 	@Fight
 	public void aKidRunningStraightAtWalkingSpeedIsHitOnLevel3(GameTestHelper helper) {
 		ArenaFight arena = new ArenaFight(helper, new TafelBoemConfig(), FightLevel.MOEILIJK, true);
-		// From the west side of the floor towards the east: across his line of fire, the way a kid dodges.
-		arena.kid.teleportTo(arena.box.middleX() - 9, arena.floorY, arena.box.middleZ() + 5);
+		// Along the south edge of the floor, west to east: across his line of fire, the way a kid dodges. Far from him,
+		// so the bomb flies long (about 19 ticks at his first throw, when the kid is about 4 blocks east of the middle).
+		arena.kid.teleportTo(arena.box.middleX() - 9.5, arena.floorY, arena.box.middleZ() + 9);
 		arena.walk(arena.kid, WALKING, 0);
 
 		helper.succeedWhen(() -> {
 			FightTally tally = arena.fight.tally(arena.kid.getUUID());
 			helper.assertTrue(tally.thrownAt() >= 1, "wait for his first throw to land");
-			helper.assertTrue(tally.dodged() == 0, "he aimed where the kid was going: a hit");
+			ThrowReport line = arena.fight.lastThrow();
+			// Without his lead the bomb would land where the kid stood at the throw: this far behind them, well out of the zone.
+			double behind = line.flightTicks() * WALKING;
+			helper.assertTrue(behind > Dodging.HIT_RADIUS + 0.5, "the flight was long enough that only the lead hits: " + line + ", "
+					+ behind + " blocks walked");
+			helper.assertTrue(tally.dodged() == 0, "he aimed where the kid was going: a hit, " + line);
 			helper.assertTrue(tally.still() == 0, "and the kid was moving: " + arena.fight.lastThrow());
 			helper.assertTrue(arena.askedAnything(), "so the question comes");
 			arena.end();
