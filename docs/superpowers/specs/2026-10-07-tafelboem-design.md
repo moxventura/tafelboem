@@ -1150,13 +1150,13 @@ lying-bomb row in `AGENTS.md`:
 - **Client game test:** a screenshot of the landing ring, of a kid holding a Terugbom, and of him
   frozen mid-air in a juggle.
 
-**R1.4 evaluation (playtest 6).** Record it in `docs/evaluations/R1.4.md`. First add the numbers
-from the 1.3.0 playtest's logs to `R1.2.md` and `R1.3.md`, as the baseline.
+**R1.4 evaluation (playtest 6).** Record it in `docs/evaluations/R1.4.md`. The 1.3.0 playtest has no
+log, so the baseline is playtest 3 on 1.1.1 (`R1.1.md`), the last one with a log.
 
 **Go when:**
 - dodged throws at a free kid, both kids pooled, are 20–45% on level 1 and 10–30% on level 3
-- at least 4 answers per minute in the fight (1.2.0 reached 4.7), and % right and "?" no worse than
-  1.2.0
+- at least 4 answers per minute in the fight (playtest 3 on 1.1.1 reached 3.9 and 4.7), and % right and "?" no
+  worse than playtest 3
 - the kids catch and throw back without being told, and at least some throw-backs hit
 - the kids still ask to play
 
