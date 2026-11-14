@@ -464,21 +464,39 @@ public final class BossFight implements QuizListener {
 		terugbommen.drop(floorBelow(boss.position()), tier);
 	}
 
-	/** The arena floor straight below this spot: kept inside the arena, and never over the void. */
+	/**
+	 * The arena floor below this spot, where a kid can walk to it: straight below him when that is floor, else the first
+	 * floor on the way to the arena's middle and a block further in. Never over the void, and never on top of a wall (a
+	 * wall's top is higher than a step above the middle's floor).
+	 */
 	private Vec3 floorBelow(Vec3 at) {
-		double x = at.x;
-		double z = at.z;
-		if (arena != null) {
-			x = Math.max(arena.minX() + 1, Math.min(arena.maxX(), x));
-			z = Math.max(arena.minZ() + 1, Math.min(arena.maxZ(), z));
+		if (arena == null) {
+			return new Vec3(at.x, groundAt(at.x, at.z), at.z);
 		}
-		int ground = level.getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(x), Mth.floor(z));
-		if (arena != null && ground <= arena.minY()) {
-			x = arena.middleX();
-			z = arena.middleZ();
-			ground = level.getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(x), Mth.floor(z));
+		double middleX = arena.middleX();
+		double middleZ = arena.middleZ();
+		int middleGround = groundAt(middleX, middleZ);
+		double dx = middleX - at.x;
+		double dz = middleZ - at.z;
+		double distance = Math.hypot(dx, dz);
+		for (double step = 0; step < distance; step++) {
+			double x = at.x + dx / distance * step;
+			double z = at.z + dz / distance * step;
+			int ground = groundAt(x, z);
+			if (arena.containsColumn(x, z) && ground > arena.minY() && ground <= middleGround + 1) {
+				if (step == 0) {
+					return new Vec3(x, ground, z);
+				}
+				double inX = at.x + dx / distance * Math.min(step + 1, distance);
+				double inZ = at.z + dz / distance * Math.min(step + 1, distance);
+				return new Vec3(inX, groundAt(inX, inZ), inZ);
+			}
 		}
-		return new Vec3(x, ground, z);
+		return new Vec3(middleX, middleGround, middleZ);
+	}
+
+	private int groundAt(double x, double z) {
+		return level.getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(x), Mth.floor(z));
 	}
 
 	/** The kid whose answer sent him on the flight he is on, or on his last one; null before the first. For the GameTests. */
@@ -690,7 +708,7 @@ public final class BossFight implements QuizListener {
 			participants.sayTo(target, Component.translatable("tafelboem.boss.graaf_fout.dodged"));
 		}
 		// Time to catch it, turn round and throw it back.
-		cooldown(Pacing.AFTER_DODGE_COOLDOWN_TICKS);
+		pause(Pacing.AFTER_DODGE_COOLDOWN_TICKS);
 	}
 
 	/** A throw at a free kid has landed: the tally, the throw line and the report for the GameTests. */
@@ -706,21 +724,34 @@ public final class BossFight implements QuizListener {
 	/** The bomb is gone without a question, and he throws again after the usual pause. */
 	private void poofAndPause(BlockPos landing) {
 		BombEffects.poof(level, Vec3.atCenterOf(landing));
-		cooldown(COOLDOWN_TICKS);
+		pause(COOLDOWN_TICKS);
 	}
 
-	/** A bomb landed on its kid: they are rooted and the question comes. */
 	/** A bomb landed on its kid: they are rooted and the question comes. */
 	private void root(ServerPlayer target, BlockPos pos, BombTier tier) {
 		level.setBlock(pos, ModBlocks.bomb(tier).defaultBlockState(), Block.UPDATE_ALL);
 		if (ask(target, tier, pos, QuestionKind.BOMB) == null) {
 			BombEffects.fizzle(level, pos);
-			cooldown(COOLDOWN_TICKS);
+			pause(COOLDOWN_TICKS);
 			return;
 		}
-		// Not while he flies or lands from a kick that came meanwhile: that reaction keeps its phase.
-		if (phase == Phase.COOLDOWN || phase == Phase.BOMB_IN_FLIGHT || phase == Phase.ANSWERING) {
+		if (betweenThrows()) {
 			phase = Phase.ANSWERING;
+		}
+	}
+
+	/**
+	 * Not while he flies or lands from a kick or a Terug! answer that came meanwhile (two questions at once): that
+	 * reaction keeps its phase, its stall net and the pause after its landing.
+	 */
+	private boolean betweenThrows() {
+		return phase == Phase.COOLDOWN || phase == Phase.BOMB_IN_FLIGHT || phase == Phase.ANSWERING;
+	}
+
+	/** A bomb of his came down: the pause before his next throw, unless a reaction runs (see {@link #betweenThrows}). */
+	private void pause(int ticks) {
+		if (betweenThrows()) {
+			cooldown(ticks);
 		}
 	}
 
@@ -770,8 +801,7 @@ public final class BossFight implements QuizListener {
 	 */
 	boolean pickUp(ServerPlayer kid, BlockPos pos) {
 		BombTier tier = lying.get(pos);
-		boolean between = phase == Phase.COOLDOWN || phase == Phase.BOMB_IN_FLIGHT || phase == Phase.ANSWERING;
-		if (tier == null || !between || !kid.isAlive() || kid.isSpectator() || !participants.players().contains(kid)) {
+		if (tier == null || !betweenThrows() || !kid.isAlive() || kid.isSpectator() || !participants.players().contains(kid)) {
 			return false;
 		}
 		if (ask(kid, tier, pos, QuestionKind.BOMB) == null) {

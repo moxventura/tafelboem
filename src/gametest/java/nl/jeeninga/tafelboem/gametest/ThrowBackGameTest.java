@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.server.level.ServerPlayer;
@@ -14,6 +15,8 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.animal.chicken.Chicken;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
@@ -249,6 +252,31 @@ public class ThrowBackGameTest {
 			arena.fight.boss().finalYeet();
 			arena.fight.backReached(arena.kid.getUUID(), BombTier.KIPPENBOM);
 			helper.assertTrue(arena.terugbommen().size() == dropped[0] + 2, "in his finale it bounces too");
+			arena.end();
+			helper.succeed();
+		});
+	}
+
+	@GameTest(maxTicks = 40, padding = 48)
+	public void aBouncedTerugbomOverAWallLandsOnTheArenaFloorWhereAKidCanReachIt(GameTestHelper helper) {
+		ArenaFight arena = new ArenaFight(helper, new TafelBoemConfig());
+		// A 4-high obsidian wall along the arena's east edge, and him right above it.
+		for (int z = arena.box.minZ(); z <= arena.box.maxZ(); z++) {
+			for (int y = arena.floorY; y < arena.floorY + 4; y++) {
+				arena.level.setBlockAndUpdate(new BlockPos(arena.box.maxX(), y, z), Blocks.OBSIDIAN.defaultBlockState());
+			}
+		}
+		helper.runAfterDelay(2, () -> {
+			arena.fight.boss().teleportTo(arena.box.maxX() + 0.5, arena.floorY + 5, arena.box.middleZ());
+			// The first throw-back staggers him; the second, while he wobbles, bounces off.
+			arena.fight.backReached(arena.kid.getUUID(), BombTier.KNALLETJE);
+			arena.fight.backReached(arena.kid.getUUID(), BombTier.KNALLETJE);
+		});
+		helper.runAfterDelay(6, () -> {
+			helper.assertTrue(arena.terugbommen().size() == 1, "it bounced off: " + arena.terugbommen().size());
+			ItemEntity bomb = arena.terugbommen().getFirst();
+			helper.assertTrue(bomb.getY() < arena.floorY + 1, "on the floor, not on top of the wall: y " + bomb.getY() + ", floor " + arena.floorY);
+			helper.assertTrue(bomb.getX() <= arena.box.maxX() - 1, "a block in from the wall: x " + bomb.getX() + ", wall " + arena.box.maxX());
 			arena.end();
 			helper.succeed();
 		});
