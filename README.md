@@ -62,10 +62,10 @@ back on the next Play.
   door says which level it is, and the bombs Graaf Fout throws there sit beside it in item frames.
   Builds on the hub's own platform are reset every time the world loads; builds beside it stay.
 - **The levels.** Walk into a door to go to its arena. Level 1 asks the tables of 1, 2, 5 and 10,
-  level 2 adds 3, 4 and 9, and level 3 asks all ten. Graaf Fout appears when the build countdown
-  runs out or 10 seconds after someone rings the bell (see "Building first" below), and then the
-  fight starts. With `buildPhase` off he appears about three seconds after you arrive. Anyone who
-  walks through the same door while the fight runs joins it.
+  level 2 adds 3, 4 and 9, and level 3 asks all ten. Graaf Fout appears about three seconds after
+  you arrive (see "No building" below), and then the fight starts. With `buildPhase` on he appears
+  when the build countdown runs out or 10 seconds after someone rings the bell. Anyone who walks
+  through the same door while the fight runs joins it.
 - **No building (1.4).** Graaf Fout comes about three seconds after you walk in. The building chest,
   the bell and the traps are still in the mod behind the switches `buildPhase` and `traps`, both off.
   While the fight runs you are in adventure mode, so nobody breaks or places blocks; you are back in
@@ -123,9 +123,9 @@ log. `/tafelboem stats` shows a line per level, for example "Medium: ★★☆, 
 ## Build your own arena
 
 The kids can build their own hub and arenas in creative, in any world with cheats on, and save them
-with vanilla structure blocks. With `buildPhase` on (the default) every level uses the plain arena,
-so the kids can build in it; the saved arenas are picked at random only with `buildPhase` set to
-`false`. With it off, the mod picks one of the arenas for a level at random, never the same one
+with vanilla structure blocks. With `buildPhase` on every level uses the plain arena, so
+the kids can build in it; the saved arenas are picked at random only with `buildPhase` set to
+`false`, the default since 1.4. With it off, the mod picks one of the arenas for a level at random, never the same one
 twice in a row. It uses the plain arena it builds itself only when a level has none, or when all of
 its arenas are skipped.
 
