@@ -488,12 +488,15 @@ public final class TafelBoemWorld {
 		});
 	}
 
-	/** A kid who logs in inside an arena without a running fight goes to the hub. */
+	/**
+	 * A kid who logs in inside an arena they are not in the run of goes to the hub. Then the fights look at them: sent
+	 * out of a sibling's running fight, no fight holds them any more, so the adventure mode it saved them in goes too.
+	 */
 	public void onJoin(ServerPlayer player) {
-		fights.onJoin(player);
 		if (player.level() == level && runOf(player).isEmpty() && layout.arenaAt(player.getX(), player.getZ()).isPresent()) {
 			teleport(player, hub.standAt(), hub.yaw());
 		}
+		fights.onJoin(player);
 	}
 
 	private void write(ServerPlayer kid, ArenaRun run, String result, int stars) {

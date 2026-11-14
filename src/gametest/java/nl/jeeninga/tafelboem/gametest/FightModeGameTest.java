@@ -8,6 +8,7 @@ import net.minecraft.world.level.block.Blocks;
 
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 
+import nl.jeeninga.tafelboem.boss.BossFight;
 import nl.jeeninga.tafelboem.config.TafelBoemConfig;
 import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.world.ArenaRun;
@@ -91,6 +92,49 @@ public class FightModeGameTest {
 			helper.assertTrue(mode(arena.kid) == GameType.ADVENTURE, "a kid who is in the running fight is left alone");
 			arena.end();
 			helper.succeed();
+		});
+	}
+
+	/**
+	 * A kid drops out of a fight on LAN (the PC went off) and logs in again while the sibling still fights. Minecraft
+	 * saved them in adventure, in the arena, and the fight still counts them; they are not in the run any more, so they
+	 * go to the hub, and must get their own mode back there.
+	 */
+	@GameTest(maxTicks = 400, padding = TestWorld.PADDING)
+	@Fight
+	@SuppressWarnings("removal") // mock players are still the only way to test without a client
+	public void aKidWhoLogsInWhileTheSiblingsFightRunsGoesToTheHubInTheirOwnMode(GameTestHelper helper) {
+		TestWorld test = new TestWorld(helper).running();
+		ServerPlayer sibling = test.kidInTheHub();
+		test.world.enterDoor(sibling, 1);
+		ServerPlayer[] back = {null};
+		long[] joinedAt = {-1};
+		helper.onEachTick(() -> {
+			BossFight fight = test.world.run(FightLevel.MAKKELIJK).map(ArenaRun::fight).orElse(null);
+			if (fight == null) {
+				return;
+			}
+			if (back[0] == null) {
+				// As saved when the PC went off: in the arena, in adventure, survival before it.
+				ServerPlayer kid = helper.makeMockServerPlayerInLevel();
+				kid.setGameMode(GameType.SURVIVAL);
+				kid.setGameMode(GameType.ADVENTURE);
+				kid.teleportTo(fight.arena().middleX(), sibling.getY(), fight.arena().middleZ());
+				back[0] = kid;
+			} else if (joinedAt[0] < 0 && fight.participants().contains(back[0].getUUID())) {
+				// The fight holds them, as it holds a kid whose saved spot is in its arena when they log in.
+				test.world.onJoin(back[0]);
+				joinedAt[0] = helper.getTick();
+			}
+		});
+
+		helper.succeedWhen(() -> {
+			helper.assertTrue(joinedAt[0] >= 0, "wait for the fight and the login");
+			helper.assertTrue(helper.getTick() - joinedAt[0] >= 5, "and a few fight ticks after it");
+			helper.assertTrue(test.world.hub().bounds().containsColumn(back[0].getX(), back[0].getZ()), "the kid is in the hub");
+			helper.assertTrue(mode(back[0]) == GameType.SURVIVAL, "in their own mode again: " + mode(back[0]));
+			helper.assertTrue(mode(sibling) == GameType.ADVENTURE, "the sibling still fights in adventure");
+			test.close();
 		});
 	}
 
