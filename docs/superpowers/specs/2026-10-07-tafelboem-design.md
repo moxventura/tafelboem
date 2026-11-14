@@ -1081,8 +1081,11 @@ The yeet-o-meter's own factor already goes up to ×1.3 (`YeetBoost.MAX`), and ×
 the wall of a 48-block arena. On top of it:
 
 1. **A throw-back yeet ×1.25, a super yeet ×1.5,** and the total power is capped so he still lands
-   in the arena (the cap is a constant, set by a GameTest that yeets him at the cap on level 3 and
-   checks he lands inside).
+   in the arena. The cap is the room on the floor ahead of him, minus 2 blocks
+   (`YeetPower.capForRoom`); when the room away from the thrower is short he flies across the middle
+   instead. A fixed constant was tried first: low enough for a yeet from near the wall, it made
+   every throw-back shorter than a kick. Plain kicks stay uncapped. GameTests check a super yeet
+   from 15 blocks out and a throw-back from the middle on level 3.
 2. **Separate records.** Throw-back yeets and super yeets keep their own personal bests on the
    yeet-o-meter (*"hoogste terug"*, *"hoogste juggle"*); a normal kick's record is only beaten by
    normal kicks.

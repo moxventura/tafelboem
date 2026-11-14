@@ -1197,11 +1197,15 @@ public final class BossFight implements QuizListener {
 		rings.clear();
 		poofLyingBombs();
 		terugbommen.poofAll();
-		for (UUID id : participants.ids()) {
+		// Only the kids still in this fight: one who dropped out lost theirs then, and may be catching in another fight.
+		for (UUID id : present) {
 			ServerPlayer kid = level.getServer().getPlayerList().getPlayer(id);
 			if (kid != null) {
 				Terugbommen.strip(kid);
 			}
+		}
+		for (ServerPlayer kid : participants.players()) {
+			Terugbommen.strip(kid);
 		}
 		if (boss.isAlive()) {
 			// Ending the landing here sends a chase's chickens off with him.
