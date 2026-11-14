@@ -146,4 +146,31 @@ class FightLogTest {
 		assertTrue(Files.readString(dir.resolve("fights-Sanne.jsonl")).contains("\"trapped\":{\"cactus\":2,\"cobweb\":1}"),
 				"the traps are written in the same order every time");
 	}
+
+	@Test
+	void aLineFromBefore14HasNoR14Counts() throws IOException {
+		Files.writeString(dir.resolve("fights-Sanne.jsonl"), "{\"timestamp\":0,\"player\":\"Sanne\",\"level\":2,\"arena\":\"default\","
+				+ "\"result\":\"won\",\"answers\":12,\"wrong\":1,\"dontKnow\":0,\"chickenOut\":0,\"stars\":2,\"seconds\":120,\"kids\":1,"
+				+ "\"version\":\"1.3.0\",\"farthestYeet\":25,\"buildSeconds\":0,\"dodged\":4,\"pickedUp\":2,\"trapped\":{\"cactus\":1},"
+				+ "\"difficulty\":\"normal\"}\n");
+
+		FightRecord old = new FightLog(dir).read("Sanne").getFirst();
+		assertEquals(4, old.dodged());
+		assertEquals(2, old.pickedUp(), "still readable");
+		assertEquals(0, old.thrownAt());
+		assertEquals(0, old.caught());
+		assertEquals(0, old.terugRight());
+		assertEquals(0, old.farthestBack());
+		assertEquals(Map.of("cactus", 1), old.trapped());
+	}
+
+	@Test
+	void theR14CountsAreWrittenReadBackAndShownInTheLine() {
+		FightLog log = new FightLog(dir);
+		FightRecord fight = new FightRecord(0L, "Sanne", 3, "default", FightRecord.WON, 14, 2, 1, 0, 2, 180, 2, "1.4.0", 31, 0, 11, 0, Map.of(),
+				"normal", 40, 9, 6, 5, 3, 1, 5, 1, 17, 22);
+		log.append(fight);
+
+		assertEquals(fight, log.read("Sanne").getFirst());
+	}
 }

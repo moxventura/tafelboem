@@ -1,5 +1,7 @@
 package nl.jeeninga.tafelboem.game;
 
+import java.util.UUID;
+
 import net.minecraft.server.level.ServerPlayer;
 
 import nl.jeeninga.tafelboem.core.FightLevel;
@@ -23,4 +25,11 @@ public interface QuizListener {
 	void onCorrect(ServerPlayer player, QuizSession session);
 
 	void onMiss(ServerPlayer player, QuizSession session, Outcome outcome);
+
+	/**
+	 * The question ended without an answer: it timed out, or the kid died or disconnected (R1.4). A fight that
+	 * closes its own questions with {@code SessionManager.close} is not told.
+	 */
+	default void onEnded(UUID player, QuizSession session) {
+	}
 }

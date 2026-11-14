@@ -15,15 +15,27 @@ import java.util.stream.Collectors;
  * @param kids   how many kids took part in the fight
  * @param farthestYeet the kid's farthest yeet in this fight in blocks (helicopter heights don't count); 0 in lines from before 1.1
  * @param buildSeconds how long the arena's build phase lasted (R1.2); 0 in lines from before 1.2
- * @param dodged   bombs thrown at this kid that missed (R1.3); 0 in lines from before 1.3
- * @param pickedUp lying bombs this kid walked into (R1.3); 0 in lines from before 1.3
+ * @param dodged   bombs thrown at this kid while free that missed (R1.3); 0 in lines from before 1.3
+ * @param pickedUp lying bombs this kid walked into (R1.3; no longer written from 1.4, when a dodged bomb became a Terugbom); 0 in lines from before 1.3
  * @param trapped  trap landings after this kid's kicks, by {@link TrapKind#id()} (R1.3); empty in lines from before 1.3
  * @param difficulty Minecraft's difficulty when the fight ended, lowercase (peaceful, easy, normal or hard; R1.3); empty in lines
  *                   from before 1.3, as the arena's safety depends on it
+ * @param thrownAt throws at this kid while they were free (R1.4); 0 in lines from before 1.4. {@code dodged / thrownAt} is the dodge
+ *                 rate, read per {@code level} against the spec's ranges
+ * @param still    of those, throws where they moved less than a block (R1.4)
+ * @param caught   Terugbommen this kid caught (R1.4)
+ * @param thrownBack Terugbommen this kid threw back (R1.4)
+ * @param backHits throw-backs of this kid that hit him (R1.4)
+ * @param juggles  throw-backs of this kid that hit him in mid-yeet (R1.4)
+ * @param terugRight right answers on Terug! and juggle questions (R1.4)
+ * @param terugWrong typed wrong answers on Terug! and juggle questions (R1.4)
+ * @param farthestBack the kid's farthest throw-back yeet in blocks (R1.4), a record apart from {@code farthestYeet}
+ * @param farthestSuper the kid's farthest super yeet in blocks (R1.4), a record apart from the other two
  */
 public record FightRecord(long timestamp, String player, int level, String arena, String result, int answers, int wrong,
 		int dontKnow, int chickenOut, int stars, long seconds, int kids, String version, int farthestYeet, long buildSeconds,
-		int dodged, int pickedUp, Map<String, Integer> trapped, String difficulty) {
+		int dodged, int pickedUp, Map<String, Integer> trapped, String difficulty, int thrownAt, int still, int caught,
+		int thrownBack, int backHits, int juggles, int terugRight, int terugWrong, int farthestBack, int farthestSuper) {
 	public static final String WON = "won";
 	public static final String LEFT = "left";
 	public static final String DISCONNECTED = "disconnected";
@@ -63,6 +75,14 @@ public record FightRecord(long timestamp, String player, int level, String arena
 				buildSeconds, dodged, pickedUp, trapped, "");
 	}
 
+	/** A fight without the R1.4 counts, as every line before 1.4. */
+	public FightRecord(long timestamp, String player, int level, String arena, String result, int answers, int wrong, int dontKnow,
+			int chickenOut, int stars, long seconds, int kids, String version, int farthestYeet, long buildSeconds, int dodged,
+			int pickedUp, Map<String, Integer> trapped, String difficulty) {
+		this(timestamp, player, level, arena, result, answers, wrong, dontKnow, chickenOut, stars, seconds, kids, version, farthestYeet,
+				buildSeconds, dodged, pickedUp, trapped, difficulty, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+	}
+
 	public boolean won() {
 		return WON.equals(result);
 	}
@@ -74,7 +94,13 @@ public record FightRecord(long timestamp, String player, int level, String arena
 				+ (buildSeconds > 0 ? " after " + buildSeconds + " s of building" : "") + ", "
 				+ kids + (kids == 1 ? " kid" : " kids") + (difficulty.isEmpty() ? "" : ", difficulty " + difficulty)
 				+ (farthestYeet > 0 ? ", farthest yeet " + farthestYeet + " blocks" : "")
+				+ (farthestBack > 0 ? ", farthest throw-back " + farthestBack + " blocks" : "")
+				+ (farthestSuper > 0 ? ", farthest super yeet " + farthestSuper + " blocks" : "")
+				+ (thrownAt > 0 ? ", thrown at " + thrownAt + (still > 0 ? " (" + still + " still)" : "") : "")
 				+ (dodged > 0 ? ", dodged " + dodged : "") + (pickedUp > 0 ? ", picked up " + pickedUp : "")
+				+ (caught > 0 ? ", caught " + caught : "")
+				+ (thrownBack > 0 ? ", threw back " + thrownBack + " (" + backHits + " hit" + (juggles > 0 ? ", " + juggles + " juggled" : "") + ")" : "")
+				+ (terugRight + terugWrong > 0 ? ", Terug! " + terugRight + " right " + terugWrong + " wrong" : "")
 				+ (trapped.isEmpty() ? "" : ", trapped " + trappedLine()) + ")";
 	}
 

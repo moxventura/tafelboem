@@ -34,4 +34,16 @@ class BuildPhaseTest {
 	void theClassicFightHasNoArenaAndNoBuildTime() {
 		assertThrows(IllegalArgumentException.class, () -> BuildPhase.STANDARD.seconds(FightLevel.CLASSIC));
 	}
+
+	@Test
+	void theSwitchDecidesInARealGame() {
+		assertEquals(BuildPhase.STANDARD, BuildPhase.choose(true, null));
+		assertEquals(BuildPhase.OFF, BuildPhase.choose(false, null));
+	}
+
+	@Test
+	void theClientGameTestsAlwaysBuildForTheirShortTime() {
+		assertEquals(BuildPhase.everyLevel(5), BuildPhase.choose(false, 5), "with the switch off, as it is by default");
+		assertEquals(BuildPhase.everyLevel(5), BuildPhase.choose(true, 5));
+	}
 }

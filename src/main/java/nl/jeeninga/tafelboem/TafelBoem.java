@@ -9,6 +9,7 @@ import org.jspecify.annotations.Nullable;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.level.storage.LevelResource;
 
@@ -145,6 +146,8 @@ public class TafelBoem implements ModInitializer {
 		ServerEntityEvents.ENTITY_LOAD.register((entity, level) -> {
 			if (TafelBoemWorld.isLeftOver(entity, world)) {
 				entity.discard();
+			} else if (fights != null && entity instanceof ItemEntity item) {
+				fights.returnDropped(item);
 			}
 		});
 		// The build phase's bell: right-clicking it rings it as in vanilla, and brings Graaf Fout within 10 s.
@@ -174,11 +177,7 @@ public class TafelBoem implements ModInitializer {
 	 * ({@code -Dtafelboem.buildSeconds}, set in build.gradle) so they don't wait minutes per arena.
 	 */
 	static BuildPhase buildPhase(TafelBoemConfig config) {
-		if (!config.buildPhase) {
-			return BuildPhase.OFF;
-		}
-		Integer seconds = Integer.getInteger("tafelboem.buildSeconds");
-		return seconds == null ? BuildPhase.STANDARD : BuildPhase.everyLevel(seconds);
+		return BuildPhase.choose(config.buildPhase, Integer.getInteger("tafelboem.buildSeconds"));
 	}
 
 	public static SessionManager sessions() {

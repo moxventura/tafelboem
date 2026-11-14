@@ -28,6 +28,7 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.presets.WorldPreset;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
@@ -35,11 +36,13 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContex
 import net.fabricmc.fabric.api.client.gametest.v1.world.TestWorldSave;
 
 import nl.jeeninga.tafelboem.TafelBoem;
+import nl.jeeninga.tafelboem.boss.BossFight;
 import nl.jeeninga.tafelboem.block.LevelDoorBlock;
 import nl.jeeninga.tafelboem.client.QuestionScreen;
 import nl.jeeninga.tafelboem.core.ArenaBox;
 import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.FightLevel;
+import nl.jeeninga.tafelboem.core.YeetStyle;
 import nl.jeeninga.tafelboem.game.BombEffects;
 import nl.jeeninga.tafelboem.world.ArenaRun;
 import nl.jeeninga.tafelboem.world.BuildCorner;
@@ -109,34 +112,6 @@ public class WorldClientGameTest implements FabricClientGameTest {
 						"Graaf Fout in arena " + level);
 				context.waitTicks(10);
 				context.takeScreenshot("r1-0" + (level.number() + 1) + "-arena-" + level.number());
-				if (level == FightLevel.MAKKELIJK) {
-					// R1.3: a bomb the build stopped lies behind the wall until a kid walks into it. The kid looks from
-					// beside the wall, so both show; Graaf Fout's own throws may add more.
-					BlockPos bomb = world.getServer().computeOnServer(server -> {
-						ArenaRun run = tafelBoem().run(level).orElseThrow();
-						PlacedArea arena = run.arena();
-						Direction ahead = Direction.fromYRot(arena.yaw());
-						Direction side = ahead.getClockWise();
-						BlockPos wall = arena.standAt().relative(ahead, 6);
-						for (int across = -2; across <= 2; across++) {
-							for (int up = 0; up < 2; up++) {
-								server.overworld().setBlockAndUpdate(wall.relative(side, across).above(up), Blocks.STONE_BRICKS.defaultBlockState());
-							}
-						}
-						BlockPos behind = wall.relative(ahead);
-						run.fight().placeLyingBomb(behind, BombTier.GEWONE_TNT);
-						BlockPos look = behind.relative(side, 4);
-						server.getPlayerList().getPlayers().getFirst()
-								.teleportTo(server.overworld(), look.getX() + 0.5, look.getY(), look.getZ() + 0.5, Set.of(), arena.yaw(), 0F, true);
-						return behind;
-					});
-					context.waitTicks(3);
-					context.getInput().lookAt(bomb);
-					context.waitTicks(5);
-					check(world.getServer().computeOnServer(server -> tafelBoem().run(level).orElseThrow().fight().lyingBombs().contains(bomb)),
-							"the bomb lies behind the wall");
-					context.takeScreenshot("r1.3-01-lying-bomb");
-				}
 				check(music(context).equals(TRACKS.get(level)), "arena " + level + " plays " + TRACKS.get(level) + ", not " + music(context));
 
 				if (level == FightLevel.MAKKELIJK) {
@@ -146,6 +121,16 @@ public class WorldClientGameTest implements FabricClientGameTest {
 					// The walk in carried the kid up against the build corner's chest, and R1.3's cover rule makes the chest stop
 					// bombs like any block. Out in the open a thrown bomb must root him; his first comes 3 s after he appears.
 					standInTheOpen(world, level);
+					// R1.4: a ring of dust round where he thinks his bomb will land. His first throw comes a second or two later, so the
+					// test shows one round a spot 6 blocks east of the kid, for 40 ticks, and the kid looks at its middle.
+					BlockPos ringMiddle = world.getServer().computeOnServer(server -> {
+						BlockPos middle = server.getPlayerList().getPlayers().getFirst().blockPosition().east(6);
+						tafelBoem().run(level).orElseThrow().fight().showLandingRing(Vec3.atBottomCenterOf(middle), BombTier.GEWONE_TNT, 40);
+						return middle;
+					});
+					context.getInput().lookAt(ringMiddle.below());
+					context.waitTicks(3);
+					context.takeScreenshot("r1.4-01-landing-ring");
 					context.waitForScreen(QuestionScreen.class);
 					check(pickedUp(world, level) == 0, "a bomb Graaf Fout threw rooted the kid, he did not pick one up");
 					answerQuestion(context);
@@ -153,18 +138,27 @@ public class WorldClientGameTest implements FabricClientGameTest {
 					context.takeScreenshot("r1-05-yeet-in-arena");
 				}
 				if (level == FightLevel.MOEILIJK) {
-					// R1.3: a bomb he dodged lies where it fell, and walking into it asks the question without a throw.
+					// R1.4: he is sent up first, rising (a helicopter hangs about over the kids for a good second), and a throw-back
+					// reaches him there: he freezes in the air with the juggle question open.
 					world.getServer().runOnServer(server -> {
 						ServerPlayer kid = server.getPlayerList().getPlayers().getFirst();
-						BlockPos next = Direction.Plane.HORIZONTAL.stream()
-								.map(direction -> kid.blockPosition().relative(direction))
-								.filter(pos -> server.overworld().getBlockState(pos).isAir())
-								.findFirst().orElseThrow();
-						tafelBoem().run(level).orElseThrow().fight().placeLyingBomb(next, BombTier.GEWONE_TNT);
+						tafelBoem().run(level).orElseThrow().fight().boss().yeet(kid.position(), 1.0, YeetStyle.HELICOPTER, kid.position());
 					});
+					context.waitTicks(8);
+					world.getServer().runOnServer(server -> tafelBoem().run(level).orElseThrow().fight()
+							.backReached(server.getPlayerList().getPlayers().getFirst().getUUID(), BombTier.GEWONE_TNT));
 					context.waitForScreen(QuestionScreen.class);
-					check(pickedUp(world, level) == 1, "the kid picked up the bomb lying next to him");
+					check(world.getServer().computeOnServer(server -> tafelBoem().run(level).orElseThrow().fight().boss().isFrozen()),
+							"Graaf Fout hangs frozen in the air with the juggle question open");
+					context.takeScreenshot("r1.4-02-juggle");
+					// Right: a super yeet. Then a Terugbom lies next to the kid, who catches it by standing there: it is in their hand.
 					answerQuestion(context);
+					world.getServer().runOnServer(server -> tafelBoem().run(level).orElseThrow().fight()
+							.dropTerugbom(server.getPlayerList().getPlayers().getFirst().position().add(1.0, 0, 0), BombTier.GEWONE_TNT));
+					waitUntil(context, () -> world.getServer().computeOnServer(server -> tafelBoem().run(level).orElseThrow().fight()
+							.tally(server.getPlayerList().getPlayers().getFirst().getUUID()).caught() == 1), "the kid caught the Terugbom");
+					context.waitTicks(3);
+					context.takeScreenshot("r1.4-03-terugbom-in-hand");
 				}
 				walkOut(context, world, level);
 			}

@@ -14,6 +14,19 @@ public record BuildPhase(boolean on, int makkelijkSeconds, int gemiddeldSeconds,
 		return new BuildPhase(true, seconds, seconds, seconds);
 	}
 
+	/**
+	 * The build phase a world plays with: the parent's switch, and for the client GameTests one short time on every
+	 * level, whatever the switch says, so they still play the build phase that is off by default (R1.4).
+	 *
+	 * @param testSeconds the client GameTests' build time ({@code -Dtafelboem.buildSeconds}); null in a real game
+	 */
+	public static BuildPhase choose(boolean switchedOn, Integer testSeconds) {
+		if (testSeconds != null) {
+			return everyLevel(testSeconds);
+		}
+		return switchedOn ? STANDARD : OFF;
+	}
+
 	public int seconds(FightLevel level) {
 		return switch (level) {
 			case MAKKELIJK -> makkelijkSeconds;

@@ -33,24 +33,6 @@ import nl.jeeninga.tafelboem.registry.ModBlocks;
 public class DodgeGameTest {
 	@GameTest(maxTicks = 300, padding = 48)
 	@Fight
-	public void aBombTheWallStopsLiesStillAndRootsNobody(GameTestHelper helper) {
-		ArenaFight arena = new ArenaFight(helper, new TafelBoemConfig());
-		BlockPos wall = wallInFrontOf(arena);
-
-		helper.succeedWhen(() -> {
-			helper.assertTrue(arena.fight.tally(arena.kid.getUUID()).dodged() >= 1, "wait for his first throw to hit the wall");
-			BlockPos lying = arena.fight.lyingBombs().iterator().next();
-			helper.assertTrue(arena.level.getBlockState(lying).getBlock() instanceof BombBlock, "it lies there as a bomb block");
-			helper.assertTrue(lying.getY() == arena.floorY && lying.getZ() < wall.getZ(), "on the floor, on his side of the wall: " + lying);
-			helper.assertFalse(arena.askedAnything(), "nobody gets a question");
-			helper.assertFalse(arena.sessions.isBusy(arena.kid), "nobody is rooted");
-			helper.assertTrue(arena.heard(arena.kid, "tafelboem.boss.graaf_fout.dodged"), "he taunts the kid it missed");
-			arena.end();
-		});
-	}
-
-	@GameTest(maxTicks = 300, padding = 48)
-	@Fight
 	public void withDodgingOffTheKidIsRootedWhereverTheBombLands(GameTestHelper helper) {
 		TafelBoemConfig config = new TafelBoemConfig();
 		config.dodging = false;
@@ -99,7 +81,7 @@ public class DodgeGameTest {
 	@GameTest(maxTicks = 100, padding = 48)
 	public void aDeadKidsBodyPicksUpNoLyingBomb(GameTestHelper helper) {
 		ArenaFight arena = new ArenaFight(helper, new TafelBoemConfig());
-		survival(arena.kid);
+		ArenaFight.survival(arena.kid);
 		BlockPos lying = arena.kid.blockPosition().east();
 		// On Normal the body stays in the arena until its kid presses Respawn.
 		helper.runAfterDelay(5, () -> {
@@ -119,14 +101,13 @@ public class DodgeGameTest {
 
 	@GameTest(maxTicks = 200, padding = 48)
 	@Fight
-	public void aBombThatLandsOnAKidWhoJustDiedLiesStillWithoutATauntOrADodge(GameTestHelper helper) {
+	public void aBombThatLandsOnAKidWhoJustDiedDropsAsATerugbomWithoutATauntOrACount(GameTestHelper helper) {
 		ArenaFight arena = new ArenaFight(helper, new TafelBoemConfig());
-		survival(arena.kid);
-		AABB around = new AABB(arena.kid.blockPosition()).inflate(30);
+		ArenaFight.survival(arena.kid);
 		boolean[] killed = {false};
 		helper.onEachTick(() -> {
 			// His first bomb is in the air, aimed at the kid: now the kid dies.
-			if (!killed[0] && !arena.level.getEntitiesOfClass(ThrownBomb.class, around).isEmpty()) {
+			if (!killed[0] && !arena.bombsInTheAir().isEmpty()) {
 				killed[0] = true;
 				arena.kid.kill(arena.level);
 			}
@@ -134,11 +115,11 @@ public class DodgeGameTest {
 
 		helper.succeedWhen(() -> {
 			helper.assertTrue(killed[0], "wait for his bomb to be in the air");
-			helper.assertTrue(arena.fight.lyingBombs().size() == 1, "wait for the bomb to land and lie still: " + arena.fight.lyingBombs());
+			helper.assertTrue(arena.terugbommen().size() == 1, "wait for the bomb to land and drop: " + arena.terugbommen().size());
 			helper.assertFalse(arena.askedAnything(), "a dead kid is asked nothing");
 			helper.assertFalse(arena.sessions.isBusy(arena.kid), "and rooted by nothing");
-			helper.assertTrue(arena.fight.tally(arena.kid.getUUID()).dodged() == 0, "nothing was dodged by a dead kid");
-			helper.assertTrue(arena.fight.tally(arena.kid.getUUID()).pickedUp() == 0, "and nothing picked up");
+			helper.assertTrue(arena.fight.tally(arena.kid.getUUID()).thrownAt() == 0 && arena.fight.tally(arena.kid.getUUID()).dodged() == 0,
+					"a dead kid was not a free kid: nothing counted");
 			helper.assertFalse(arena.heard(arena.kid, "tafelboem.boss.graaf_fout.dodged"), "he does not taunt a dead kid");
 			arena.end();
 		});
@@ -337,20 +318,11 @@ public class DodgeGameTest {
 	}
 
 	/**
-	 * Mock players start in creative, which nothing kills; and until their client has loaded (a mock one
-	 * never says so) Minecraft keeps a player invulnerable, even to {@code kill()}.
-	 */
-	private static void survival(ServerPlayer kid) {
-		kid.setGameMode(GameType.SURVIVAL);
-		kid.connection.handleAcceptPlayerLoad(new ServerboundPlayerLoadedPacket());
-	}
-
-	/**
 	 * Stone 7 wide and 5 high, 2 blocks in front of the kid towards Graaf Fout: higher than his throws
 	 * fly, so every one hits it, 3 blocks from the kid.
 	 */
-	private static BlockPos wallInFrontOf(ArenaFight arena) {
-		BlockPos wall = arena.kid.blockPosition().north(2);
+	static BlockPos wallInFrontOf(ArenaFight arena) {
+		BlockPos wall = arena.kid.blockPosition().north(4);
 		for (int across = -3; across <= 3; across++) {
 			for (int up = 0; up < 5; up++) {
 				arena.level.setBlockAndUpdate(wall.east(across).above(up), Blocks.STONE.defaultBlockState());

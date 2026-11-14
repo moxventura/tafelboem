@@ -46,8 +46,8 @@ class FightTallyTest {
 	@Test
 	void dodgesPickUpsAndTrapsAreCountedPerKind() {
 		FightTally tally = new FightTally();
-		tally.dodge();
-		tally.dodge();
+		tally.thrownAt(false, true);
+		tally.thrownAt(false, true);
 		tally.pickUp();
 		tally.trap(TrapKind.COBWEB);
 		tally.trap(TrapKind.CACTUS);
@@ -57,5 +57,55 @@ class FightTallyTest {
 		assertEquals(1, tally.pickedUp());
 		assertEquals(Map.of("cactus", 2, "cobweb", 1), tally.trapped());
 		assertEquals(0, tally.answers(), "none of them is an answer");
+	}
+
+	@Test
+	void everyThrowAtAFreeKidCountsAndTheDodgedAndStillOnesCountOfThose() {
+		FightTally tally = new FightTally();
+		tally.thrownAt(true, false);
+		tally.thrownAt(false, true);
+		tally.thrownAt(false, false);
+		tally.thrownAt(true, false);
+
+		assertEquals(4, tally.thrownAt());
+		assertEquals(2, tally.still());
+		assertEquals(1, tally.dodged());
+	}
+
+	@Test
+	void catchesThrowBacksHitsJugglesAndTerugAnswersAreCountedApart() {
+		FightTally tally = new FightTally();
+		tally.catches();
+		tally.catches();
+		tally.catches();
+		tally.throwBack();
+		tally.throwBack();
+		tally.backHit();
+		tally.juggle();
+		tally.terug(true);
+		tally.terug(false);
+		tally.terug(true);
+
+		assertEquals(3, tally.caught());
+		assertEquals(2, tally.thrownBack());
+		assertEquals(1, tally.backHits());
+		assertEquals(1, tally.juggles());
+		assertEquals(2, tally.terugRight());
+		assertEquals(1, tally.terugWrong());
+		assertEquals(0, tally.answers(), "answers are recorded through record(), not here");
+	}
+
+	@Test
+	void eachKindOfYeetKeepsItsOwnFarthest() {
+		FightTally tally = new FightTally();
+		tally.yeeted(31);
+		tally.yeeted(YeetKind.BACK, 18);
+		tally.yeeted(YeetKind.BACK, 12);
+		tally.yeeted(YeetKind.SUPER, 22);
+		tally.yeeted(YeetKind.KICK, 5);
+
+		assertEquals(31, tally.farthestYeet());
+		assertEquals(18, tally.farthestBack());
+		assertEquals(22, tally.farthestSuper());
 	}
 }

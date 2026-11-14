@@ -11,6 +11,7 @@ import net.minecraft.sounds.SoundEvents;
 import nl.jeeninga.tafelboem.TafelBoem;
 import nl.jeeninga.tafelboem.boss.yeet.Yeet;
 import nl.jeeninga.tafelboem.config.TafelBoemConfig;
+import nl.jeeninga.tafelboem.core.YeetKind;
 import nl.jeeninga.tafelboem.core.YeetReport;
 import nl.jeeninga.tafelboem.game.QuizClient;
 
@@ -56,22 +57,22 @@ final class YeetMeter {
 			@Nullable String trap) {
 		ServerLevel level = (ServerLevel) boss.level();
 		ServerPlayer kicker = kick == null ? null : level.getServer().getPlayerList().getPlayer(kick.kicker());
+		YeetKind kind = kick == null ? YeetKind.KICK : kick.kind();
 		int blocks = yeet.blocks();
 		int previousBest = 0;
 		boolean record = false;
 		if (kicker != null && records != null && !yeet.measuresHeight()) {
-			previousBest = records.best(kicker);
+			previousBest = records.best(kicker, kind);
 			if (blocks > previousBest) {
-				records.beaten(kicker, blocks);
-				// The first yeet on file only sets the best: the first kick after the update is no record.
+				records.beaten(kicker, kind, blocks);
+				// The first yeet of a kind on file only sets the best: the first one after the update is no record.
 				record = previousBest > 0 && config.yeetRecords;
 			}
 		}
 
 		if (flewOut || blocks >= 1) {
 			// A helicopter says how high, even when it drops him out of the arena: a height is no distance.
-			String key = yeet.measuresHeight() ? "tafelboem.message.yeet_height"
-					: flewOut ? "tafelboem.message.yeet_out" : "tafelboem.message.yeet_distance";
+			String key = yeet.measuresHeight() ? "tafelboem.message.yeet_height" : flewOut ? "tafelboem.message.yeet_out" : distanceKey(kind);
 			Component plain = Component.translatable(key, boss.getDisplayName(), blocks).withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD);
 			for (ServerPlayer player : flewOut ? participants.players() : participants.nearBoss()) {
 				client.actionBar(player, player == kicker ? forKicker(plain, kick, record, blocks) : plain);
@@ -83,16 +84,31 @@ final class YeetMeter {
 		if (kick != null) {
 			String name = kicker != null ? kicker.getPlainTextName() : kick.kicker().toString();
 			lastReport = new YeetReport(name, kick.tier(), kick.fact(), kick.millis(), kick.usual(), kick.fast(), kick.streak(), factor,
-					yeet.style(), landing, signature, blocks, yeet.measuresHeight(), flewOut, record, previousBest, trap);
+					yeet.style(), landing, signature, blocks, yeet.measuresHeight(), flewOut, record, previousBest, trap, kind);
 			TafelBoem.LOGGER.info("TafelBoem yeet: {}", lastReport.describe());
 		}
 	}
 
-	/** The kicker's own meter: a new record, or why he flew further. */
+	private static String distanceKey(YeetKind kind) {
+		return switch (kind) {
+			case KICK -> "tafelboem.message.yeet_distance";
+			case BACK -> "tafelboem.message.yeet_back";
+			case SUPER -> "tafelboem.message.yeet_super";
+		};
+	}
+
+	private static String recordKey(YeetKind kind) {
+		return switch (kind) {
+			case KICK -> "tafelboem.message.yeet_record";
+			case BACK -> "tafelboem.message.yeet_record_back";
+			case SUPER -> "tafelboem.message.yeet_record_super";
+		};
+	}
+
+	/** The kicker's own meter: a new record of this kind, or why he flew further. */
 	private Component forKicker(Component plain, Kick kick, boolean record, int blocks) {
 		if (record) {
-			return Component.translatable("tafelboem.message.yeet_record", boss.getDisplayName(), blocks)
-					.withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
+			return Component.translatable(recordKey(kick.kind()), boss.getDisplayName(), blocks).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
 		}
 		Component why = why(kick);
 		return why == null ? plain : plain.copy().append(" ").append(why);

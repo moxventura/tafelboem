@@ -71,7 +71,7 @@ public final class TafelBoemConfig {
 	 * countdown (5, 4 or 3 minutes by level) or the bell brings Graaf Fout. Off, as 1.1.2: a random arena, he
 	 * comes 3 s after the first kid. Applies from the next world load.
 	 */
-	public boolean buildPhase = true;
+	public boolean buildPhase = false;
 
 	/**
 	 * R1.3: in an arena, a bomb that lands more than 2 blocks from the kid it was thrown at (they ran, or the build
@@ -85,7 +85,7 @@ public final class TafelBoemConfig {
 	 * (cactus, sweet berry bush, magma block, cobweb, slime block, a lying bomb) for one more hit, and the trap
 	 * goes. Off: no pull and no bonus; the trap blocks stay in the chest.
 	 */
-	public boolean traps = true;
+	public boolean traps = false;
 
 	/**
 	 * R1.3: on Peaceful and Easy nothing takes a kid in an arena (build phase and fight) below half a heart.
@@ -93,6 +93,32 @@ public final class TafelBoemConfig {
 	 * everywhere, on every difficulty. Our booms and wrong answers never hurt that much either way.
 	 */
 	public boolean arenaSafety = true;
+
+	public boolean noBuildInFight = true;
+	public boolean landingRing = true;
+	public double dodgeLead1 = 0.70;
+	public double dodgeLead2 = 0.85;
+	public double dodgeLead3 = 0.95;
+	public double dodgeFlight1 = 0.85;
+	public double dodgeFlight2 = 0.75;
+	public double dodgeFlight3 = 0.68;
+	public int dodgeMinFlightTicks = 12;
+
+	/** What a level asks of his throw, from the parent's numbers; absurd ones are kept sane. The R0.1 fight uses level 1's. */
+	public nl.jeeninga.tafelboem.core.Aim.Tuning aimFor(nl.jeeninga.tafelboem.core.FightLevel level) {
+		int number = Math.clamp(level.number(), 1, 3);
+		double lead = switch (number) {
+			case 1 -> dodgeLead1;
+			case 2 -> dodgeLead2;
+			default -> dodgeLead3;
+		};
+		double flight = switch (number) {
+			case 1 -> dodgeFlight1;
+			case 2 -> dodgeFlight2;
+			default -> dodgeFlight3;
+		};
+		return new nl.jeeninga.tafelboem.core.Aim.Tuning(Math.clamp(lead, 0.0, 1.0), Math.clamp(flight, 0.3, 2.0), Math.max(1, dodgeMinFlightTicks));
+	}
 
 	public static TafelBoemConfig load(Path file) {
 		if (!Files.exists(file)) {

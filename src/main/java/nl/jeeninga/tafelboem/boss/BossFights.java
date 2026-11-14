@@ -7,8 +7,10 @@ import org.jspecify.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
@@ -17,6 +19,7 @@ import nl.jeeninga.tafelboem.core.ArenaBox;
 import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.game.SessionManager;
+import nl.jeeninga.tafelboem.item.TerugbomItem;
 import nl.jeeninga.tafelboem.registry.ModEntities;
 
 /**
@@ -102,6 +105,53 @@ public final class BossFights {
 		if (!touchLyingBomb(kid, pos)) {
 			sessions.startFromBlock(kid, tier, pos);
 		}
+	}
+
+	/**
+	 * A kid logged in (R1.4). No fight can hold them yet, so adventure mode left over from a fight that never got to
+	 * end goes; a kid in a running fight is left alone.
+	 */
+	public void onJoin(ServerPlayer kid) {
+		if (fights.stream().noneMatch(fight -> fight.holds(kid))) {
+			// A Terugbom in a pocket outside a running fight goes; so does adventure mode a fight left behind.
+			Terugbommen.strip(kid);
+			if (config().noBuildInFight) {
+				FightGameModes.afterLogin(kid);
+			}
+		}
+	}
+
+	/**
+	 * An item entity turned up. A Terugbom a kid dropped (Q, or dragged out of the inventory) can't be dropped: it goes
+	 * straight back to them. The ones the fight put on the floor carry its tag and are left alone.
+	 */
+	public void returnDropped(ItemEntity item) {
+		if (!(item.getItem().getItem() instanceof TerugbomItem terugbom) || item.entityTags().contains(Terugbommen.TAG)
+				|| !(item.level() instanceof ServerLevel level)) {
+			return;
+		}
+		ServerPlayer kid = item.getOwner() instanceof ServerPlayer owner ? owner : null;
+		double nearest = 16;
+		for (ServerPlayer player : level.players()) {
+			if (kid == null && player.distanceToSqr(item) < nearest) {
+				kid = player;
+				nearest = player.distanceToSqr(item);
+			}
+		}
+		item.discard();
+		if (kid != null) {
+			Terugbommen.give(sessions.client(), kid, terugbom.tier());
+		}
+	}
+
+	/** A kid right-clicked a Terugbom: it flies at him, if that kid is in a running fight. */
+	public boolean throwBack(ServerPlayer kid, InteractionHand hand) {
+		for (BossFight fight : fights) {
+			if (fight.holds(kid) && fight.throwBack(kid, hand)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public void tick() {

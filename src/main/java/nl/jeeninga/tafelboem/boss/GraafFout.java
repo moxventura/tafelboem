@@ -47,6 +47,12 @@ public class GraafFout extends Evoker {
 	/** What he does once a yeet has put him down. */
 	private @Nullable Landing landing;
 	private boolean finale;
+	/** Ticks of wobble left after a throw-back hit him (R1.4). */
+	private int staggerTicks;
+	/** Hanging in the air in a juggle (R1.4): his flight and its velocity wait until he is let go. */
+	private boolean frozen;
+	private Vec3 frozenVelocity = Vec3.ZERO;
+	private boolean frozenFloating;
 
 	/** Client side: when the pose last changed and what came before, so the renderer can ease in and out. */
 	private YeetPose shownPose = YeetPose.NONE;
@@ -115,6 +121,72 @@ public class GraafFout extends Evoker {
 		return shownPose != YeetPose.NONE ? shownPose.transform(ticks) : YeetPose.settle(previousTransform, ticks);
 	}
 
+	/** A throw-back hit him: he wobbles for a moment, arms up, and says "ouch" in his own way. */
+	public void stagger(int ticks) {
+		staggerTicks = ticks;
+		armsUp(true);
+		playSound(SoundEvents.EVOKER_HURT, 1.2F, 1.5F);
+	}
+
+	public boolean isStaggered() {
+		return staggerTicks > 0;
+	}
+
+	/** Flying from a yeet (not the finale). */
+	public boolean isFlying() {
+		return yeet != null && !finale;
+	}
+
+	/** Beaten: on his way up for good. */
+	public boolean isFinale() {
+		return finale;
+	}
+
+	private void wobble(ServerLevel level) {
+		spin(25F);
+		level.sendParticles(ParticleTypes.CLOUD, getX(), getY() + 2.1, getZ(), 2, 0.3, 0.1, 0.3, 0.02);
+		if (--staggerTicks == 0) {
+			armsUp(false);
+		}
+	}
+
+	/**
+	 * A throw-back hit him mid-yeet: he hangs in the air, spinning and flailing, until {@link #unfreeze} lets his flight
+	 * go on or a new yeet replaces it.
+	 */
+	public void freeze() {
+		if (frozen || yeet == null || finale) {
+			return;
+		}
+		frozen = true;
+		frozenVelocity = getDeltaMovement();
+		frozenFloating = isNoGravity();
+		setNoGravity(true);
+		setDeltaMovement(Vec3.ZERO);
+		armsUp(true);
+		playSound(SoundEvents.EVOKER_HURT, 1.5F, 0.7F);
+	}
+
+	/** He is let go: the flight goes on where it stopped, so he falls the normal way. */
+	public void unfreeze() {
+		if (!frozen) {
+			return;
+		}
+		frozen = false;
+		setNoGravity(frozenFloating);
+		setDeltaMovement(frozenVelocity);
+	}
+
+	public boolean isFrozen() {
+		return frozen;
+	}
+
+	private void hang(ServerLevel level) {
+		spin(40F);
+		setDeltaMovement(Vec3.ZERO);
+		level.sendParticles(ParticleTypes.CLOUD, getX(), getY() + 1, getZ(), 2, 0.3, 0.6, 0.3, 0.02);
+	}
+
 	public boolean isReacting() {
 		return yeet != null || landing != null;
 	}
@@ -154,7 +226,9 @@ public class GraafFout extends Evoker {
 			} else if (finale) {
 				flyAway(level);
 			} else if (yeet != null) {
-				if (yeet.tick(level)) {
+				if (frozen) {
+					hang(level);
+				} else if (yeet.tick(level)) {
 					land(level);
 				}
 			} else if (landing != null) {
@@ -164,6 +238,9 @@ public class GraafFout extends Evoker {
 				}
 			} else {
 				hover(level);
+				if (staggerTicks > 0) {
+					wobble(level);
+				}
 			}
 		}
 	}
@@ -180,6 +257,9 @@ public class GraafFout extends Evoker {
 	 * @param kicker where the kid who kicked stands; the boomerang comes back to them
 	 */
 	public void yeet(Vec3 from, double power, YeetStyle style, Vec3 kicker, Traps traps) {
+		staggerTicks = 0;
+		frozen = false;
+		frozen = false;
 		// Before the flight starts: ending a landing puts him upright with gravity off.
 		endLanding();
 		Vec3 direction = position().subtract(from).multiply(1, 0, 1);
@@ -197,6 +277,8 @@ public class GraafFout extends Evoker {
 	 * Defeated: one last enormous yeet, straight into the sky.
 	 */
 	public void finalYeet() {
+		staggerTicks = 0;
+		frozen = false;
 		finale = true;
 		yeet = null;
 		endLanding();
@@ -214,6 +296,7 @@ public class GraafFout extends Evoker {
 	 */
 	public @Nullable Yeet comeBack(ServerLevel level, Vec3 nearKid, ArenaBox arena) {
 		Yeet cut = yeet;
+		frozen = false;
 		yeet = null;
 		endLanding();
 		setYeetPose(YeetPose.NONE);

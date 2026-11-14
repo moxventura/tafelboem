@@ -9,6 +9,21 @@ public final class Pacing {
 	public static final int COOLDOWN_TICKS = 50;
 
 	/**
+	 * After a bomb was dodged his next throw comes this much later (R1.4), so there is time to catch it, turn
+	 * round and throw it back.
+	 */
+	public static final int AFTER_DODGE_COOLDOWN_TICKS = 90;
+
+	/** The wobble after a throw-back hits him; he also skips a throw, see {@link Stagger}. */
+	public static final int STAGGER_TICKS = 20;
+
+	/** A kid throws a Terugbom back at most once a second. */
+	public static final int BACK_COOLDOWN_TICKS = 20;
+
+	/** A Terugbom nobody picks up poofs after 15 s. */
+	public static final int TERUGBOM_LIFETIME_TICKS = 300;
+
+	/**
 	 * How long (15 s) the fight waits for a kick's reaction to end before it brings Graaf Fout back
 	 * itself. A yeet ends within 100 ticks (the boss package's {@code Yeet.MAX_AIRBORNE_TICKS}) and a
 	 * landing within 40 ({@link LandingStyle#ticks()}), so a real reaction never comes near it: only a
