@@ -494,6 +494,10 @@ public final class BossFight implements QuizListener {
 			return;
 		}
 		// While a juggle question is open nothing in the fight times out (R1.4): he hangs there, however long the kid thinks.
+		// Only while he really hangs: a juggle question he no longer hangs for must never hold the fight still.
+		if (juggleOpen() && !boss.isFrozen()) {
+			closeJuggle();
+		}
 		boolean frozen = juggleOpen();
 		if (!frozen && arena != null && phase != Phase.FINALE && boss.getY() < arena.minY()) {
 			flewOut();
@@ -870,7 +874,21 @@ public final class BossFight implements QuizListener {
 		}
 	}
 
-	/** The fight is over: every question still open closes, so nobody stays rooted over a bomb that is gone. */
+	/**
+	 * A sibling's right answer sent him flying while he hung for a juggle question (or he stopped hanging some other
+	 * way): that question closes without an answer. No hit, no hearts, no yeet; the juggler is free again, and the
+	 * answer log has nothing for it, as for a timeout. The juggle and the hit that reached him stay in the tally.
+	 */
+	private void closeJuggle() {
+		for (Map.Entry<UUID, QuestionKind> question : List.copyOf(open.entrySet())) {
+			if (question.getValue() == QuestionKind.JUGGLE) {
+				open.remove(question.getKey());
+				sessions.close(question.getKey());
+			}
+		}
+	}
+
+	/** The fight is over or decided: every question still open closes, so nobody stays rooted over a bomb that is gone. */
 	private void closeOpenQuestions() {
 		for (UUID kid : List.copyOf(open.keySet())) {
 			sessions.close(kid);
@@ -921,6 +939,8 @@ public final class BossFight implements QuizListener {
 		reactionCooldown = COOLDOWN_TICKS;
 		// A super yeet is the end of a juggle: it can't be juggled again. Every other new flight can be, once.
 		flightJuggled = kind == YeetKind.SUPER;
+		// A sibling's right answer wins over an open juggle: he flies off on it, so that juggle question closes.
+		closeJuggle();
 		// A kicked bomb sends him away from where it hit; a throw-back or a super yeet from the kid who threw it.
 		boss.yeet(kind == YeetKind.KICK ? where : kickedFrom, power, reactions.nextFlight(arena != null, config.yeetCatalogue), kickedFrom, traps());
 		phase = Phase.REACTING;
@@ -948,7 +968,9 @@ public final class BossFight implements QuizListener {
 		if (!fight.isDefeated()) {
 			return false;
 		}
-		// One last enormous yeet into the sky, and the reward after the finale.
+		// One last enormous yeet into the sky, and the reward after the finale. A question still open is about a
+		// Graaf Fout who is gone: it closes now, a juggle's too, so nobody stays rooted and nothing holds the finale.
+		closeOpenQuestions();
 		boss.finalYeet();
 		level.sendParticles(ParticleTypes.FIREWORK, boss.getX(), boss.getY() + 1, boss.getZ(), 200, 1.5, 1.5, 1.5, 0.3);
 		level.playSound(null, boss.getX(), boss.getY(), boss.getZ(), SoundEvents.FIREWORK_ROCKET_LARGE_BLAST, SoundSource.HOSTILE, 3.0F, 1.0F);

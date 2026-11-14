@@ -1,6 +1,8 @@
 package nl.jeeninga.tafelboem.gametest;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerPlayer;
@@ -19,9 +21,11 @@ import nl.jeeninga.tafelboem.core.AnswerRecord;
 import nl.jeeninga.tafelboem.core.ArenaBox;
 import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.FightLevel;
+import nl.jeeninga.tafelboem.core.FightTally;
 import nl.jeeninga.tafelboem.core.Pacing;
 import nl.jeeninga.tafelboem.core.YeetKind;
 import nl.jeeninga.tafelboem.core.YeetStyle;
+import nl.jeeninga.tafelboem.net.QuizS2C;
 import nl.jeeninga.tafelboem.world.ArenaRun;
 
 /**
@@ -259,6 +263,72 @@ public class JuggleGameTest {
 			helper.assertFalse(chickens.isEmpty(), "chickens came out");
 			helper.assertTrue(chickens.stream().allMatch(chicken -> chicken.getY() < arena.floorY + 2.6), "all of them at the arena floor, not in the air");
 			arena.end();
+		});
+	}
+
+	/**
+	 * Kid B juggles him while kid A has a Terug! question open, and A answers first: A's answer wins. He flies off on
+	 * A's throw-back yeet, B's juggle question closes quietly (no hit, no hearts, B is free, the answer log has nothing
+	 * for it), and the fight goes on: he lands, throws again, and is beaten in the end.
+	 */
+	@GameTest(maxTicks = 6000, padding = 48)
+	@Fight
+	public void aSiblingsRightAnswerWhileTheJuggleHangsWinsAndTheFightGoesOn(GameTestHelper helper) {
+		ArenaFight arena = new ArenaFight(helper, new TafelBoemConfig());
+		ServerPlayer kidA = arena.kid;
+		ServerPlayer kidB = arena.addKid(arena.box.middleX() + 6, arena.box.middleZ() + 6);
+		int startHits = arena.fight.hitsRemaining();
+		int[] stage = {0};
+		long[] answeredAt = {-1};
+		boolean[] threwAgain = {false};
+		Set<Integer> answered = new HashSet<>();
+		helper.onEachTick(() -> {
+			if (stage[0] == 0 && helper.getTick() >= 2) {
+				// A's throw-back reaches him while he stands: A's Terug! question opens.
+				arena.fight.backReached(kidA.getUUID(), BombTier.KNALLETJE);
+				helper.assertTrue(arena.sessions.isBusy(kidA), "A has the Terug! question");
+				arena.fight.boss().yeet(kidA.position(), 1.0, YeetStyle.HELICOPTER, kidA.position());
+				stage[0] = 1;
+			} else if (stage[0] == 1 && arena.fight.boss().isFlying()) {
+				// B's throw-back reaches him in mid-yeet: the juggle.
+				arena.fight.backReached(kidB.getUUID(), BombTier.KNALLETJE);
+				helper.assertTrue(arena.fight.boss().isFrozen() && arena.sessions.isBusy(kidB), "B juggled him: he hangs, B is asked");
+				stage[0] = 2;
+			} else if (stage[0] == 2) {
+				answered.add(arena.questionsTo(kidB).getFirst().sessionId());
+				QuizS2C terug = arena.questionsTo(kidA).getFirst();
+				answered.add(terug.sessionId());
+				arena.answerRight(kidA, terug);
+				answeredAt[0] = helper.getTick();
+				helper.assertFalse(arena.fight.boss().isFrozen(), "A's answer sends him off: he no longer hangs");
+				helper.assertTrue(arena.fight.boss().isFlying(), "he flies on A's yeet");
+				helper.assertFalse(arena.sessions.isBusy(kidB), "B's juggle question closed: B is free");
+				helper.assertTrue(kidA.getUUID().equals(arena.fight.creditedKid()), "the yeet is A's");
+				helper.assertTrue(arena.fight.hitsRemaining() == startHits - 1, "one hit, A's: " + arena.fight.hitsRemaining());
+				stage[0] = 3;
+			} else if (stage[0] == 3) {
+				// From here on both kids answer everything right, until he is beaten.
+				for (ServerPlayer kid : List.of(kidA, kidB)) {
+					for (QuizS2C question : arena.questionsTo(kid)) {
+						if (answered.add(question.sessionId())) {
+							threwAgain[0] = true;
+							arena.answerRight(kid, question);
+						}
+					}
+				}
+			}
+		});
+
+		helper.succeedWhen(() -> {
+			helper.assertTrue(stage[0] == 3, "wait for the juggle and A's answer");
+			helper.assertTrue(threwAgain[0] || arena.fight.lastThrow() != null, "wait for his next throw: the fight's timers run");
+			helper.assertTrue(arena.fight.isOver() && arena.fight.isWon(), "wait until he is beaten and gone");
+			FightTally b = arena.fight.tally(kidB.getUUID());
+			helper.assertTrue(b.terugRight() == 0 && b.terugWrong() == 0, "B's juggle question was never answered: " + b.terugRight() + "/" + b.terugWrong());
+			helper.assertTrue(b.juggles() == 1, "B's juggle still counts as a juggle");
+			helper.assertTrue(arena.fight.tally(kidA.getUUID()).terugRight() == 1, "A's Terug! answer counts");
+			List<AnswerRecord> answers = arena.sessions.learners().log().read(kidB.getPlainTextName());
+			helper.assertTrue(answers.stream().noneMatch(answer -> answer.context().equals("juggle")), "no juggle answer is logged for B: " + answers);
 		});
 	}
 

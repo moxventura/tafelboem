@@ -238,8 +238,9 @@ public class DodgeGameTest {
 
 	/**
 	 * Two questions open at once must not derail the win: the sibling picks up a lying bomb late in the
-	 * fight and answers while Graaf Fout, hit for the last time by the other kid's kick, is flying off.
-	 * He must still be gone 60 ticks after that hit, and everyone gets the reward.
+	 * fight and is still answering when Graaf Fout is hit for the last time by the other kid's kick. That
+	 * question closes with his finale (R1.4), so the sibling's late answer does nothing. He must still be
+	 * gone 60 ticks after that hit, and everyone gets the reward.
 	 */
 	private static void beatenWhileTheSiblingAnswers(GameTestHelper helper, boolean right) {
 		// The lying bomb goes down while he is still flying from his second-last hit. With traps on, his flight can be
@@ -252,6 +253,8 @@ public class DodgeGameTest {
 		Set<Integer> answered = new HashSet<>();
 		boolean[] lastHitNear = {false};
 		boolean[] siblingAnswered = {false};
+		boolean[] siblingBusy = {false};
+		boolean[] busyAtTheLastHit = {false};
 		long[] wonAt = {-1};
 		long[] goneAt = {-1};
 		helper.onEachTick(() -> {
@@ -271,11 +274,14 @@ public class DodgeGameTest {
 			}
 			if (arena.fight.isWon() && wonAt[0] < 0) {
 				wonAt[0] = helper.getTick();
+				busyAtTheLastHit[0] = siblingBusy[0];
+				helper.assertFalse(arena.sessions.isBusy(sibling), "the finale closed the sibling's question");
 			}
 			if (arena.fight.isOver() && goneAt[0] < 0) {
 				goneAt[0] = helper.getTick();
 			}
-			if (arena.fight.isWon() && arena.sessions.isBusy(sibling) && !siblingAnswered[0]) {
+			if (arena.fight.isWon() && busyAtTheLastHit[0] && !siblingAnswered[0]) {
+				// Too late: the question is closed, and the answer must change nothing.
 				siblingAnswered[0] = true;
 				QuizS2C open = arena.questionsTo(sibling).getLast();
 				if (right) {
@@ -284,6 +290,7 @@ public class DodgeGameTest {
 					arena.answerWrong(sibling, open);
 				}
 			}
+			siblingBusy[0] = arena.sessions.isBusy(sibling);
 		});
 
 		helper.succeedWhen(() -> {
