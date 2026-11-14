@@ -24,6 +24,7 @@ import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.core.FightTally;
 import nl.jeeninga.tafelboem.core.Pacing;
 import nl.jeeninga.tafelboem.core.YeetKind;
+import nl.jeeninga.tafelboem.core.YeetReport;
 import nl.jeeninga.tafelboem.core.YeetStyle;
 import nl.jeeninga.tafelboem.net.QuizS2C;
 import nl.jeeninga.tafelboem.world.ArenaRun;
@@ -34,6 +35,9 @@ import nl.jeeninga.tafelboem.world.ArenaRun;
  * One juggle per yeet, never on a super yeet, and the first of two kids' throw-backs counts.
  */
 public class JuggleGameTest {
+	/** The floor of a level 3 arena ends 22.5 blocks from its middle; he must land a block short of that at least. */
+	private static final double LANDS_WITHIN = 21.5;
+
 	@GameTest(maxTicks = 100, padding = 48)
 	public void aThrowBackMidYeetFreezesHimAndAsksTheJuggleQuestion(GameTestHelper helper) {
 		ArenaFight arena = new ArenaFight(helper, new TafelBoemConfig());
@@ -77,12 +81,25 @@ public class JuggleGameTest {
 	@GameTest(maxTicks = 600, padding = TestWorld.PADDING)
 	@Fight
 	public void aRightJuggleAnswerIsAHitAndASuperYeetThatLandsInsideTheArenaOnLevel3(GameTestHelper helper) {
+		superYeetOnLevel3(helper, 0);
+	}
+
+	/**
+	 * A juggle in a level 3 arena: he starts {@code out} blocks south of the middle, the kid 6 blocks north of him, and a
+	 * helicopter yeet takes him up and about 1.5 blocks towards the kid; the kid's throw-back juggles him, TestWorld
+	 * answers right at once, and the super yeet flies south, away from the kid. He must land on the floor: never out of
+	 * the arena.
+	 */
+	private static void superYeetOnLevel3(GameTestHelper helper, double out) {
 		TestWorld test = new TestWorld(helper).running();
 		ServerPlayer kid = test.kidInTheHub();
 		test.world.enterDoor(kid, 3);
 		int[] step = {0};
 		int[] waited = {0};
 		int[] startHits = {0};
+		double[] hanging = {-1};
+		double[] farthest = {0};
+		YeetReport[] superYeet = {null};
 		helper.onEachTick(() -> {
 			BossFight fight = test.world.run(FightLevel.MOEILIJK).map(ArenaRun::fight).orElse(null);
 			if (fight == null) {
@@ -90,12 +107,12 @@ public class JuggleGameTest {
 			}
 			ArenaBox box = fight.arena();
 			GraafFout boss = fight.boss();
+			double fromMiddle = Math.hypot(boss.getX() - box.middleX(), boss.getZ() - box.middleZ());
 			if (step[0] == 0) {
-				// In the middle, flying up; the kid north of him, so a super yeet takes him south, across the wide part of the floor.
 				int ground = test.level.getHeight(Heightmap.Types.MOTION_BLOCKING, (int) box.middleX(), (int) box.middleZ());
-				boss.teleportTo(box.middleX(), ground + 1.5, box.middleZ());
-				kid.teleportTo(box.middleX(), ground, box.middleZ() - 6);
-				Vec3 south = new Vec3(box.middleX(), ground, box.middleZ() + 3);
+				boss.teleportTo(box.middleX(), ground + 1.5, box.middleZ() + out);
+				kid.teleportTo(box.middleX(), ground, box.middleZ() + out - 6);
+				Vec3 south = new Vec3(box.middleX(), ground, box.middleZ() + out + 3);
 				boss.yeet(south, 1.0, YeetStyle.HELICOPTER, south);
 				startHits[0] = fight.hitsRemaining();
 				step[0] = 1;
@@ -104,19 +121,32 @@ public class JuggleGameTest {
 				ArenaFight.aimAt(kid, boss.position().add(0, boss.getBbHeight() / 2, 0));
 				fight.throwBack(kid, InteractionHand.MAIN_HAND);
 				step[0] = 2;
+			} else if (step[0] == 2) {
+				// Until the super yeet starts (it credits the kid), he flies or hangs from the helicopter; then he is on the super yeet.
+				if (fight.creditedKid() == null) {
+					hanging[0] = fromMiddle;
+				} else {
+					farthest[0] = Math.max(farthest[0], fromMiddle);
+				}
+				// The first yeet that lands is the super yeet, or the helicopter when the throw-back missed: then the test fails.
+				if (fight.lastYeet() != null) {
+					superYeet[0] = fight.lastYeet();
+					step[0] = 3;
+				}
 			}
 		});
 
 		// TestWorld answers every question right at once: the juggle question too.
 		helper.succeedWhen(() -> {
 			BossFight fight = test.world.run(FightLevel.MOEILIJK).map(ArenaRun::fight).orElse(null);
-			helper.assertTrue(fight != null && fight.lastYeet() != null, "wait for the super yeet to land");
-			helper.assertTrue(fight.lastYeet().kind() == YeetKind.SUPER, "it was a super yeet: " + fight.lastYeet().describe());
+			helper.assertTrue(fight != null && superYeet[0] != null, "wait for the super yeet to land");
+			YeetReport yeet = superYeet[0];
+			helper.assertTrue(yeet.kind() == YeetKind.SUPER, "it was a super yeet: " + yeet.describe());
+			helper.assertTrue(yeet.flight() == YeetStyle.CLASSIC || yeet.flight() == YeetStyle.TUMBLE, "classic or tumbling: " + yeet.describe());
 			helper.assertTrue(fight.hitsRemaining() == startHits[0] - 1, "and one hit: " + fight.hitsRemaining() + " left of " + startHits[0]);
-			GraafFout boss = fight.boss();
-			ArenaBox box = fight.arena();
-			double fromMiddle = Math.hypot(boss.getX() - box.middleX(), boss.getZ() - box.middleZ());
-			helper.assertTrue(fromMiddle < 22.0, "he landed inside the arena, " + fromMiddle + " blocks from its middle");
+			helper.assertTrue(hanging[0] >= out - 2.5, "he hung " + hanging[0] + " blocks from the middle");
+			helper.assertFalse(yeet.flewOut(), "he never flew out of the arena: " + yeet.describe() + ", hung " + hanging[0] + " out");
+			helper.assertTrue(farthest[0] < LANDS_WITHIN, "he landed on the floor, " + farthest[0] + " blocks from its middle (hung " + hanging[0] + " out)");
 			List<AnswerRecord> answers = test.sessions.learners().log().read(kid.getPlainTextName());
 			helper.assertTrue(answers.stream().anyMatch(answer -> answer.context().equals("juggle") && answer.correct()),
 					"the answer log says the sum was a juggle's: " + answers);

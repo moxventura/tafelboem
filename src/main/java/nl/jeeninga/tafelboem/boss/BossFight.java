@@ -989,7 +989,7 @@ public final class BossFight implements QuizListener {
 		// A sibling's right answer wins over an open juggle: he flies off on it, so that juggle question closes.
 		closeJuggle();
 		// A kicked bomb sends him away from where it hit; a throw-back or a super yeet from the kid who threw it.
-		boss.yeet(kind == YeetKind.KICK ? where : kickedFrom, power, reactions.nextFlight(arena != null, config.yeetCatalogue), kickedFrom, traps());
+		boss.yeet(kind == YeetKind.KICK ? where : kickedFrom, power, reactions.nextFlight(arena != null, config.yeetCatalogue, kind), kickedFrom, traps());
 		phase = Phase.REACTING;
 		phaseTicks = REACTION_MIN_TICKS;
 	}
