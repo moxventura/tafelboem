@@ -18,13 +18,16 @@ import net.minecraft.world.entity.animal.chicken.Chicken;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 
+import nl.jeeninga.tafelboem.boss.BossFight;
 import nl.jeeninga.tafelboem.boss.GraafFout;
 import nl.jeeninga.tafelboem.boss.YeetRecords;
 import nl.jeeninga.tafelboem.config.TafelBoemConfig;
+import nl.jeeninga.tafelboem.core.ArenaBox;
 import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.core.FightTally;
@@ -32,6 +35,7 @@ import nl.jeeninga.tafelboem.core.YeetStyle;
 import nl.jeeninga.tafelboem.core.YeetKind;
 import nl.jeeninga.tafelboem.core.YeetReport;
 import nl.jeeninga.tafelboem.net.QuizS2C;
+import nl.jeeninga.tafelboem.world.ArenaRun;
 
 /**
  * R1.4's throw-back: right-click throws a caught bomb at him, once a second, through kids and chickens; it homes in
@@ -420,6 +424,49 @@ public class ThrowBackGameTest {
 			helper.assertTrue(tally.terugRight() == 1 && tally.juggles() == (juggle ? 1 : 0), "the last hit was a right " + (juggle ? "juggle" : "Terug!")
 					+ " answer: " + tally.terugRight() + " right, " + tally.juggles() + " juggles");
 			helper.assertTrue(arena.kid.getInventory().countItem(Items.COOKED_CHICKEN) == 4, "the win is rewarded");
+		});
+	}
+
+	/**
+	 * The cap by room still lets a throw-back fly: from the middle of a level 3 arena, a Kippenbom's throw-back asks for
+	 * at least 2.0 and gets what fits the 20 blocks to the floor's edge, a real yeet, not a hop.
+	 */
+	@GameTest(maxTicks = 600, padding = TestWorld.PADDING)
+	@Fight
+	public void aKippenbomThrowBackFromTheMiddleOfLevel3FliesFar(GameTestHelper helper) {
+		TestWorld test = new TestWorld(helper).running();
+		ServerPlayer kid = test.kidInTheHub();
+		test.world.enterDoor(kid, 3);
+		int[] step = {0};
+		YeetReport[] back = {null};
+		helper.onEachTick(() -> {
+			BossFight fight = test.world.run(FightLevel.MOEILIJK).map(ArenaRun::fight).orElse(null);
+			if (fight == null) {
+				return;
+			}
+			ArenaBox box = fight.arena();
+			GraafFout boss = fight.boss();
+			int ground = test.level.getHeight(Heightmap.Types.MOTION_BLOCKING, (int) box.middleX(), (int) box.middleZ());
+			if (step[0] == 0) {
+				boss.teleportTo(box.middleX(), ground + 1.5, box.middleZ());
+				kid.teleportTo(box.middleX(), ground, box.middleZ() + 3);
+				step[0] = 1;
+			} else if (step[0] == 1 && test.level.isPositionEntityTicking(boss.blockPosition())) {
+				// It reached him standing: the Terug! question, which TestWorld answers right at once.
+				fight.backReached(kid.getUUID(), BombTier.KIPPENBOM);
+				step[0] = 2;
+			} else if (step[0] == 2 && fight.lastYeet() != null) {
+				back[0] = fight.lastYeet();
+				step[0] = 3;
+			}
+		});
+
+		helper.succeedWhen(() -> {
+			helper.assertTrue(back[0] != null, "wait for the throw-back yeet to land");
+			helper.assertTrue(back[0].kind() == YeetKind.BACK, "a throw-back yeet: " + back[0].describe());
+			helper.assertFalse(back[0].flewOut(), "inside the arena: " + back[0].describe());
+			helper.assertTrue(back[0].blocks() > 12, "and far: " + back[0].describe());
+			test.close();
 		});
 	}
 

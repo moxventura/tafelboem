@@ -86,20 +86,20 @@ public class JuggleGameTest {
 
 	/**
 	 * The juggle where it is hardest to stay in: he hangs about 15 blocks out from the middle of a level 3 arena (its
-	 * floor ends 22.5 out), and the kid stands behind him, between him and the middle, so the super yeet takes him
-	 * further out.
+	 * floor ends 22.5 out), and the kid stands behind him, between him and the middle. Away from the kid there is no
+	 * room for a super yeet, so it takes him through the middle and lands him on the far side.
 	 */
 	@GameTest(maxTicks = 600, padding = TestWorld.PADDING)
 	@Fight
-	public void aSuperYeetFrom15BlocksOutWithTheKidBehindHimLandsInsideTheArenaOnLevel3(GameTestHelper helper) {
+	public void aSuperYeetFrom15BlocksOutWithTheKidBehindHimFliesAcrossTheMiddleAndLandsInsideOnLevel3(GameTestHelper helper) {
 		superYeetOnLevel3(helper, 16.85);
 	}
 
 	/**
 	 * A juggle in a level 3 arena: he starts {@code out} blocks south of the middle, the kid 6 blocks north of him, and a
 	 * helicopter yeet takes him up and about 1.5 blocks towards the kid; the kid's throw-back juggles him, TestWorld
-	 * answers right at once, and the super yeet flies south, away from the kid. He must land on the floor: never out of
-	 * the arena.
+	 * answers right at once, and the super yeet flies south, away from the kid, when there is room for it, else north
+	 * through the middle. He must land on the floor: never out of the arena.
 	 */
 	private static void superYeetOnLevel3(GameTestHelper helper, double out) {
 		TestWorld test = new TestWorld(helper).running();
@@ -112,6 +112,7 @@ public class JuggleGameTest {
 		double[] farthest = {0};
 		YeetReport[] superYeet = {null};
 		int[] hitsAtLanding = {0};
+		double[] landedSouth = {0};
 		helper.onEachTick(() -> {
 			BossFight fight = test.world.run(FightLevel.MOEILIJK).map(ArenaRun::fight).orElse(null);
 			if (fight == null) {
@@ -150,6 +151,7 @@ public class JuggleGameTest {
 				if (fight.lastYeet() != null) {
 					superYeet[0] = fight.lastYeet();
 					hitsAtLanding[0] = fight.hitsRemaining();
+					landedSouth[0] = boss.getZ() - box.middleZ();
 					step[0] = 4;
 				}
 			}
@@ -167,6 +169,9 @@ public class JuggleGameTest {
 			helper.assertTrue(hanging[0] >= out - 2.5, "he hung " + hanging[0] + " blocks from the middle");
 			helper.assertFalse(yeet.flewOut(), "he never flew out of the arena: " + yeet.describe() + ", hung " + hanging[0] + " out");
 			helper.assertTrue(farthest[0] < LANDS_WITHIN, "he landed on the floor, " + farthest[0] + " blocks from its middle (hung " + hanging[0] + " out)");
+			if (out > 10) {
+				helper.assertTrue(landedSouth[0] < 0, "across the middle, on the far side: " + landedSouth[0] + " blocks south of it, " + yeet.describe());
+			}
 			List<AnswerRecord> answers = test.sessions.learners().log().read(kid.getPlainTextName());
 			helper.assertTrue(answers.stream().anyMatch(answer -> answer.context().equals("juggle") && answer.correct()),
 					"the answer log says the sum was a juggle's: " + answers);

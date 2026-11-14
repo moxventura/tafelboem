@@ -16,13 +16,14 @@ import nl.jeeninga.tafelboem.core.YeetStyle;
 import nl.jeeninga.tafelboem.world.ArenaRun;
 
 /**
- * R1.4's cap on throw-back and super yeets: at {@link YeetPower#MAX_POWER} the longest flight on the ground (the
- * classic yeet) launched from the middle of a level 3 arena must land on its floor, not beyond its wall. This set
- * the constant at first (1.9); a super yeet from about 15 blocks out ({@code JuggleGameTest}) now sets it, lower.
+ * R1.4's cap on throw-back and super yeets by the room ahead ({@link YeetPower#capForRoom}): the classic yeet, the
+ * longest flight these get, at the power that fits the room from the middle of a level 3 arena to its floor's edge,
+ * must land on that floor, not beyond its wall. This checks {@link YeetPower#BLOCKS_PER_POWER} in a real flight.
  */
 public class YeetCapGameTest {
 	/** The floor of a level 3 arena ends 22.5 blocks from its middle; he must land a block short of that at least. */
 	private static final double LANDS_WITHIN = 21.5;
+	private static final double FLOOR_ENDS = 22.5;
 
 	@GameTest(maxTicks = 400, padding = TestWorld.PADDING)
 	@Fight
@@ -47,7 +48,7 @@ public class YeetCapGameTest {
 				int ground = test.level.getHeight(Heightmap.Types.MOTION_BLOCKING, (int) box.middleX(), (int) box.middleZ());
 				boss.teleportTo(box.middleX(), ground + 1.5, box.middleZ());
 				Vec3 kicker = new Vec3(box.middleX(), ground, box.middleZ() + 3);
-				boss.yeet(kicker, YeetPower.MAX_POWER, YeetStyle.CLASSIC, kicker);
+				boss.yeet(kicker, YeetPower.capForRoom(FLOOR_ENDS - YeetPower.ROOM_MARGIN), YeetStyle.CLASSIC, kicker);
 				return;
 			}
 			farthest[0] = Math.max(farthest[0], Math.hypot(boss.getX() - box.middleX(), boss.getZ() - box.middleZ()));

@@ -170,6 +170,8 @@ public final class BossFight implements QuizListener {
 	private final Deque<LandingStyle> queuedLandings = new ArrayDeque<>();
 	/** The pause after this landing, so a kick-to-throw takes as long whatever the landing. */
 	private int reactionCooldown = COOLDOWN_TICKS;
+	/** The ground at the arena's middle as it was placed, before any crater: the floor's height, for {@link #floor}. */
+	private final int middleGround;
 	/** Bombs that missed their kid (R1.3), where they lie and which bomb each is. */
 	private final Map<BlockPos, BombTier> lying = new LinkedHashMap<>();
 
@@ -182,6 +184,7 @@ public final class BossFight implements QuizListener {
 		this.arena = arena;
 		this.fight = Fight.of(fightLevel);
 		this.participants = new Participants(level, boss, arena, sessions);
+		this.middleGround = arena == null ? 0 : groundAt(arena.middleX(), arena.middleZ());
 		this.terugbommen = new Terugbommen(level, sessions.client());
 		this.meter = new YeetMeter(boss, participants, sessions.client(), config);
 		boss.attach(this);
@@ -475,24 +478,34 @@ public final class BossFight implements QuizListener {
 		}
 		double middleX = arena.middleX();
 		double middleZ = arena.middleZ();
-		int middleGround = groundAt(middleX, middleZ);
+		YeetPower.Floor floor = floor();
 		double dx = middleX - at.x;
 		double dz = middleZ - at.z;
 		double distance = Math.hypot(dx, dz);
 		for (double step = 0; step < distance; step++) {
 			double x = at.x + dx / distance * step;
 			double z = at.z + dz / distance * step;
-			int ground = groundAt(x, z);
-			if (arena.containsColumn(x, z) && ground > arena.minY() && ground <= middleGround + 1) {
+			if (floor.at(x, z)) {
 				if (step == 0) {
-					return new Vec3(x, ground, z);
+					return new Vec3(x, groundAt(x, z), z);
 				}
 				double inX = at.x + dx / distance * Math.min(step + 1, distance);
 				double inZ = at.z + dz / distance * Math.min(step + 1, distance);
 				return new Vec3(inX, groundAt(inX, inZ), inZ);
 			}
 		}
-		return new Vec3(middleX, middleGround, middleZ);
+		return new Vec3(middleX, groundAt(middleX, middleZ), middleZ);
+	}
+
+	/**
+	 * This fight's arena floor, column by column: in the arena, with ground above its bottom (not the void), and no
+	 * higher than a step above the middle's floor when the fight began (not a wall; a crater there since changes nothing).
+	 */
+	private YeetPower.Floor floor() {
+		return (x, z) -> {
+			int ground = groundAt(x, z);
+			return arena.containsColumn(x, z) && ground > arena.minY() && ground <= middleGround + 1;
+		};
 	}
 
 	private int groundAt(double x, double z) {
@@ -982,14 +995,32 @@ public final class BossFight implements QuizListener {
 		Vec3 kickedFrom = kicker != null ? kicker.position() : where;
 		yeetKick = kick;
 		yeetFactor = kick == null ? 1.0 : kick.factor(config.yeetBoost);
-		double power = YeetPower.power(kind, 0.9 + level.getRandom().nextDouble() * 0.5, tier.yeetPower(), yeetFactor);
+		double wanted = YeetPower.wanted(0.9 + level.getRandom().nextDouble() * 0.5, tier.yeetPower(), yeetFactor);
+		// A kicked bomb sends him away from where it hit; a throw-back or a super yeet from the kid who threw it, or through
+		// the middle when that has the room he needs (R1.4).
+		Vec3 from = kind == YeetKind.KICK ? where : kickedFrom;
+		double power = wanted;
+		if (kind != YeetKind.KICK && arena != null) {
+			Vec3 away = boss.position().subtract(kickedFrom).multiply(1, 0, 1);
+			if (away.lengthSqr() < 1.0E-4) {
+				away = new Vec3(0, 0, 1);
+			}
+			Vec3 toMiddle = new Vec3(arena.middleX() - boss.getX(), 0, arena.middleZ() - boss.getZ());
+			YeetPower.Floor floor = floor();
+			double roomAway = YeetPower.room(boss.getX(), boss.getZ(), away.x, away.z, floor);
+			// Right at the middle there is no way through it: away is the only way.
+			double roomThroughTheMiddle = toMiddle.lengthSqr() < 1 ? 0 : YeetPower.room(boss.getX(), boss.getZ(), toMiddle.x, toMiddle.z, floor);
+			YeetPower.Way way = YeetPower.way(wanted, roomAway, roomThroughTheMiddle);
+			Vec3 direction = (way.throughTheMiddle() ? toMiddle : away).normalize();
+			from = boss.position().subtract(direction);
+			power = YeetPower.power(kind, wanted, way.room());
+		}
 		reactionCooldown = COOLDOWN_TICKS;
 		// A super yeet is the end of a juggle: it can't be juggled again. Every other new flight can be, once.
 		flightJuggled = kind == YeetKind.SUPER;
 		// A sibling's right answer wins over an open juggle: he flies off on it, so that juggle question closes.
 		closeJuggle();
-		// A kicked bomb sends him away from where it hit; a throw-back or a super yeet from the kid who threw it.
-		boss.yeet(kind == YeetKind.KICK ? where : kickedFrom, power, reactions.nextFlight(arena != null, config.yeetCatalogue, kind), kickedFrom, traps());
+		boss.yeet(from, power, reactions.nextFlight(arena != null, config.yeetCatalogue, kind), kickedFrom, traps());
 		phase = Phase.REACTING;
 		phaseTicks = REACTION_MIN_TICKS;
 	}
