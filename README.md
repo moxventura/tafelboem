@@ -58,9 +58,9 @@ back on the next Play.
 |---|---|---|
 | ![Graaf Fout head-first in the ground](docs/screenshots/r1.1-head-first.png) | ![Graaf Fout as a pancake](docs/screenshots/r1.1-pancake.png) | ![A Kippenbom's chickens in groups](docs/screenshots/r1.1-counting-kippenbom.png) |
 
-| A caught Terugbom (1.4) |
-|---|
-| ![A Terugbom in the hotbar, with the hint to right-click](docs/screenshots/r1.4-terugbom-in-hand.png) |
+| The landing ring (1.4) | A caught Terugbom (1.4) |
+|---|---|
+| ![A ring of red dust on the arena floor where Graaf Fout's bomb will land](docs/screenshots/r1.4-landing-ring.png) | ![A Terugbom in the hotbar, with the hint to right-click](docs/screenshots/r1.4-terugbom-in-hand.png) |
 
 - **The hub.** You start on a stone platform facing three doors, one per level. A sign above each
   door says which level it is, and the bombs Graaf Fout throws there sit beside it in item frames.

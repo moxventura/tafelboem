@@ -121,15 +121,23 @@ public class WorldClientGameTest implements FabricClientGameTest {
 					// The walk in carried the kid up against the build corner's chest, and R1.3's cover rule makes the chest stop
 					// bombs like any block. Out in the open a thrown bomb must root him; his first comes 3 s after he appears.
 					standInTheOpen(world, level);
+					// The teleport turns the kid to face the arena, but only once the client has it: before that, a look is undone.
+					context.waitTicks(3);
 					// R1.4: a ring of dust round where he thinks his bomb will land. His first throw comes a second or two later, so the
-					// test shows one round a spot 6 blocks east of the kid, for 40 ticks, and the kid looks at its middle.
+					// test shows one round a spot 7 blocks in front of the kid, for 40 ticks, and the kid looks down at its middle. The
+					// chat (his intro, the countdown) would hide the floor there, so it is cleared for the picture.
 					BlockPos ringMiddle = world.getServer().computeOnServer(server -> {
-						BlockPos middle = server.getPlayerList().getPlayers().getFirst().blockPosition().east(6);
+						PlacedArea arena = tafelBoem().run(level).orElseThrow().arena();
+						BlockPos middle = server.getPlayerList().getPlayers().getFirst().blockPosition().relative(Direction.fromYRot(arena.yaw()), 7);
 						tafelBoem().run(level).orElseThrow().fight().showLandingRing(Vec3.atBottomCenterOf(middle), BombTier.GEWONE_TNT, 40);
 						return middle;
 					});
 					context.getInput().lookAt(ringMiddle.below());
-					context.waitTicks(3);
+					context.runOnClient(client -> client.gui.hud.getChat().clearMessages(false));
+					// The ring is drawn every other tick and its dust lasts a while: a few ticks show the whole round.
+					context.waitTicks(6);
+					check(world.getServer().computeOnServer(server -> !tafelBoem().run(level).orElseThrow().fight().landingRings().isEmpty()),
+							"the landing ring is still showing for the screenshot");
 					context.takeScreenshot("r1.4-01-landing-ring");
 					context.waitForScreen(QuestionScreen.class);
 					check(pickedUp(world, level) == 0, "a bomb Graaf Fout threw rooted the kid, he did not pick one up");
