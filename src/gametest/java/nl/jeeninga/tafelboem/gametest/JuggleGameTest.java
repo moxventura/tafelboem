@@ -106,11 +106,12 @@ public class JuggleGameTest {
 		ServerPlayer kid = test.kidInTheHub();
 		test.world.enterDoor(kid, 3);
 		int[] step = {0};
-		int[] waited = {0};
+		int[] yeetedAt = {0};
 		int[] startHits = {0};
 		double[] hanging = {-1};
 		double[] farthest = {0};
 		YeetReport[] superYeet = {null};
+		int[] hitsAtLanding = {0};
 		helper.onEachTick(() -> {
 			BossFight fight = test.world.run(FightLevel.MOEILIJK).map(ArenaRun::fight).orElse(null);
 			if (fight == null) {
@@ -119,20 +120,26 @@ public class JuggleGameTest {
 			ArenaBox box = fight.arena();
 			GraafFout boss = fight.boss();
 			double fromMiddle = Math.hypot(boss.getX() - box.middleX(), boss.getZ() - box.middleZ());
+			int ground = test.level.getHeight(Heightmap.Types.MOTION_BLOCKING, (int) box.middleX(), (int) box.middleZ());
 			if (step[0] == 0) {
-				int ground = test.level.getHeight(Heightmap.Types.MOTION_BLOCKING, (int) box.middleX(), (int) box.middleZ());
 				boss.teleportTo(box.middleX(), ground + 1.5, box.middleZ() + out);
 				kid.teleportTo(box.middleX(), ground, box.middleZ() + out - 6);
+				step[0] = 1;
+			} else if (step[0] == 1 && test.level.isPositionEntityTicking(boss.blockPosition())) {
+				// Only once his new spot ticks (TestWorld follows him with a ticket): a helicopter that stands still for a few ticks
+				// meanwhile would hang somewhere else.
 				Vec3 south = new Vec3(box.middleX(), ground, box.middleZ() + out + 3);
 				boss.yeet(south, 1.0, YeetStyle.HELICOPTER, south);
+				yeetedAt[0] = boss.tickCount;
 				startHits[0] = fight.hitsRemaining();
-				step[0] = 1;
-			} else if (step[0] == 1 && ++waited[0] >= 12) {
+				step[0] = 2;
+			} else if (step[0] == 2 && boss.tickCount - yeetedAt[0] >= 12) {
+				// Twelve of his own ticks into the helicopter, however the server's load spread them.
 				ArenaFight.giveInHand(kid, BombTier.KNALLETJE);
 				ArenaFight.aimAt(kid, boss.position().add(0, boss.getBbHeight() / 2, 0));
 				fight.throwBack(kid, InteractionHand.MAIN_HAND);
-				step[0] = 2;
-			} else if (step[0] == 2) {
+				step[0] = 3;
+			} else if (step[0] == 3) {
 				// Until the super yeet starts (it credits the kid), he flies or hangs from the helicopter; then he is on the super yeet.
 				if (fight.creditedKid() == null) {
 					hanging[0] = fromMiddle;
@@ -142,7 +149,8 @@ public class JuggleGameTest {
 				// The first yeet that lands is the super yeet, or the helicopter when the throw-back missed: then the test fails.
 				if (fight.lastYeet() != null) {
 					superYeet[0] = fight.lastYeet();
-					step[0] = 3;
+					hitsAtLanding[0] = fight.hitsRemaining();
+					step[0] = 4;
 				}
 			}
 		});
@@ -154,7 +162,8 @@ public class JuggleGameTest {
 			YeetReport yeet = superYeet[0];
 			helper.assertTrue(yeet.kind() == YeetKind.SUPER, "it was a super yeet: " + yeet.describe());
 			helper.assertTrue(yeet.flight() == YeetStyle.CLASSIC || yeet.flight() == YeetStyle.TUMBLE, "classic or tumbling: " + yeet.describe());
-			helper.assertTrue(fight.hitsRemaining() == startHits[0] - 1, "and one hit: " + fight.hitsRemaining() + " left of " + startHits[0]);
+			// When it landed: TestWorld answers every bomb after it too, so the fight goes on meanwhile.
+			helper.assertTrue(hitsAtLanding[0] == startHits[0] - 1, "and one hit: " + hitsAtLanding[0] + " left of " + startHits[0] + ", " + yeet.describe());
 			helper.assertTrue(hanging[0] >= out - 2.5, "he hung " + hanging[0] + " blocks from the middle");
 			helper.assertFalse(yeet.flewOut(), "he never flew out of the arena: " + yeet.describe() + ", hung " + hanging[0] + " out");
 			helper.assertTrue(farthest[0] < LANDS_WITHIN, "he landed on the floor, " + farthest[0] + " blocks from its middle (hung " + hanging[0] + " out)");
