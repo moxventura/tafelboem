@@ -16,15 +16,18 @@ import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.animal.chicken.Chicken;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 
+import nl.jeeninga.tafelboem.boss.GraafFout;
 import nl.jeeninga.tafelboem.boss.YeetRecords;
 import nl.jeeninga.tafelboem.config.TafelBoemConfig;
 import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.FightLevel;
+import nl.jeeninga.tafelboem.core.FightTally;
 import nl.jeeninga.tafelboem.core.YeetStyle;
 import nl.jeeninga.tafelboem.core.YeetKind;
 import nl.jeeninga.tafelboem.core.YeetReport;
@@ -79,9 +82,12 @@ public class ThrowBackGameTest {
 	public void itPassesThroughAKidAndAChickenOnTheWay(GameTestHelper helper) {
 		ArenaFight arena = new ArenaFight(helper, new TafelBoemConfig());
 		ServerPlayer sibling = arena.addKid(arena.box.middleX(), arena.box.middleZ() + 2.5);
+		// The throw climbs from the kid's eyes to his middle: 1.5 blocks out it is about 1.8 above the floor. A chicken
+		// on the floor is lower than that, so this one floats in the line, at the bomb's height.
 		Chicken chicken = EntityTypes.CHICKEN.create(arena.level, EntitySpawnReason.TRIGGERED);
-		chicken.setPos(arena.box.middleX(), arena.floorY, arena.box.middleZ() + 3.5);
+		chicken.setPos(arena.box.middleX(), arena.floorY + 1.4, arena.box.middleZ() + 3.5);
 		chicken.setNoAi(true);
+		chicken.setNoGravity(true);
 		arena.level.addFreshEntity(chicken);
 		helper.runAfterDelay(2, () -> {
 			ArenaFight.giveInHand(arena.kid, BombTier.KNALLETJE);
@@ -93,10 +99,16 @@ public class ThrowBackGameTest {
 			helper.assertTrue(arena.fight.tally(arena.kid.getUUID()).backHits() == 1, "wait for it to reach him, past the sibling and the chicken");
 			helper.assertFalse(arena.asked(sibling, BombTier.KNALLETJE), "the sibling was not hit");
 			helper.assertTrue(chicken.isAlive(), "and the chicken is fine");
+			helper.assertTrue(chicken.getY() > arena.floorY + 1, "and still in the line, in the air: " + chicken.getY());
 			arena.end();
 		});
 	}
 
+	/**
+	 * The spec asks for 5 blocks off-aim, but a straight throw 5 blocks beside him never comes within the homing range
+	 * (5 blocks) of his middle, so nothing bends it in; it catches throws up to just under 5 blocks off (4.9 in
+	 * {@code HomingTest}'s model of the flight). This checks 4, with room to spare. R1.4.md's watch list says so.
+	 */
 	@GameTest(maxTicks = 80, padding = 48)
 	public void homingHitsAStandingGraafFoutFromFourBlocksOffAim(GameTestHelper helper) {
 		ArenaFight arena = new ArenaFight(helper, new TafelBoemConfig());
@@ -125,8 +137,9 @@ public class ThrowBackGameTest {
 			arena.fight.throwBack(arena.kid, InteractionHand.MAIN_HAND);
 		});
 
+		helper.runAfterDelay(4, () -> helper.assertTrue(arena.thrownBackInTheAir(arena.kid).size() == 1, "the throw flies"));
 		helper.runAfterDelay(58, () -> {
-			helper.assertTrue(arena.bombsInTheAir().isEmpty(), "it poofed: nothing flies any more");
+			helper.assertTrue(arena.thrownBackInTheAir(arena.kid).isEmpty(), "it poofed: nothing flies any more");
 			helper.assertTrue(arena.fight.tally(arena.kid.getUUID()).backHits() == 0, "no hit");
 			helper.assertFalse(arena.askedAnything(), "no question");
 			helper.assertTrue(arena.terugbommen().isEmpty(), "and it doesn't drop back: a miss is gone");
@@ -354,6 +367,59 @@ public class ThrowBackGameTest {
 			helper.assertFalse(arena.sessions.isBusy(arena.kid), "and asked nothing");
 			helper.assertFalse(arena.fight.boss().isStaggered(), "he is not staggered");
 			arena.end();
+		});
+	}
+
+	@GameTest(maxTicks = 6000, padding = 48)
+	@Fight
+	public void aRightTerugAnswerThatIsTheLastHitWinsTheFight(GameTestHelper helper) {
+		lastHitFromAThrowBack(helper, false);
+	}
+
+	/**
+	 * A fight played to its last hit, the kid standing still and answering every bomb right; then a throw-back that
+	 * reaches him, standing (a Terug! question) or in mid-yeet (with {@code juggle}, a juggle question), answered right,
+	 * is that last hit: he is beaten, the finale ends and the kid gets the reward.
+	 */
+	static void lastHitFromAThrowBack(GameTestHelper helper, boolean juggle) {
+		// The test's floor is one block of stone: ten kicks' craters could leave him nothing to stand on.
+		TafelBoemConfig config = new TafelBoemConfig();
+		config.arenaCraters = false;
+		ArenaFight arena = new ArenaFight(helper, config);
+		Set<Integer> answered = new HashSet<>();
+		int[] stage = {0};
+		long[] yeetedAt = {-1};
+		helper.onEachTick(() -> {
+			GraafFout boss = arena.fight.boss();
+			if (stage[0] == 0 && arena.fight.hitsRemaining() == 1 && !boss.isReacting() && !arena.sessions.isBusy(arena.kid)) {
+				if (juggle) {
+					boss.yeet(arena.kid.position(), 1.0, YeetStyle.HELICOPTER, arena.kid.position());
+					yeetedAt[0] = helper.getTick();
+					stage[0] = 1;
+				} else {
+					arena.fight.backReached(arena.kid.getUUID(), BombTier.KNALLETJE);
+					stage[0] = 2;
+				}
+			} else if (stage[0] == 1 && helper.getTick() - yeetedAt[0] >= 6) {
+				arena.fight.backReached(arena.kid.getUUID(), BombTier.KNALLETJE);
+				helper.assertTrue(boss.isFrozen(), "the throw-back juggled him");
+				stage[0] = 2;
+			}
+			// Every question is answered right at once: the bombs until the last hit, then the Terug! or juggle question.
+			for (QuizS2C question : arena.questionsTo(arena.kid)) {
+				if (answered.add(question.sessionId())) {
+					arena.answerRight(arena.kid, question);
+				}
+			}
+		});
+
+		helper.succeedWhen(() -> {
+			helper.assertTrue(stage[0] == 2, "wait for the last hit to come from a throw-back");
+			helper.assertTrue(arena.fight.isOver() && arena.fight.isWon(), "wait for the win and the end of his finale");
+			FightTally tally = arena.fight.tally(arena.kid.getUUID());
+			helper.assertTrue(tally.terugRight() == 1 && tally.juggles() == (juggle ? 1 : 0), "the last hit was a right " + (juggle ? "juggle" : "Terug!")
+					+ " answer: " + tally.terugRight() + " right, " + tally.juggles() + " juggles");
+			helper.assertTrue(arena.kid.getInventory().countItem(Items.COOKED_CHICKEN) == 4, "the win is rewarded");
 		});
 	}
 

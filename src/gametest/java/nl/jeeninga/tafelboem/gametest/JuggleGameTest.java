@@ -373,6 +373,12 @@ public class JuggleGameTest {
 		});
 	}
 
+	@GameTest(maxTicks = 6000, padding = 48)
+	@Fight
+	public void aRightJuggleAnswerThatIsTheLastHitWinsTheFight(GameTestHelper helper) {
+		ThrowBackGameTest.lastHitFromAThrowBack(helper, true);
+	}
+
 	/** A helicopter yeet on cue (he hovers up over the kids for a while), and a throw-back of this tier into him in mid-air. */
 	private static void startJuggle(GameTestHelper helper, ArenaFight arena, BombTier tier) {
 		helper.runAfterDelay(2, () -> arena.fight.boss().yeet(arena.kid.position(), 1.0, YeetStyle.HELICOPTER, arena.kid.position()));

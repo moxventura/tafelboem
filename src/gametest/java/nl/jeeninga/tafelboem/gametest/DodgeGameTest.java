@@ -26,9 +26,10 @@ import nl.jeeninga.tafelboem.net.QuizS2C;
 import nl.jeeninga.tafelboem.registry.ModBlocks;
 
 /**
- * R1.3's dodging: a bomb that lands more than 2 blocks from its kid lies still and roots nobody, a
- * kid who touches a lying bomb gets its question, bombs pile up without a cap, craters never set
- * them off, and they all poof when the fight ends.
+ * Dodging: a bomb that lands more than 3 blocks from its kid roots nobody and drops as a Terugbom (R1.4); a
+ * wall that stops it within 3 blocks of the kid is still a hit. R1.3's lying bombs, which the GameTests and the
+ * client test still place: a kid who touches one gets its question, they pile up without a cap, craters never
+ * set them off, and they all poof when the fight ends.
  */
 public class DodgeGameTest {
 	@GameTest(maxTicks = 300, padding = 48)
@@ -43,6 +44,22 @@ public class DodgeGameTest {
 			helper.assertTrue(arena.askedAnything(), "wait for the question: as in 1.2.0, the wall changes nothing");
 			helper.assertTrue(arena.sessions.isBusy(arena.kid), "the kid is rooted");
 			helper.assertTrue(arena.fight.lyingBombs().isEmpty(), "nothing lies around");
+			arena.end();
+		});
+	}
+
+	@GameTest(maxTicks = 300, padding = 48)
+	@Fight
+	public void aWallThatStopsTheBombWithin3BlocksOfTheKidIsStillAHit(GameTestHelper helper) {
+		ArenaFight arena = new ArenaFight(helper, new TafelBoemConfig());
+		// Right in front of the kid: the bomb comes down in front of it, 2 blocks from the kid.
+		wallInFrontOf(arena, 1);
+
+		helper.succeedWhen(() -> {
+			helper.assertTrue(arena.fight.tally(arena.kid.getUUID()).thrownAt() >= 1, "wait for his first throw to land");
+			helper.assertTrue(arena.fight.tally(arena.kid.getUUID()).dodged() == 0, "the wall stopped it within 3 blocks: a hit, " + arena.fight.lastThrow());
+			helper.assertTrue(arena.askedAnything() && arena.sessions.isBusy(arena.kid), "the kid is asked and rooted");
+			helper.assertTrue(arena.terugbommen().isEmpty(), "nothing drops");
 			arena.end();
 		});
 	}
@@ -325,11 +342,16 @@ public class DodgeGameTest {
 	}
 
 	/**
-	 * Stone 7 wide and 5 high, 2 blocks in front of the kid towards Graaf Fout: higher than his throws
-	 * fly, so every one hits it, 3 blocks from the kid.
+	 * Stone 7 wide and 5 high, 4 blocks in front of the kid towards Graaf Fout: higher than his throws
+	 * fly, so every one hits it and comes down in front of it, 5 blocks from the kid: a dodge.
 	 */
 	static BlockPos wallInFrontOf(ArenaFight arena) {
-		BlockPos wall = arena.kid.blockPosition().north(4);
+		return wallInFrontOf(arena, 4);
+	}
+
+	/** The same wall, this many blocks in front of the kid. */
+	static BlockPos wallInFrontOf(ArenaFight arena, int blocks) {
+		BlockPos wall = arena.kid.blockPosition().north(blocks);
 		for (int across = -3; across <= 3; across++) {
 			for (int up = 0; up < 5; up++) {
 				arena.level.setBlockAndUpdate(wall.east(across).above(up), Blocks.STONE.defaultBlockState());

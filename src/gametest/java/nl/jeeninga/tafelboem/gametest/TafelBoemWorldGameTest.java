@@ -2,6 +2,7 @@ package nl.jeeninga.tafelboem.gametest;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -22,6 +23,7 @@ import nl.jeeninga.tafelboem.core.BombTier;
 import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.core.FightRecord;
 import nl.jeeninga.tafelboem.core.LandingStyle;
+import nl.jeeninga.tafelboem.core.YeetKind;
 import nl.jeeninga.tafelboem.core.YeetPose;
 import nl.jeeninga.tafelboem.gametest.RecordingQuizClient.Bar;
 import nl.jeeninga.tafelboem.registry.ModBlocks;
@@ -260,6 +262,24 @@ public class TafelBoemWorldGameTest {
 			helper.assertTrue(fights.size() == 1 && fights.getFirst().won(), "the win is the only line: " + fights);
 			test.close();
 		});
+	}
+
+	@GameTest(maxTicks = 20, padding = TestWorld.PADDING)
+	public void eachKindOfYeetHasItsOwnRecordFromTheFightsLog(GameTestHelper helper) {
+		TestWorld test = new TestWorld(helper).running();
+		ServerPlayer kid = test.kidInTheHub();
+		// A fight line from 1.4 whose kick, throw-back and super yeet bests all differ.
+		test.log.append(new FightRecord(0L, kid.getPlainTextName(), 1, "default", FightRecord.WON, 11, 0, 0, 0, 3, 120, 1, "1.4.0", 10, 0,
+				0, 0, Map.of(), "easy", 0, 0, 0, 0, 0, 0, 0, 0, 20, 30));
+
+		helper.assertTrue(test.world.yeetRecords().best(kid, YeetKind.KICK) == 10, "a kick's best is the farthest kick");
+		helper.assertTrue(test.world.yeetRecords().best(kid, YeetKind.BACK) == 20, "a throw-back's best is the farthest throw-back");
+		helper.assertTrue(test.world.yeetRecords().best(kid, YeetKind.SUPER) == 30, "a super yeet's best is the farthest super yeet");
+		test.world.yeetRecords().beaten(kid, YeetKind.BACK, 25);
+		helper.assertTrue(test.world.yeetRecords().best(kid, YeetKind.BACK) == 25 && test.world.yeetRecords().best(kid, YeetKind.KICK) == 10,
+				"a new throw-back best leaves the kick's alone");
+		test.close();
+		helper.succeed();
 	}
 
 	@GameTest(maxTicks = 1200, padding = TestWorld.PADDING)

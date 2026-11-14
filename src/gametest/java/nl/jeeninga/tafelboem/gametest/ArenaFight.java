@@ -106,6 +106,13 @@ final class ArenaFight {
 				bomb -> bomb.getOwner() == fight.boss());
 	}
 
+	/** This kid's throw-backs in the air over this arena now. */
+	List<ThrownBomb> thrownBackInTheAir(ServerPlayer thrower) {
+		return level.getEntitiesOfClass(ThrownBomb.class,
+				new AABB(box.minX() - 20, box.minY(), box.minZ() - 20, box.maxX() + 21, box.maxY() + 40, box.maxZ() + 21),
+				bomb -> bomb.getOwner() == thrower);
+	}
+
 	/** The Terugbommen lying on the floor of this arena now. */
 	List<ItemEntity> terugbommen() {
 		return level.getEntitiesOfClass(ItemEntity.class,

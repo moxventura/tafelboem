@@ -110,6 +110,11 @@ public final class TafelBoemWorld {
 			return kid.getPlainTextName() + ":" + kind.id();
 		}
 	};
+	/** The kids' records per kind, as the fights get them; the GameTests read them here. */
+	public YeetRecords yeetRecords() {
+		return yeetRecords;
+	}
+
 	private final Set<String> hinted = new HashSet<>();
 	/** The Terugbom hint is once per kid per world: the fights log remembers who caught one before. */
 	private final Hints hints = new Hints() {
