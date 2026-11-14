@@ -29,7 +29,8 @@ go/no-go (see the spec):
 | **R1.1 "Meer yeets"** | A flight plus a landing per hit (wall splat, head-first, pancake, running round, a landing per bomb), fast answers and streaks yeet Graaf Fout further with a record per kid, the counting Kippenbom | ✅ 1.1.x, played in playtest 3 on 2026-10-31, go/no-go still open |
 | Faster tests | Nothing new for the kids: the same tests, quicker to run | ✅ done on 2026-10-26 (merged, no publish) |
 | **R1.2 "Bouwen"** | A build phase before every fight: the kids build the plain arena from a chest of blocks, with a countdown and a bell, and then Graaf Fout comes | ✅ published (1.2.0) on 2026-11-01, playtest 4 still to come |
-| **R1.3 "Dekking"** | Terrain in the fight: dodging behind blocks the kids built, and traps Graaf Fout can land in | built, not published yet (it waits for playtest 4) |
+| **R1.3 "Dekking"** | Terrain in the fight: dodging behind blocks the kids built, and traps Graaf Fout can land in | built, then reworked into R1.4 (1.3.0 was played in playtests 4 and 5) |
+| **R1.4 "Terug!"** | No building or traps by default, harder dodging, a dodged bomb is a Terugbom you throw back at Graaf Fout, the juggle and the super yeet | released as 1.4.0 |
 | R2 "Leren dat blijft" | Fact states, spaced practice, Tafelkaart, parent report, daily limit, "Kies je bom", leg-kick animation | backlog |
 | R3 "Meer boem" | Bombs 4–9, craters, particle shows, lives, co-op rescue | backlog |
 | R4 new villains | Tante Toverfout, Robo-Rekenaar 3000 | backlog |
@@ -65,20 +66,18 @@ back on the next Play.
   runs out or 10 seconds after someone rings the bell (see "Building first" below), and then the
   fight starts. With `buildPhase` off he appears about three seconds after you arrive. Anyone who
   walks through the same door while the fight runs joins it.
-- **Building first (1.2).** Behind a level door the arena is empty at first: a double chest full of
-  blocks (wood, stone, glass, wool, slime, redstone, lanterns and more) and a bell stand in front of
-  you. Build what you like. Graaf Fout comes when the countdown in the boss bar runs out (5 minutes on
-  level 1, 4 on level 2, 3 on level 3), or 10 seconds after someone rings the bell. The bell
-  counts only when Minecraft itself rings it: right-click its front or back, not its top, and not
-  while sneaking with something in your hand. His bombs can blow holes in what you built. The next
-  time, the arena is empty again.
-- **Cover and traps (1.3).** Graaf Fout's bombs only get you when they land within 2 blocks of
-  you: run, or hide behind what you built. A bomb that misses lies there (he says so); walk into it
-  and you get its sum after all, and either of you can. After a right answer he may land in a trap
-  within 4 blocks: cactus, berry bush, magma, cobweb, slime or a lying bomb. That's one more hit, and
-  the trap is gone. The chest has cactus with sand, berries with dirt, magma and cobweb. On Peaceful
-  and Easy nothing in an arena takes your last half heart; on Normal and Hard you can die, and that
-  counts as leaving.
+- **No building (1.4).** Graaf Fout comes about three seconds after you walk in. The building chest,
+  the bell and the traps are still in the mod behind the switches `buildPhase` and `traps`, both off.
+  While the fight runs you are in adventure mode, so nobody breaks or places blocks; you are back in
+  your own mode when it ends, you leave, or log in again.
+- **Dodge, catch and throw back (1.4).** He aims ahead of where you run, so keep moving: a bomb
+  only gets you when it lands within 3 blocks of you, and a ring of dust shows where he thinks it
+  will land. A bomb that misses drops as a glowing Terugbom (he says "Mis!"): walk onto it to catch
+  it (3 at most), right-click to throw it back. It homes in on him when it gets near and passes
+  through everyone else. A hit makes him wobble and skip a throw, and you get a Terug! question: right
+  is a hit and a harder yeet, wrong fizzles like any wrong answer. Hit him while he flies and he
+  freezes in the air until you have answered: right is a super yeet. Terugbommen only exist in a
+  fight, and poof after 15 seconds on the floor.
 - **Stars.** A win is ★, a win with at most 2 wrong answers is ★★ and a win without a wrong answer
   is ★★★. Only typed wrong answers count: "?" and ESC don't. The best result per level counts. Stand
   within 3 blocks of a door in the hub to see your own stars for that level. Set `stars` to `false`
@@ -115,7 +114,7 @@ back on the next Play.
 - **Other worlds.** Every other world still works as before: the summon item starts the R0.1 fight
   with all tables, and `/tafelboem arena` still sets one up. In a TafelBoem world the summon item
   only says to use the doors. The R1.1 yeets, landings, boost and counting Kippenbom work there too;
-  records are only kept in a TafelBoem world. Dodging, lying bombs and traps belong to the arenas
+  records are only kept in a TafelBoem world. Dodging, Terugbommen and traps belong to the arenas
   behind the level doors: a fight from the summon item plays as before.
 
 Each fight is written to `tafelboem/fights-<player>.jsonl` in the world folder, next to the answer
@@ -265,10 +264,15 @@ version, and the mod warns when they don't match, even when two builds are only 
 | `yeetCatalogue` | `true` | The wall splat and the landings head-first, pancake and running round. `false`: the R1 yeets and the dizzy spell |
 | `bombSignatures` | `true` | Each bomb's own landing every other kick: sore toe, soot face, chasing chickens |
 | `arenaMusic` | `true` | Each level's arena plays its own track. `false` keeps the normal music; applies from the next arena a kid walks into |
-| `buildPhase` | `true` | Through a level door the kids first build in the plain arena, with a double chest of blocks and a bell. Graaf Fout comes when the countdown in the boss bar runs out (5, 4 or 3 minutes by level) or 10 seconds after someone rings the bell. `false` is 1.1.2: a random arena, and he comes 3 seconds after the first kid |
-| `dodging` | `true` | A bomb that lands more than 2 blocks from the kid it was thrown at lies still until a kid walks into it. `false` is 1.2.0: wherever it lands, that kid answers |
-| `traps` | `true` | After a right answer Graaf Fout lands in the nearest trap within 4 blocks for one more hit, and the trap goes. `false`: no pull and no bonus; the chest keeps the trap blocks |
+| `buildPhase` | `false` | Through a level door the kids first build in the plain arena, with a double chest of blocks and a bell. Graaf Fout comes when the countdown in the boss bar runs out (5, 4 or 3 minutes by level) or 10 seconds after someone rings the bell. `true` is the 1.2.0 build phase; the default since 1.4 is `false`: a random arena, and he comes 3 seconds after the first kid |
+| `dodging` | `true` | A bomb that lands more than 3 blocks from the kid it was thrown at drops as a Terugbom; he aims ahead of a running kid and throws quicker; a ring shows where it lands. `false` is 1.2.0: wherever it lands, that kid answers |
+| `traps` | `false` | After a right answer Graaf Fout lands in the nearest trap within 4 blocks for one more hit, and the trap goes. `false`: no pull and no bonus; the chest keeps the trap blocks |
 | `arenaSafety` | `true` | On Peaceful and Easy nothing takes a kid in an arena below half a heart. `false`: vanilla damage everywhere, on every difficulty |
+| `noBuildInFight` | `true` | Kids in an arena with a running fight are in adventure mode: no breaking or placing. Their own mode comes back when it ends, they leave, die or log in again |
+| `landingRing` | `true` | A ring of dust shows where his bomb will land |
+| `dodgeLead1`, `dodgeLead2`, `dodgeLead3` | `0.70`, `0.85`, `0.95` | How much of a running kid's movement he aims ahead, on levels 1, 2 and 3 (0 to 1) |
+| `dodgeFlight1`, `dodgeFlight2`, `dodgeFlight3` | `0.85`, `0.75`, `0.68` | His bomb's flight time as a part of the old one, on levels 1, 2 and 3; smaller is quicker and harder |
+| `dodgeMinFlightTicks` | `12` | No bomb flies shorter than this many ticks (20 a second) |
 
 `/tafelboem stats [player]` shows accuracy and typical time per table, the hardest facts, how often a
 missed fact is right when it comes back, and how often "?" was probably pressed by accident.
