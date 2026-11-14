@@ -227,33 +227,85 @@ public class ThrowBackGameTest {
 		});
 	}
 
-	@GameTest(maxTicks = 100, padding = 48)
-	public void aThrowBackBouncesOffAStaggeredOrBeatenHimAndAKidWhoIsAnswering(GameTestHelper helper) {
+	@GameTest(maxTicks = 40, padding = 48)
+	public void aThrowBackBouncesOffAStaggeredHim(GameTestHelper helper) {
 		ArenaFight arena = new ArenaFight(helper, new TafelBoemConfig());
 		ServerPlayer sibling = arena.addKid(arena.box.middleX() + 6, arena.box.middleZ() + 6);
-		int[] dropped = {0};
-		// 1. Staggered: the first throw-back hits, the sibling's right after it bounces.
 		helper.runAfterDelay(2, () -> {
+			// The first throw-back hits and staggers him; the sibling, free and not answering, throws right after it.
 			arena.fight.backReached(arena.kid.getUUID(), BombTier.KNALLETJE);
 			helper.assertTrue(arena.fight.boss().isStaggered(), "the first hit staggers him");
 			arena.fight.backReached(sibling.getUUID(), BombTier.KNALLETJE);
 			helper.assertTrue(arena.terugbommen().size() == 1, "the sibling's bounced off and dropped below him");
-			helper.assertFalse(arena.asked(sibling, BombTier.KNALLETJE), "and asks nothing");
-			dropped[0] = arena.terugbommen().size();
-		});
-		// 2. A kid who is answering: their throw-back, in the air when the bomb landed on them, bounces.
-		helper.runAfterDelay(4, () -> {
-			arena.sessions.start(sibling, BombTier.GEWONE_TNT, sibling.blockPosition().east(), "test", null);
-			arena.fight.backReached(sibling.getUUID(), BombTier.GEWONE_TNT);
-			helper.assertTrue(arena.terugbommen().size() == dropped[0] + 1, "dropped back as well");
-		});
-		// 3. His finale.
-		helper.runAfterDelay(6, () -> {
-			arena.fight.boss().finalYeet();
-			arena.fight.backReached(arena.kid.getUUID(), BombTier.KIPPENBOM);
-			helper.assertTrue(arena.terugbommen().size() == dropped[0] + 2, "in his finale it bounces too");
+			helper.assertFalse(arena.sessions.isBusy(sibling), "and asks nothing");
+			helper.assertTrue(arena.fight.tally(sibling.getUUID()).backHits() == 0, "and is no hit");
 			arena.end();
 			helper.succeed();
+		});
+	}
+
+	@GameTest(maxTicks = 40, padding = 48)
+	public void aThrowBackOfAKidWhoIsAnsweringBouncesOff(GameTestHelper helper) {
+		ArenaFight arena = new ArenaFight(helper, new TafelBoemConfig());
+		helper.runAfterDelay(2, () -> {
+			// Neither staggered nor beaten: only the thrower is busy, with a bomb that landed on them while it flew.
+			arena.sessions.start(arena.kid, BombTier.GEWONE_TNT, arena.kid.blockPosition().east(), "test", null);
+			arena.fight.backReached(arena.kid.getUUID(), BombTier.KNALLETJE);
+			helper.assertTrue(arena.terugbommen().size() == 1, "it bounced off and dropped below him");
+			helper.assertFalse(arena.fight.boss().isStaggered(), "no stagger");
+			helper.assertTrue(arena.fight.tally(arena.kid.getUUID()).backHits() == 0, "and no hit");
+			arena.end();
+			helper.succeed();
+		});
+	}
+
+	@GameTest(maxTicks = 40, padding = 48)
+	public void aThrowBackInHisFinaleBouncesOff(GameTestHelper helper) {
+		ArenaFight arena = new ArenaFight(helper, new TafelBoemConfig());
+		helper.runAfterDelay(2, () -> {
+			// Not staggered, the thrower free: only his finale yeet.
+			arena.fight.boss().finalYeet();
+			arena.fight.backReached(arena.kid.getUUID(), BombTier.KIPPENBOM);
+			helper.assertTrue(arena.terugbommen().size() == 1, "in his finale it bounces off");
+			helper.assertFalse(arena.sessions.isBusy(arena.kid), "and asks nothing");
+			helper.assertFalse(arena.fight.boss().isStaggered(), "no stagger");
+			arena.end();
+			helper.succeed();
+		});
+	}
+
+	@GameTest(maxTicks = 6000, padding = 48)
+	@Fight
+	public void aThrowBackThatReachesHimAfterTheLastHitBouncesOff(GameTestHelper helper) {
+		// The test's floor is one block of stone: eleven kicks' craters would leave no floor to drop it on (an arena has bedrock).
+		TafelBoemConfig config = new TafelBoemConfig();
+		config.arenaCraters = false;
+		ArenaFight arena = new ArenaFight(helper, config);
+		Set<Integer> answered = new HashSet<>();
+		boolean[] reached = {false};
+		helper.onEachTick(() -> {
+			if (arena.fight.isWon()) {
+				if (!reached[0]) {
+					// Beaten: a throw-back in the air arrives now.
+					reached[0] = true;
+					arena.fight.backReached(arena.kid.getUUID(), BombTier.KNALLETJE);
+					helper.assertTrue(arena.terugbommen().size() == 1, "it bounced off: " + arena.terugbommen().size());
+					helper.assertFalse(arena.sessions.isBusy(arena.kid), "and asks nothing");
+					helper.assertTrue(arena.fight.tally(arena.kid.getUUID()).backHits() == 0, "and is no hit");
+				}
+				return;
+			}
+			// Until then the kid stands still and answers every bomb right.
+			for (QuizS2C question : arena.questionsTo(arena.kid)) {
+				if (answered.add(question.sessionId())) {
+					arena.answerRight(arena.kid, question);
+				}
+			}
+		});
+
+		helper.succeedWhen(() -> {
+			helper.assertTrue(reached[0], "wait until he is beaten");
+			helper.assertTrue(arena.fight.isOver(), "and his finale ends as usual");
 		});
 	}
 
