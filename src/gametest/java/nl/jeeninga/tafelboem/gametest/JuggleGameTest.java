@@ -118,6 +118,9 @@ public class JuggleGameTest {
 			if (fight == null) {
 				return;
 			}
+			// He throws nothing in this test: on a busy server the setup can outlast his first-throw delay, and a kicked
+			// bomb's yeet would land before the super yeet.
+			fight.holdThrows(true);
 			ArenaBox box = fight.arena();
 			GraafFout boss = fight.boss();
 			double fromMiddle = Math.hypot(boss.getX() - box.middleX(), boss.getZ() - box.middleZ());

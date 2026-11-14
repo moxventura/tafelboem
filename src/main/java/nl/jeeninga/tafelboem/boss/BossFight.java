@@ -135,6 +135,7 @@ public final class BossFight implements QuizListener {
 	private @Nullable Hints hints;
 	private Phase phase = Phase.COOLDOWN;
 	private int phaseTicks = FIRST_THROW_DELAY;
+	private boolean throwsHeld;
 	private int throwCount;
 	private UUID currentTarget;
 	/** The kick that sent him on the flight he is on, or on the last one he flew: it credits the yeet. */
@@ -612,7 +613,16 @@ public final class BossFight implements QuizListener {
 		}
 	}
 
+	/** While held he throws nothing; for GameTests that set up a scene and can't race his first throw. */
+	public void holdThrows(boolean hold) {
+		throwsHeld = hold;
+	}
+
 	private void throwNextBomb() {
+		if (throwsHeld) {
+			cooldown(REACTING_RETRY_TICKS);
+			return;
+		}
 		// Never while he flies or lands: a throw then would overlap his reaction (two questions at once can get here).
 		if (boss.isReacting()) {
 			cooldown(REACTING_RETRY_TICKS);
