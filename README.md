@@ -73,7 +73,8 @@ back on the next Play.
 - **No building (1.4).** Graaf Fout comes about three seconds after you walk in. The building chest,
   the bell and the traps are still in the mod behind the switches `buildPhase` and `traps`, both off.
   While the fight runs you are in adventure mode, so nobody breaks or places blocks; you are back in
-  your own mode when it ends, you leave, or log in again.
+  your own mode when it ends, you leave, or log in again. A parent in creative in the arena is put in
+  adventure during a fight too, like the kids.
 - **Dodge, catch and throw back (1.4).** He aims ahead of where you run, so keep moving: a bomb
   only gets you when it lands within 3 blocks of you, and a ring of dust shows where he thinks it
   will land. A bomb that misses drops as a glowing Terugbom (he says "Mis!"): walk onto it to catch
