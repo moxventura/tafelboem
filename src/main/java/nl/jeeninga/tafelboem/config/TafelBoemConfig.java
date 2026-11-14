@@ -7,7 +7,13 @@ import java.nio.file.Path;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
+import com.google.gson.JsonParser;
+
+import nl.jeeninga.tafelboem.core.Aim;
+import nl.jeeninga.tafelboem.core.FightLevel;
 
 /**
  * The parent's switches, in {@code config/tafelboem.json}. Every new feature gets one, so it can be
@@ -16,6 +22,14 @@ import com.google.gson.JsonParseException;
  */
 public final class TafelBoemConfig {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+	/** The file's version now: 1 since R1.4, which turned {@link #buildPhase} and {@link #traps} off on every PC once. */
+	static final int VERSION = 1;
+
+	/**
+	 * Which version of this file the parent's values come from; a file without it is from before R1.4 (0). Not a switch:
+	 * the game sets it when it writes the file.
+	 */
+	public int configVersion = VERSION;
 
 	/** After a miss, make the child retype the correct fact (R0 behaviour) instead of showing it on the HUD. */
 	public boolean correctionRetype = false;
@@ -74,9 +88,10 @@ public final class TafelBoemConfig {
 	public boolean buildPhase = false;
 
 	/**
-	 * R1.3: in an arena, a bomb that lands more than 2 blocks from the kid it was thrown at (they ran, or the build
-	 * stopped it) lies still until a kid walks into it, and then asks its sum. Off, as 1.2.0: wherever it lands, its
-	 * kid answers. A fight outside a TafelBoem world always plays as 1.2.0.
+	 * R1.3, R1.4: in an arena, a bomb that lands more than 3 blocks from the kid it was thrown at (they ran, or a wall
+	 * stopped it) drops as a Terugbom a kid can catch and throw back at him, and he aims ahead of a running kid. Off, as
+	 * 1.2.0: wherever it lands, its kid answers, and there is no lead, ring or throw-back. A fight outside a TafelBoem
+	 * world always plays as 1.2.0.
 	 */
 	public boolean dodging = true;
 
@@ -94,18 +109,38 @@ public final class TafelBoemConfig {
 	 */
 	public boolean arenaSafety = true;
 
+	/**
+	 * R1.4: kids in the arena of a running fight are in adventure mode, so nobody breaks or places blocks; their own
+	 * mode comes back when the fight ends, they leave, die or log in again. Off: as 1.3.0.
+	 */
 	public boolean noBuildInFight = true;
+
+	/** R1.4: when he throws, a ring of dust shows where the bomb will land (with {@link #dodging}). */
 	public boolean landingRing = true;
+
+	/** R1.4: how much of a running kid's movement he aims ahead on level 1 (0 to 1). */
 	public double dodgeLead1 = 0.70;
+
+	/** R1.4: how much of a running kid's movement he aims ahead on level 2 (0 to 1). */
 	public double dodgeLead2 = 0.85;
+
+	/** R1.4: how much of a running kid's movement he aims ahead on level 3 (0 to 1). */
 	public double dodgeLead3 = 0.95;
+
+	/** R1.4: his bomb's flight time on level 1, times 1.3.0's (smaller is quicker, harder to dodge). */
 	public double dodgeFlight1 = 0.85;
+
+	/** R1.4: his bomb's flight time on level 2, times 1.3.0's. */
 	public double dodgeFlight2 = 0.75;
+
+	/** R1.4: his bomb's flight time on level 3, times 1.3.0's. */
 	public double dodgeFlight3 = 0.68;
+
+	/** R1.4: his bomb never flies shorter than this many ticks, so there is always time to react. */
 	public int dodgeMinFlightTicks = 12;
 
 	/** What a level asks of his throw, from the parent's numbers; absurd ones are kept sane. The R0.1 fight uses level 1's. */
-	public nl.jeeninga.tafelboem.core.Aim.Tuning aimFor(nl.jeeninga.tafelboem.core.FightLevel level) {
+	public Aim.Tuning aimFor(FightLevel level) {
 		int number = Math.clamp(level.number(), 1, 3);
 		double lead = switch (number) {
 			case 1 -> dodgeLead1;
@@ -117,7 +152,7 @@ public final class TafelBoemConfig {
 			case 2 -> dodgeFlight2;
 			default -> dodgeFlight3;
 		};
-		return new nl.jeeninga.tafelboem.core.Aim.Tuning(Math.clamp(lead, 0.0, 1.0), Math.clamp(flight, 0.3, 2.0), Math.max(1, dodgeMinFlightTicks));
+		return new Aim.Tuning(Math.clamp(lead, 0.0, 1.0), Math.clamp(flight, 0.3, 2.0), Math.max(1, dodgeMinFlightTicks));
 	}
 
 	public static TafelBoemConfig load(Path file) {
@@ -127,15 +162,37 @@ public final class TafelBoemConfig {
 			return defaults;
 		}
 		try {
-			TafelBoemConfig read = GSON.fromJson(Files.readString(file, StandardCharsets.UTF_8), TafelBoemConfig.class);
+			JsonElement json = JsonParser.parseString(Files.readString(file, StandardCharsets.UTF_8));
+			TafelBoemConfig read = GSON.fromJson(json, TafelBoemConfig.class);
 			TafelBoemConfig config = read == null ? new TafelBoemConfig() : read;
+			config.migrateFrom(versionOf(json));
 			// Written back, so a file from an older version shows the parent the switches added since.
 			config.save(file);
 			return config;
-		} catch (IOException | JsonParseException e) {
+		} catch (IOException | JsonParseException | NumberFormatException e) {
 			// Keep playing with the defaults; the parent can fix the file later.
 			return new TafelBoemConfig();
 		}
+	}
+
+	/** The version a file was written at: 0 when it says none (before R1.4). */
+	private static int versionOf(JsonElement json) {
+		if (json instanceof JsonObject object && object.get("configVersion") instanceof JsonElement version && version.isJsonPrimitive()) {
+			return version.getAsInt();
+		}
+		return 0;
+	}
+
+	/**
+	 * Once per PC: R1.4 turned the build phase and the traps off by default, and a file from 1.2 or 1.3 still says
+	 * true, so the kids would build on. From version 1 on, the parent's own values stay.
+	 */
+	private void migrateFrom(int version) {
+		if (version < 1) {
+			buildPhase = false;
+			traps = false;
+		}
+		configVersion = VERSION;
 	}
 
 	/** Every switch on one line, for the game log the parent shares after a playtest. */

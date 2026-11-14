@@ -277,6 +277,7 @@ version, and the mod warns when they don't match, even when two builds are only 
 | `dodgeLead1`, `dodgeLead2`, `dodgeLead3` | `0.70`, `0.85`, `0.95` | How much of a running kid's movement he aims ahead, on levels 1, 2 and 3 (0 to 1) |
 | `dodgeFlight1`, `dodgeFlight2`, `dodgeFlight3` | `0.85`, `0.75`, `0.68` | His bomb's flight time as a part of the old one, on levels 1, 2 and 3; smaller is quicker and harder |
 | `dodgeMinFlightTicks` | `12` | No bomb flies shorter than this many ticks (20 a second) |
+| `configVersion` | `1` | Not a switch: the game writes it. A file from before 1.4 has none, so on the first start of 1.4 it gets `buildPhase` and `traps` set to `false` once and is saved at version 1; from then on your own values stay |
 
 `/tafelboem stats [player]` shows accuracy and typical time per table, the hardest facts, how often a
 missed fact is right when it comes back, and how often "?" was probably pressed by accident.

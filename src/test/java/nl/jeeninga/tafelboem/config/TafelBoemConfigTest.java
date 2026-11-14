@@ -11,6 +11,9 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import nl.jeeninga.tafelboem.core.Aim;
+import nl.jeeninga.tafelboem.core.FightLevel;
+
 class TafelBoemConfigTest {
 	@TempDir
 	Path dir;
@@ -95,32 +98,57 @@ class TafelBoemConfigTest {
 	}
 
 	@Test
-	void anOlderFileKeepsItsOwnBuildPhaseAndGainsTheNewSwitches() throws IOException {
+	void aFileFromBeforeR14TurnsBuildingAndTrapsOffOnceAndGainsTheNewSwitches() throws IOException {
 		Path file = dir.resolve("tafelboem.json");
-		Files.writeString(file, "{\"buildPhase\": true, \"traps\": true}");
+		Files.writeString(file, "{\"buildPhase\": true, \"traps\": true, \"correctionRetype\": true}");
 
 		TafelBoemConfig config = TafelBoemConfig.load(file);
 
-		assertTrue(config.buildPhase, "the parent's own value stays, whatever the new default");
-		assertTrue(config.traps);
+		assertFalse(config.buildPhase, "R1.4: the playtest turned building off, on the PCs that played 1.2 and 1.3 too");
+		assertFalse(config.traps);
+		assertTrue(config.correctionRetype, "every other value of the parent's stays");
 		assertTrue(config.noBuildInFight);
+		assertEquals(TafelBoemConfig.VERSION, config.configVersion);
 		String written = Files.readString(file);
 		assertTrue(written.contains("\"noBuildInFight\"") && written.contains("\"dodgeLead3\""), "the parent can find the new switches: " + written);
+		assertTrue(written.contains("\"configVersion\": 1"), "saved at version 1, so it happens once: " + written);
+		assertFalse(TafelBoemConfig.load(file).buildPhase, "and stays off on the next load");
+	}
+
+	@Test
+	void aFileAtVersion1KeepsTheParentsOwnBuildPhaseAndTraps() throws IOException {
+		Path file = dir.resolve("tafelboem.json");
+		Files.writeString(file, "{\"configVersion\": 1, \"buildPhase\": true, \"traps\": true}");
+
+		TafelBoemConfig config = TafelBoemConfig.load(file);
+
+		assertTrue(config.buildPhase, "the parent turned it back on after R1.4: that stays");
+		assertTrue(config.traps);
+		assertTrue(TafelBoemConfig.load(file).buildPhase, "on every load");
+	}
+
+	@Test
+	void aNewFileIsWrittenAtTheCurrentVersion() throws IOException {
+		Path file = dir.resolve("tafelboem.json");
+
+		TafelBoemConfig.load(file);
+
+		assertTrue(Files.readString(file).contains("\"configVersion\": 1"), Files.readString(file));
 	}
 
 	@Test
 	void theDodgeNumbersDefaultToTheSpecsAndTheParentCanTuneThem() throws IOException {
 		TafelBoemConfig config = new TafelBoemConfig();
-		for (nl.jeeninga.tafelboem.core.FightLevel level : nl.jeeninga.tafelboem.core.FightLevel.DOORS) {
-			assertEquals(nl.jeeninga.tafelboem.core.Aim.Tuning.defaults(level.number()), config.aimFor(level), "level " + level.number());
+		for (FightLevel level : FightLevel.DOORS) {
+			assertEquals(Aim.Tuning.defaults(level.number()), config.aimFor(level), "level " + level.number());
 		}
-		assertEquals(nl.jeeninga.tafelboem.core.Aim.Tuning.defaults(1), config.aimFor(nl.jeeninga.tafelboem.core.FightLevel.CLASSIC));
+		assertEquals(Aim.Tuning.defaults(1), config.aimFor(FightLevel.CLASSIC));
 
 		Path file = dir.resolve("tafelboem.json");
 		Files.writeString(file, "{\"dodgeLead3\": 0.5, \"dodgeFlight3\": 0.9, \"dodgeMinFlightTicks\": 20}");
 		TafelBoemConfig tuned = TafelBoemConfig.load(file);
-		assertEquals(new nl.jeeninga.tafelboem.core.Aim.Tuning(0.5, 0.9, 20), tuned.aimFor(nl.jeeninga.tafelboem.core.FightLevel.MOEILIJK));
-		assertEquals(nl.jeeninga.tafelboem.core.Aim.Tuning.defaults(1).lead(), tuned.aimFor(nl.jeeninga.tafelboem.core.FightLevel.MAKKELIJK).lead());
+		assertEquals(new Aim.Tuning(0.5, 0.9, 20), tuned.aimFor(FightLevel.MOEILIJK));
+		assertEquals(Aim.Tuning.defaults(1).lead(), tuned.aimFor(FightLevel.MAKKELIJK).lead());
 	}
 
 	@Test
@@ -130,7 +158,7 @@ class TafelBoemConfigTest {
 		config.dodgeFlight1 = 0;
 		config.dodgeMinFlightTicks = -4;
 
-		nl.jeeninga.tafelboem.core.Aim.Tuning tuning = config.aimFor(nl.jeeninga.tafelboem.core.FightLevel.MAKKELIJK);
+		Aim.Tuning tuning = config.aimFor(FightLevel.MAKKELIJK);
 
 		assertEquals(1.0, tuning.lead());
 		assertEquals(0.3, tuning.flightFactor());
