@@ -4,6 +4,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -127,8 +128,10 @@ public final class BossFight implements QuizListener {
 	private final Participants participants;
 	private final FightGameModes modes = new FightGameModes();
 	private final Terugbommen terugbommen;
+	/** The kids alive in the fight last tick: one who is not any more drops out, and loses their Terugbommen. */
+	private final Set<UUID> present = new HashSet<>();
 	/** Kids told how to throw a Terugbom in this fight, for a fight without {@link Hints}. */
-	private final Set<UUID> hinted = new java.util.HashSet<>();
+	private final Set<UUID> hinted = new HashSet<>();
 	private @Nullable Hints hints;
 	private Phase phase = Phase.COOLDOWN;
 	private int phaseTicks = FIRST_THROW_DELAY;
@@ -326,6 +329,27 @@ public final class BossFight implements QuizListener {
 		return state.getBlock() instanceof BombBlock && lying.containsKey(pos) ? TrapKind.LYING_BOMB : null;
 	}
 
+	/**
+	 * A kid who left the arena or died has no business with a Terugbom: it goes from their pocket, once, as they drop
+	 * out. Not every tick after: a kid who went on to another arena's fight catches their own there.
+	 */
+	private void stripWhoDroppedOut() {
+		Set<UUID> now = new HashSet<>();
+		for (ServerPlayer kid : participants.players()) {
+			if (kid.isAlive()) {
+				now.add(kid.getUUID());
+			}
+		}
+		for (UUID id : present) {
+			ServerPlayer kid = now.contains(id) ? null : level.getServer().getPlayerList().getPlayer(id);
+			if (kid != null) {
+				Terugbommen.strip(kid);
+			}
+		}
+		present.clear();
+		present.addAll(now);
+	}
+
 	private void recordMotions() {
 		for (ServerPlayer kid : participants.players()) {
 			motions.computeIfAbsent(kid.getUUID(), id -> new Motion()).record(kid.getX(), kid.getZ());
@@ -507,14 +531,7 @@ public final class BossFight implements QuizListener {
 		if (arena != null && config.noBuildInFight) {
 			modes.update(level.getServer(), participants.players());
 		}
-		// A kid who left the arena or died has no business with a Terugbom: it goes from their pocket.
-		List<ServerPlayer> inFight = participants.players();
-		for (UUID id : participants.ids()) {
-			ServerPlayer kid = level.getServer().getPlayerList().getPlayer(id);
-			if (kid != null && (!kid.isAlive() || !inFight.contains(kid))) {
-				Terugbommen.strip(kid);
-			}
-		}
+		stripWhoDroppedOut();
 		recordMotions();
 		showRings();
 		if (dodging()) {

@@ -4,11 +4,15 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 
+import nl.jeeninga.tafelboem.boss.BossFight;
 import nl.jeeninga.tafelboem.config.TafelBoemConfig;
+import nl.jeeninga.tafelboem.core.ArenaBox;
 import nl.jeeninga.tafelboem.core.BombTier;
+import nl.jeeninga.tafelboem.core.FightLevel;
 import nl.jeeninga.tafelboem.item.TerugbomItem;
 import nl.jeeninga.tafelboem.registry.ModItems;
 
@@ -43,6 +47,32 @@ public class TerugbomLeakGameTest {
 		helper.runAfterDelay(8, () -> {
 			helper.assertTrue(carried(arena.kid) == 0, "their Terugbom is gone from their pocket");
 			helper.assertTrue(arena.terugbommen().size() == 1, "the one on the floor stays: the fight goes on");
+			arena.end();
+			helper.succeed();
+		});
+	}
+
+	/**
+	 * On LAN one kid leaves the sibling's fight for another arena's: the fight they left takes their Terugbommen once,
+	 * as they go, and never again, so they can catch and keep one in their new fight.
+	 */
+	@GameTest(maxTicks = 40, padding = 48)
+	public void aKidWhoMovesOnToAnotherFightKeepsTheTerugbommenTheyCatchThere(GameTestHelper helper) {
+		ArenaFight arena = new ArenaFight(helper, new TafelBoemConfig());
+		// A second arena right next to the first, on the same field, with its own fight.
+		ArenaBox next = ArenaBox.of(arena.box.maxX() + 2, arena.box.minY(), arena.box.minZ(), 21, 6, 21);
+		BossFight second = arena.fights.summon(arena.level, new Vec3(next.middleX(), arena.floorY + 1.5, next.middleZ()), FightLevel.MAKKELIJK, next);
+		helper.assertTrue(second != null, "the second fight starts");
+		pocket(arena.kid, 2);
+		helper.runAfterDelay(3, () -> arena.kid.teleportTo(next.middleX(), arena.floorY, next.middleZ() + 5));
+		helper.runAfterDelay(6, () -> {
+			helper.assertTrue(carried(arena.kid) == 0, "the first fight took the one from its own fight as the kid left");
+			helper.assertTrue(second.participants().contains(arena.kid.getUUID()), "the kid is in the second fight");
+			// Caught in the second fight.
+			pocket(arena.kid, 3);
+		});
+		helper.runAfterDelay(12, () -> {
+			helper.assertTrue(carried(arena.kid) == 1, "the first fight, still running, leaves the new one alone");
 			arena.end();
 			helper.succeed();
 		});
