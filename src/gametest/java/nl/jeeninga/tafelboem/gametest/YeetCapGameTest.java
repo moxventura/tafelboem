@@ -17,8 +17,8 @@ import nl.jeeninga.tafelboem.world.ArenaRun;
 
 /**
  * R1.4's cap on throw-back and super yeets: at {@link YeetPower#MAX_POWER} the longest flight on the ground (the
- * classic yeet) launched from the middle of a level 3 arena must land on its floor, not beyond its wall. This is
- * the test that sets the constant: raise it only while this passes, lower it when it fails.
+ * classic yeet) launched from the middle of a level 3 arena must land on its floor, not beyond its wall. This set
+ * the constant at first (1.9); a super yeet from about 15 blocks out ({@code JuggleGameTest}) now sets it, lower.
  */
 public class YeetCapGameTest {
 	/** The floor of a level 3 arena ends 22.5 blocks from its middle; he must land a block short of that at least. */

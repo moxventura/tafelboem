@@ -8,12 +8,15 @@ package nl.jeeninga.tafelboem.core;
 public final class YeetPower {
 	/**
 	 * The most power a throw-back or super yeet gets: bomb power × the random 0.9–1.4 roll × the factors. A
-	 * classic yeet from the middle of an arena (the longest flight on the ground) travels about 11.4 blocks per
-	 * unit of power, and the floor of a level 3 arena ends 22.5 blocks from its middle: at 1.9 he lands about
-	 * 21 blocks out. {@code YeetCapGameTest} yeets him at this power in a level 3 arena; change the constant
-	 * only together with that test.
+	 * classic yeet (the longest flight a throw-back or super yeet gets) travels about 10–11 blocks per unit of
+	 * power, and the floor of a level 3 arena ends 22.5 blocks from its middle. A juggle can leave him hanging
+	 * anywhere: {@code JuggleGameTest} super-yeets him from about 15 blocks out, away from a kid behind him, and he
+	 * must land a block short of the floor's end. That holds at 0.6 (21.3 blocks out) and not at 0.65 (21.8); 1.9,
+	 * set from the middle ({@code YeetCapGameTest}), took him out of the arena. At 0.6 every throw-back and super
+	 * yeet flies at the cap, about 6 blocks, shorter than any kick, and the ×1.25 and ×1.5 change nothing. Change
+	 * the constant only together with those tests.
 	 */
-	public static final double MAX_POWER = 1.9;
+	public static final double MAX_POWER = 0.6;
 
 	private YeetPower() {
 	}

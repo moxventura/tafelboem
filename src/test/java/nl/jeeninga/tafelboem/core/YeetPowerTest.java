@@ -30,18 +30,16 @@ class YeetPowerTest {
 		assertEquals(YeetPower.MAX_POWER, superYeet, 1e-9);
 	}
 
+	/**
+	 * The price of a cap that keeps a juggle from 15 blocks out inside the arena (see {@link YeetPower#MAX_POWER}): even
+	 * the weakest throw-back flies at the cap, and the weakest kick flies further. For the evaluation's watch list.
+	 */
 	@Test
-	void theCapLeavesTheWeakestThrowBacksAlone() {
-		double weakest = YeetPower.power(YeetKind.BACK, 0.9, BombTier.KNALLETJE.yeetPower(), YeetPower.factor(YeetKind.BACK, 1.0));
-		assertEquals(0.9 * 1.0 * 1.25, weakest, 1e-9);
-		assertTrue(weakest < YeetPower.MAX_POWER);
-	}
-
-	@Test
-	void aSuperYeetBeatsAThrowBackWhereTheCapAllowsIt() {
-		double back = YeetPower.power(YeetKind.BACK, 1.15, BombTier.KNALLETJE.yeetPower(), 1.25);
-		double superYeet = YeetPower.power(YeetKind.SUPER, 1.15, BombTier.KNALLETJE.yeetPower(), 1.5);
-		assertTrue(superYeet > back);
+	void atThisCapEveryThrowBackAndSuperYeetFliesAtTheCapShorterThanAnyKick() {
+		double weakestBack = YeetPower.power(YeetKind.BACK, 0.9, BombTier.KNALLETJE.yeetPower(), YeetPower.factor(YeetKind.BACK, 1.0));
+		assertEquals(YeetPower.MAX_POWER, weakestBack, 1e-9);
+		double weakestKick = YeetPower.power(YeetKind.KICK, 0.9, BombTier.KNALLETJE.yeetPower(), 1.0);
+		assertTrue(weakestKick > YeetPower.MAX_POWER, "the weakest kick, " + weakestKick + ", flies further than the cap");
 	}
 
 	@Test

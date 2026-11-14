@@ -85,6 +85,17 @@ public class JuggleGameTest {
 	}
 
 	/**
+	 * The juggle where it is hardest to stay in: he hangs about 15 blocks out from the middle of a level 3 arena (its
+	 * floor ends 22.5 out), and the kid stands behind him, between him and the middle, so the super yeet takes him
+	 * further out.
+	 */
+	@GameTest(maxTicks = 600, padding = TestWorld.PADDING)
+	@Fight
+	public void aSuperYeetFrom15BlocksOutWithTheKidBehindHimLandsInsideTheArenaOnLevel3(GameTestHelper helper) {
+		superYeetOnLevel3(helper, 16.85);
+	}
+
+	/**
 	 * A juggle in a level 3 arena: he starts {@code out} blocks south of the middle, the kid 6 blocks north of him, and a
 	 * helicopter yeet takes him up and about 1.5 blocks towards the kid; the kid's throw-back juggles him, TestWorld
 	 * answers right at once, and the super yeet flies south, away from the kid. He must land on the floor: never out of
