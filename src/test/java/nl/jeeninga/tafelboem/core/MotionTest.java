@@ -19,7 +19,7 @@ class MotionTest {
 	void theVelocityIsTheMovementOverTheLastFiveTicks() {
 		Motion motion = new Motion();
 		for (int tick = 0; tick <= 8; tick++) {
-			// Ten ticks of standing, then running east at 0.2 a tick: only the last six positions count.
+			// Nine positions of running east at 0.2 a tick: the velocity is the movement over the last five ticks (six positions).
 			motion.record(100 + 0.2 * tick, 50);
 		}
 		assertEquals(0.2, motion.velX(), 1e-9);

@@ -9,7 +9,7 @@ public final class Aim {
 	public static final int MIN_FLIGHT_TICKS = 12;
 	/** The aim point stays this far inside the arena's edge, on the floor. */
 	private static final double INSET = 0.5;
-	/** The aim point depends on the flight time and the flight time on the aim point; three rounds settle it. */
+	/** The aim point depends on the flight time and the flight time on the aim point; at most this many rounds settle it. */
 	private static final int ROUNDS = 6;
 
 	private Aim() {

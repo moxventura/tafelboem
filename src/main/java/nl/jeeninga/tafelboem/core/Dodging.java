@@ -11,7 +11,9 @@ public final class Dodging {
 	public static final double HIT_RADIUS = 3;
 	/**
 	 * The landing ring's radius: just inside the blast zone. Particles at a radius have a size and the kid
-	 * stands somewhere in their block, so the ring is a little smaller than the zone it marks.
+	 * stands somewhere in their block, so the ring is a little smaller than the zone it marks. So there is a
+	 * band, 2.8 to 3.0 blocks from the middle, where a kid stands outside the dust and is still hit; the spec's
+	 * "a kid outside the ring is never hit" holds only up to it. It is on the evaluation's watch list (R1.4.md).
 	 */
 	public static final double RING_RADIUS = 2.8;
 	/** A kid who moved less than this between the throw and the landing stood still. */
