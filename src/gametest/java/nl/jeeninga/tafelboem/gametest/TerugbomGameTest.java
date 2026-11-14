@@ -97,6 +97,36 @@ public class TerugbomGameTest {
 		});
 	}
 
+	@GameTest(maxTicks = 40, padding = 48)
+	public void theOneOnTheCursorCountsAndAFullKidGetsNoDroppedOne(GameTestHelper helper) {
+		ArenaFight arena = new ArenaFight(helper, new TafelBoemConfig());
+		Inventory pocket = arena.kid.getInventory();
+		pocket.setItem(5, new ItemStack(ModItems.terugbom(BombTier.KNALLETJE)));
+		pocket.setItem(20, new ItemStack(ModItems.terugbom(BombTier.KNALLETJE)));
+		// The third held on the cursor in the inventory screen.
+		arena.kid.containerMenu.setCarried(new ItemStack(ModItems.terugbom(BombTier.GEWONE_TNT)));
+		arena.fight.dropTerugbom(arena.kid.position().add(1, 0, 0), BombTier.KIPPENBOM);
+
+		helper.runAfterDelay(6, () -> {
+			helper.assertTrue(arena.fight.tally(arena.kid.getUUID()).caught() == 0, "with 2 in the slots and 1 on the cursor a fourth is refused");
+			helper.assertTrue(arena.terugbommen().size() == 1, "it stays on the ground");
+			// A Terugbom without an owner turns up beside the full kid (dropped on a death with keepInventory off, say).
+			ItemEntity loose = new ItemEntity(arena.level, arena.kid.getX(), arena.kid.getY(), arena.kid.getZ(),
+					new ItemStack(ModItems.terugbom(BombTier.KNALLETJE)));
+			arena.level.addFreshEntity(loose);
+		});
+		helper.runAfterDelay(9, () -> {
+			helper.assertTrue(arena.terugbommen().size() == 1, "the loose one poofed: only the fight's own lies there");
+			int inPocket = 0;
+			for (int slot = 0; slot < Inventory.INVENTORY_SIZE; slot++) {
+				inPocket += pocket.getItem(slot).getItem() instanceof TerugbomItem ? 1 : 0;
+			}
+			helper.assertTrue(inPocket == 2, "and the full kid didn't get it: " + inPocket + " in the slots");
+			arena.end();
+			helper.succeed();
+		});
+	}
+
 	@GameTest(maxTicks = 400, padding = 48)
 	@Fight
 	public void aTerugbomNobodyPicksUpPoofsAfterFifteenSeconds(GameTestHelper helper) {

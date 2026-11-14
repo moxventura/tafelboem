@@ -133,14 +133,14 @@ final class Terugbommen {
 		return true;
 	}
 
-	/** How many Terugbommen this kid carries, over all slots and the offhand. */
+	/** How many Terugbommen this kid carries, over all slots, the offhand and the one held on the cursor in a menu. */
 	static int carried(ServerPlayer kid) {
 		Inventory inventory = kid.getInventory();
 		int count = 0;
 		for (int slot = 0; slot < Inventory.INVENTORY_SIZE; slot++) {
 			count += terugbommenIn(inventory.getItem(slot));
 		}
-		return count + terugbommenIn(inventory.getItem(Inventory.SLOT_OFFHAND));
+		return count + terugbommenIn(inventory.getItem(Inventory.SLOT_OFFHAND)) + terugbommenIn(kid.containerMenu.getCarried());
 	}
 
 	private static int terugbommenIn(ItemStack stack) {

@@ -115,7 +115,15 @@ public final class TafelBoemWorld {
 	private final Hints hints = new Hints() {
 		@Override
 		public boolean seen(ServerPlayer kid) {
-			return hinted.contains(kid.getPlainTextName()) || fightLog.read(kid.getPlainTextName()).stream().anyMatch(fight -> fight.caught() > 0);
+			if (hinted.contains(kid.getPlainTextName())) {
+				return true;
+			}
+			// Read once per kid: the log only grows, and a catch is no time to read a file on the server thread.
+			boolean before = fightLog.read(kid.getPlainTextName()).stream().anyMatch(fight -> fight.caught() > 0);
+			if (before) {
+				hinted.add(kid.getPlainTextName());
+			}
+			return before;
 		}
 
 		@Override
