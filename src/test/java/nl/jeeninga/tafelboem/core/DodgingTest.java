@@ -1,5 +1,6 @@
 package nl.jeeninga.tafelboem.core;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -7,17 +8,51 @@ import org.junit.jupiter.api.Test;
 
 class DodgingTest {
 	@Test
-	void twoBlocksAwayIsStillAHitAndFurtherIsDodged() {
+	void threeBlocksAwayIsStillAHitAndFurtherIsDodged() {
 		assertTrue(Dodging.isHit(10.5, 10.5, 10.5, 10.5), "right at the kid");
-		assertTrue(Dodging.isHit(10.5, 10.5, 12.5, 10.5), "exactly 2 blocks");
-		assertFalse(Dodging.isHit(10.5, 10.5, 12.51, 10.5), "just over 2 blocks: dodged");
-		assertFalse(Dodging.isHit(10.5, 10.5, 12.0, 12.0), "2.1 blocks diagonally: dodged");
+		assertTrue(Dodging.isHit(10.5, 10.5, 12.5, 10.5), "2 blocks: a hit as it was in 1.3.0, and still");
+		assertTrue(Dodging.isHit(10.5, 10.5, 13.5, 10.5), "exactly 3 blocks");
+		assertFalse(Dodging.isHit(10.5, 10.5, 13.51, 10.5), "just over 3 blocks: dodged");
+	}
+
+	@Test
+	void theDiagonalAtTheEdgeOfTheZone() {
+		assertTrue(Dodging.isHit(10.5, 10.5, 12.5, 12.5), "2.83 blocks diagonally: a hit");
+		assertFalse(Dodging.isHit(10.5, 10.5, 12.7, 12.7), "3.11 blocks diagonally: dodged");
 	}
 
 	@Test
 	void onlyTheHorizontalDistanceCounts() {
 		// The spec measures horizontally: a bomb on a roof right above the kid hits; there is no line of sight.
 		assertTrue(Dodging.isHit(0.5, 0.5, 1.5, 0.5));
+	}
+
+	@Test
+	void theRingIsInsideTheBlastZone() {
+		assertTrue(Dodging.RING_RADIUS < Dodging.HIT_RADIUS);
+		assertEquals(2.8, Dodging.RING_RADIUS);
+		for (int i = 0; i < 24; i++) {
+			double[] point = Dodging.ringPoint(10.5, 20.5, i, 24);
+			assertEquals(Dodging.RING_RADIUS, Math.hypot(point[0] - 10.5, point[1] - 20.5), 1e-9, "point " + i);
+			assertTrue(Dodging.isHit(10.5, 20.5, point[0], point[1]), "a kid standing on the ring is hit: " + i);
+		}
+	}
+
+	@Test
+	void theRingPointsAreSpreadAroundTheCircle() {
+		double[] first = Dodging.ringPoint(0, 0, 0, 24);
+		double[] opposite = Dodging.ringPoint(0, 0, 12, 24);
+		assertEquals(2.8, first[0], 1e-9);
+		assertEquals(-2.8, opposite[0], 1e-9);
+		assertEquals(0, opposite[1], 1e-9);
+	}
+
+	@Test
+	void aKidWhoMovedLessThanABlockStoodStill() {
+		assertTrue(Dodging.isStill(0));
+		assertTrue(Dodging.isStill(0.99));
+		assertFalse(Dodging.isStill(1.0));
+		assertFalse(Dodging.isStill(4.5));
 	}
 
 	@Test

@@ -42,6 +42,20 @@ public final class ReactionPicker {
 	}
 
 	/**
+	 * How he flies off from a yeet of this kind. A kick picks from every flight as {@link #nextFlight(boolean, boolean)}
+	 * does. A throw-back or a super yeet (R1.4) flies classic or tumbling, by turns: its power is capped by the room
+	 * ahead ({@link YeetPower#capForRoom}), which holds for these two (the tumble flies less far than the classic). A wall splat ignores the power and a boomerang flies back past the kid, so either could take him out of
+	 * the arena from where a juggle leaves him.
+	 */
+	public YeetStyle nextFlight(boolean inArena, boolean catalogue, YeetKind kind) {
+		if (kind == YeetKind.KICK) {
+			return nextFlight(inArena, catalogue);
+		}
+		lastFlight = lastFlight == YeetStyle.CLASSIC ? YeetStyle.TUMBLE : YeetStyle.CLASSIC;
+		return lastFlight;
+	}
+
+	/**
 	 * How he lands after {@code flight}, which a kick with {@code bomb} sent him on.
 	 *
 	 * @param catalogue  false: no head-first, pancake or running, only the dizzy spell

@@ -29,7 +29,7 @@ import nl.jeeninga.tafelboem.net.QuizS2C;
 public class TrapGameTest {
 	@GameTest(maxTicks = 200, padding = 48)
 	public void aYeetBendsIntoACactusThreeBlocksOffForOneMoreHit(GameTestHelper helper) {
-		ArenaFight arena = new ArenaFight(helper, new TafelBoemConfig());
+		ArenaFight arena = new ArenaFight(helper, trapsOn());
 		BlockPos cactus = cactus(arena, 3);
 		int hits = arena.fight.hitsRemaining();
 		List<LandingStyle> landings = yeetOnCue(arena);
@@ -44,13 +44,13 @@ public class TrapGameTest {
 
 	@GameTest(maxTicks = 200, padding = 48)
 	public void aCactusSixBlocksOffIsIgnored(GameTestHelper helper) {
-		ArenaFight arena = new ArenaFight(helper, new TafelBoemConfig());
+		ArenaFight arena = new ArenaFight(helper, trapsOn());
 		noPull(helper, arena, cactus(arena, 6));
 	}
 
 	@GameTest(maxTicks = 200, padding = 48)
 	public void withTrapsOffACactusThreeBlocksOffChangesNothing(GameTestHelper helper) {
-		TafelBoemConfig config = new TafelBoemConfig();
+		TafelBoemConfig config = trapsOn();
 		config.traps = false;
 		ArenaFight arena = new ArenaFight(helper, config);
 		noPull(helper, arena, cactus(arena, 3));
@@ -59,7 +59,7 @@ public class TrapGameTest {
 	@GameTest(maxTicks = 200, padding = 48)
 	public void outsideAnArenaACactusThreeBlocksOffChangesNothing(GameTestHelper helper) {
 		// The summon item's fight: 1.2.0's yeets, whatever the switch says.
-		ArenaFight arena = new ArenaFight(helper, new TafelBoemConfig(), false);
+		ArenaFight arena = new ArenaFight(helper, trapsOn(), false);
 		noPull(helper, arena, cactus(arena, 3));
 	}
 
@@ -72,7 +72,7 @@ public class TrapGameTest {
 	@GameTest(maxTicks = 6000, padding = 48)
 	@Fight
 	public void aTrapsExtraHitCanBeTheLastAndTheFightEndsWithAWin(GameTestHelper helper) {
-		TafelBoemConfig config = new TafelBoemConfig();
+		TafelBoemConfig config = trapsOn();
 		// Craters would break the walls that keep him over the cacti.
 		config.arenaCraters = false;
 		ArenaFight arena = new ArenaFight(helper, config);
@@ -122,7 +122,7 @@ public class TrapGameTest {
 	@GameTest(maxTicks = 1200, padding = 48)
 	@Fight
 	public void aLyingBombTrapGoesOffUnderHimAndIsLoggedAsTheTrapNeverASignature(GameTestHelper helper) {
-		TafelBoemConfig config = new TafelBoemConfig();
+		TafelBoemConfig config = trapsOn();
 		// Craters would break the walls that keep him over the bombs.
 		config.arenaCraters = false;
 		ArenaFight arena = new ArenaFight(helper, config);
@@ -250,5 +250,12 @@ public class TrapGameTest {
 				}
 			}
 		}
+	}
+
+	/** R1.4 turned traps off by default; this class tests them, so it turns them on. */
+	private static TafelBoemConfig trapsOn() {
+		TafelBoemConfig config = new TafelBoemConfig();
+		config.traps = true;
+		return config;
 	}
 }

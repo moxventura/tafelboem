@@ -3,6 +3,7 @@ package nl.jeeninga.tafelboem.world;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +40,7 @@ import net.minecraft.world.phys.Vec3;
 import nl.jeeninga.tafelboem.TafelBoem;
 import nl.jeeninga.tafelboem.boss.BossFight;
 import nl.jeeninga.tafelboem.boss.BossFights;
+import nl.jeeninga.tafelboem.boss.Hints;
 import nl.jeeninga.tafelboem.boss.YeetRecords;
 import nl.jeeninga.tafelboem.command.ArenaSetup;
 import nl.jeeninga.tafelboem.core.ArenaBox;
@@ -50,6 +52,7 @@ import nl.jeeninga.tafelboem.core.FightRecord;
 import nl.jeeninga.tafelboem.core.FightTally;
 import nl.jeeninga.tafelboem.core.SafetyFloor;
 import nl.jeeninga.tafelboem.core.Stars;
+import nl.jeeninga.tafelboem.core.YeetKind;
 import nl.jeeninga.tafelboem.game.BombEffects;
 import nl.jeeninga.tafelboem.game.ProtectedAreas;
 import nl.jeeninga.tafelboem.game.QuizClient;
@@ -86,17 +89,51 @@ public final class TafelBoemWorld {
 	private final Map<UUID, Integer> doorCooldown = new HashMap<>();
 	private final Map<String, int[]> bestStars = new HashMap<>();
 	private final Map<String, Integer> bestYeets = new HashMap<>();
-	/** Each kid's farthest yeet, from the fights log, kept up to date during the session. */
+	/** Each kid's farthest yeet of each kind, from the fights log, kept up to date during the session. */
 	private final YeetRecords yeetRecords = new YeetRecords() {
 		@Override
-		public int best(ServerPlayer kid) {
-			return bestYeets.computeIfAbsent(kid.getPlainTextName(),
-					name -> fightLog.read(name).stream().mapToInt(FightRecord::farthestYeet).max().orElse(0));
+		public int best(ServerPlayer kid, YeetKind kind) {
+			return bestYeets.computeIfAbsent(key(kid, kind), key -> fightLog.read(kid.getPlainTextName()).stream()
+					.mapToInt(fight -> switch (kind) {
+						case KICK -> fight.farthestYeet();
+						case BACK -> fight.farthestBack();
+						case SUPER -> fight.farthestSuper();
+					}).max().orElse(0));
 		}
 
 		@Override
-		public void beaten(ServerPlayer kid, int blocks) {
-			bestYeets.put(kid.getPlainTextName(), Math.max(best(kid), blocks));
+		public void beaten(ServerPlayer kid, YeetKind kind, int blocks) {
+			bestYeets.put(key(kid, kind), Math.max(best(kid, kind), blocks));
+		}
+
+		private String key(ServerPlayer kid, YeetKind kind) {
+			return kid.getPlainTextName() + ":" + kind.id();
+		}
+	};
+	/** The kids' records per kind, as the fights get them; the GameTests read them here. */
+	public YeetRecords yeetRecords() {
+		return yeetRecords;
+	}
+
+	private final Set<String> hinted = new HashSet<>();
+	/** The Terugbom hint is once per kid per world: the fights log remembers who caught one before. */
+	private final Hints hints = new Hints() {
+		@Override
+		public boolean seen(ServerPlayer kid) {
+			if (hinted.contains(kid.getPlainTextName())) {
+				return true;
+			}
+			// Read once per kid: the log only grows, and a catch is no time to read a file on the server thread.
+			boolean before = fightLog.read(kid.getPlainTextName()).stream().anyMatch(fight -> fight.caught() > 0);
+			if (before) {
+				hinted.add(kid.getPlainTextName());
+			}
+			return before;
+		}
+
+		@Override
+		public void shown(ServerPlayer kid) {
+			hinted.add(kid.getPlainTextName());
 		}
 	};
 	private PlacedArea hub;
@@ -304,6 +341,7 @@ public final class TafelBoemWorld {
 				BossFight fight = fights.summon(level, spot, run.level(), run.arena().bounds());
 				if (fight != null) {
 					fight.useYeetRecords(yeetRecords);
+					fight.useHints(hints);
 				}
 				run.start(fight, clock.getAsLong());
 				if (building != null && fight != null) {
@@ -463,11 +501,15 @@ public final class TafelBoemWorld {
 		});
 	}
 
-	/** A kid who logs in inside an arena without a running fight goes to the hub. */
+	/**
+	 * A kid who logs in inside an arena they are not in the run of goes to the hub. Then the fights look at them: sent
+	 * out of a sibling's running fight, no fight holds them any more, so the adventure mode it saved them in goes too.
+	 */
 	public void onJoin(ServerPlayer player) {
 		if (player.level() == level && runOf(player).isEmpty() && layout.arenaAt(player.getX(), player.getZ()).isPresent()) {
 			teleport(player, hub.standAt(), hub.yaw());
 		}
+		fights.onJoin(player);
 	}
 
 	private void write(ServerPlayer kid, ArenaRun run, String result, int stars) {
@@ -477,7 +519,8 @@ public final class TafelBoemWorld {
 		fightLog.append(new FightRecord(System.currentTimeMillis(), kid.getPlainTextName(), run.level().number(), run.arena().name(), result,
 				tally.answers(), tally.wrong(), tally.dontKnow(), tally.chickenOut(), stars, run.fightSeconds(now), run.everyone().size(),
 				TafelBoem.version(), tally.farthestYeet(), run.buildSeconds(now), tally.dodged(), tally.pickedUp(), tally.trapped(),
-				difficulty.get().getSerializedName()));
+				difficulty.get().getSerializedName(), tally.thrownAt(), tally.still(), tally.caught(), tally.thrownBack(), tally.backHits(),
+				tally.juggles(), tally.terugRight(), tally.terugWrong(), tally.farthestBack(), tally.farthestSuper()));
 	}
 
 	/** Falling is never fatal: back to the arena's arrival spot in a fight, otherwise to the hub. */

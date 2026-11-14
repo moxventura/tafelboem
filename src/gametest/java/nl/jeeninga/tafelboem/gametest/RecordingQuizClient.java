@@ -27,6 +27,9 @@ final class RecordingQuizClient implements QuizClient {
 	record Sound(ServerPlayer player, SoundEvent sound) {
 	}
 
+	record Held(ServerPlayer player, int slot) {
+	}
+
 	final List<QuizS2C> sent = new ArrayList<>();
 	final List<Sent> sentTo = new ArrayList<>();
 	final List<Component> actionBars = new ArrayList<>();
@@ -34,6 +37,7 @@ final class RecordingQuizClient implements QuizClient {
 	final List<Bar> actionBarsTo = new ArrayList<>();
 	final List<Sound> sounds = new ArrayList<>();
 	final List<Bar> chatsTo = new ArrayList<>();
+	final List<Held> heldSlots = new ArrayList<>();
 
 	@Override
 	public boolean canReceive(ServerPlayer player) {
@@ -65,6 +69,11 @@ final class RecordingQuizClient implements QuizClient {
 	@Override
 	public void track(ServerPlayer player, Entity target, int ticksAfterScreen, boolean kick) {
 		tracks.add(new Track(player, target.getId(), ticksAfterScreen, kick));
+	}
+
+	@Override
+	public void selectSlot(ServerPlayer player, int slot) {
+		heldSlots.add(new Held(player, slot));
 	}
 
 	QuizS2C last() {

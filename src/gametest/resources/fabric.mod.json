@@ -18,7 +18,16 @@
 			"nl.jeeninga.tafelboem.gametest.BuildPhaseGameTest",
 			"nl.jeeninga.tafelboem.gametest.DodgeGameTest",
 			"nl.jeeninga.tafelboem.gametest.TrapGameTest",
-			"nl.jeeninga.tafelboem.gametest.ArenaSafetyGameTest"
+			"nl.jeeninga.tafelboem.gametest.ArenaSafetyGameTest",
+			"nl.jeeninga.tafelboem.gametest.YeetCapGameTest",
+			"nl.jeeninga.tafelboem.gametest.FightModeGameTest",
+			"nl.jeeninga.tafelboem.gametest.BookkeepingGameTest",
+			"nl.jeeninga.tafelboem.gametest.AimGameTest",
+			"nl.jeeninga.tafelboem.gametest.TerugbomGameTest",
+			"nl.jeeninga.tafelboem.gametest.ThrowBackGameTest",
+			"nl.jeeninga.tafelboem.gametest.JuggleGameTest",
+			"nl.jeeninga.tafelboem.gametest.TerugbomLeakGameTest",
+			"nl.jeeninga.tafelboem.gametest.LogsGameTest"
 		],
 		"fabric-client-gametest": [
 			"nl.jeeninga.tafelboem.gametest.PlaythroughClientGameTest",

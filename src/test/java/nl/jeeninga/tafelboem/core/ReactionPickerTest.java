@@ -40,6 +40,24 @@ class ReactionPickerTest {
 	}
 
 	@Test
+	void aThrowBackOrSuperYeetFliesClassicOrTumblingNeverTheSameTwiceInARow() {
+		ReactionPicker picker = new ReactionPicker(new Random(12));
+		YeetStyle previous = null;
+		Set<YeetStyle> seen = EnumSet.noneOf(YeetStyle.class);
+		for (int i = 0; i < 200; i++) {
+			YeetKind kind = i % 3 == 0 ? YeetKind.KICK : i % 3 == 1 ? YeetKind.BACK : YeetKind.SUPER;
+			YeetStyle current = picker.nextFlight(true, true, kind);
+			if (kind != YeetKind.KICK) {
+				assertTrue(current == YeetStyle.CLASSIC || current == YeetStyle.TUMBLE, kind + " flew " + current);
+				seen.add(current);
+			}
+			assertNotEquals(previous, current, "repeat at yeet " + i);
+			previous = current;
+		}
+		assertEquals(EnumSet.of(YeetStyle.CLASSIC, YeetStyle.TUMBLE), seen);
+	}
+
+	@Test
 	void theWallSplatOnlyComesInAnArena() {
 		ReactionPicker picker = new ReactionPicker(new Random(9));
 		for (int i = 0; i < 200; i++) {

@@ -3,6 +3,7 @@ package nl.jeeninga.tafelboem.game;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket;
+import net.minecraft.network.protocol.game.ClientboundSetHeldSlotPacket;
 import net.minecraft.network.protocol.game.ClientboundSoundPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
@@ -52,6 +53,11 @@ public interface QuizClient {
 			player.connection.send(new ClientboundSoundPacket(BuiltInRegistries.SOUND_EVENT.wrapAsHolder(sound), SoundSource.PLAYERS,
 					player.getX(), player.getY(), player.getZ(), 1.0F, 1.0F, player.getRandom().nextLong()));
 		}
+
+		@Override
+		public void selectSlot(ServerPlayer player, int slot) {
+			player.connection.send(new ClientboundSetHeldSlotPacket(slot));
+		}
 	};
 
 	/** False when the player's client doesn't have TafelBoem installed. */
@@ -69,4 +75,7 @@ public interface QuizClient {
 
 	/** A sound only this player hears, such as the toast of a new record. */
 	void sound(ServerPlayer player, SoundEvent sound);
+
+	/** Selects this hotbar slot in the player's hand, for a Terugbom that was just caught. */
+	void selectSlot(ServerPlayer player, int slot);
 }

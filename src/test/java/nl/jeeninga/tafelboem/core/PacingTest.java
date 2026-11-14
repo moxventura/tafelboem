@@ -29,4 +29,13 @@ class PacingTest {
 		}
 		assertTrue(Pacing.STUCK_TICKS >= 2 * (longestYeet + longestLanding), "a real reaction must never reach it");
 	}
+
+	@Test
+	void theR14Constants() {
+		assertEquals(90, Pacing.AFTER_DODGE_COOLDOWN_TICKS);
+		assertTrue(Pacing.AFTER_DODGE_COOLDOWN_TICKS > Pacing.COOLDOWN_TICKS);
+		assertEquals(15 * 20, Pacing.TERUGBOM_LIFETIME_TICKS);
+		assertEquals(20, Pacing.STAGGER_TICKS);
+		assertEquals(20, Pacing.BACK_COOLDOWN_TICKS);
+	}
 }

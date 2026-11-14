@@ -243,6 +243,7 @@ public final class SessionManager {
 		QuizSession session = sessions.remove(player.getUUID());
 		if (session != null) {
 			RootLock.release(player);
+			notifyEnded(player.getUUID(), session);
 		}
 	}
 
@@ -259,6 +260,7 @@ public final class SessionManager {
 			ServerPlayer player = server.getPlayerList().getPlayer(session.playerId());
 			if (player == null) {
 				it.remove();
+				notifyEnded(session.playerId(), session);
 				continue;
 			}
 			if (player.isDeadOrDying()) {
@@ -284,6 +286,31 @@ public final class SessionManager {
 		RootLock.release(player);
 		BombEffects.fizzle(player.level(), session.bombPos());
 		client.send(player, QuizS2C.close(session.id()));
+		notifyEnded(player.getUUID(), session);
+	}
+
+	private void notifyEnded(UUID player, QuizSession session) {
+		QuizListener listener = session.listener();
+		if (listener != null) {
+			listener.onEnded(player, session);
+		}
+	}
+
+	/**
+	 * Closes this kid's question without an answer, for whoever owns it (a fight that is over): no pin, no screen, the
+	 * bomb fizzles. The owner is not told: it asked for this.
+	 */
+	public void close(UUID player) {
+		QuizSession session = sessions.remove(player);
+		if (session == null) {
+			return;
+		}
+		ServerPlayer kid = server.getPlayerList().getPlayer(player);
+		if (kid != null) {
+			RootLock.release(kid);
+			BombEffects.fizzle(kid.level(), session.bombPos());
+			client.send(kid, QuizS2C.close(session.id()));
+		}
 	}
 
 	private void tickBooms() {

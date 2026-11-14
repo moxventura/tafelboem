@@ -28,6 +28,11 @@ human or agent.
 - No timer on answering a sum; the build phase has a countdown (R1.2, the parent's choice). A wrong
   answer is always shorter and less fun than a right one.
 - Our booms never hurt players (`PlayerSafeExplosion`); a correct answer never hurts the kid.
+- A dodge never takes health off Graaf Fout by itself (R1.4): a dodged bomb drops as a Terugbom, and
+  the hit it earns still needs a right answer. In a juggle he stays frozen until its question ends:
+  nothing in the fight times out meanwhile.
+- In an arena fight kids are in adventure mode (`noBuildInFight`, R1.4), so nobody breaks or places
+  blocks; their own mode comes back when the fight ends, they leave, die or log in again.
 - In an arena on Peaceful and Easy nothing takes a kid below half a heart (`arenaSafety`, R1.3); on
   Normal and Hard damage is vanilla, and dying counts as leaving (`died`).
 - A typed wrong answer costs hearts on Gemiddeld and Moeilijk (`FightLevel.wrongAnswerDamage`), never
@@ -68,7 +73,9 @@ and a check. Put new world work on arena entry rather than on world load.
 | reload mid-build | the build and the run | the kid goes to the hub (the login row); the slots are cleared on load | `TafelBoemWorldGameTest`, `HubAndArenasGameTest` |
 | close mid-build | the build line | written when the last kid disconnects (closing the world never ticks again) | `BuildPhaseGameTest` |
 | build phase | a kid near the walls | still in the run within 8 blocks of the arena (`BUILD_MARGIN`); further out, or once he has come, = left | `BuildPhaseGameTest` |
-| fight ends | lying bombs | all poof | `DodgeGameTest` |
+| fight ends, a kid leaves or dies | Terugbommen (ground and pockets) | all poof; a pocket's are taken out, not dropped (the kids keep their inventory on death) | `TerugbomLeakGameTest`, `TerugbomGameTest` |
+| login, world load | Terugbommen in a pocket outside a running fight | removed | `TerugbomLeakGameTest` |
+| fight ends, a kid leaves or dies, login | game mode | back to the kid's own (from adventure) | `FightModeGameTest` |
 | any time | the void | everyone who falls is caught, never fatally | `TafelBoemWorldGameTest` |
 
 Spectacle animals that appear after the boom (the counting Kippenbom's groups, the chase) get their
@@ -139,6 +146,9 @@ GameTest pitfalls:
   again, entities loaded from disk) in `WorldClientGameTest`, which closes its world and opens it
   again (`getWorldSave().open()`).
 - The test JVM writes a `logs/` folder at the repo root; it is ignored, don't commit it.
+- Kids in an arena fight are in adventure mode (R1.4): a test whose kid must break or place a block
+  sets `noBuildInFight = false`. `ArenaFight` fights run several in one server, so nothing in
+  `BossFights` may scan every player: one test's fight would take another test's items.
 
 ## Git
 
@@ -188,5 +198,12 @@ GameTest pitfalls:
   distance when a trap pulled him in; `died` stands next to `left` in the fight and session lines;
   the fight line also names Minecraft's difficulty (`difficulty easy`), which the arena safety
   depends on.
+- From 1.4.0 on, the fight line counts per kid `thrown at` (throws at them while they were free),
+  of which `still`, then `dodged`, `caught`, `threw back` (and how many hit, how many juggled) and the
+  Terug! answers right and wrong, plus the farthest throw-back and super yeet; the level is on the
+  line, so the dodge rate per level reads against the spec's ranges. A `TafelBoem throw:` line per
+  throw (level, distance, flight ticks, the kid's speed, hit or dodged); the yeet line ends with
+  `back` for a throw-back yeet and `super` for a juggle's; the answer log's context is `terug` or
+  `juggle` for those sums. `picked up` is no longer counted (a dodge drops a Terugbom).
 - Record each playtest in `docs/evaluations/R<x>.md`: findings with their cause checked in the
   code, then the go/no-go and backlog changes.
